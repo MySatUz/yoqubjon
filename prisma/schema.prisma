@@ -1,0 +1,96 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String         @id @default(uuid())
+  email         String         @unique
+  name          String?
+  passwordHash  String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  results       Result[]
+  subscriptions Subscription[]
+  payments      Payment[]
+}
+
+model Test {
+  id          String      @id @default(uuid())
+  title       String
+  description String?
+  isFree      Boolean     @default(false)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  questions   Question[]
+  results     Result[]
+}
+
+model Question {
+  id            String   @id @default(uuid())
+  testId        String
+  content       String   // The reading passage or question text
+  options       Json     // e.g., ["A", "B", "C", "D"] mapping
+  correctAnswer String   // e.g., "A"
+  explanation   String?  // Text explanation
+  videoUrl      String?  // YouTube/Vimeo iframe URL
+  imageUrl      String?  // Local path to image
+  order         Int      // Question order in the test
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  test          Test     @relation(fields: [testId], references: [id])
+}
+
+model Result {
+  id          String   @id @default(uuid())
+  userId      String
+  testId      String
+  score       Int
+  timeSpent   Int      // Time spent in seconds
+  answers     Json     // User's selected answers
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user        User     @relation(fields: [userId], references: [id])
+  test        Test     @relation(fields: [testId], references: [id])
+
+  @@index([userId])
+}
+
+model Subscription {
+  id        String   @id @default(uuid())
+  userId    String
+  planId    String
+  isActive  Boolean  @default(true)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+}
+
+model Payment {
+  id            String   @id @default(uuid())
+  userId        String
+  amount        Int      // in tiyin/cents
+  currency      String   @default("UZS")
+  provider      String   // "CLICK" or "PAYME"
+  transactionId String?  @unique
+  status        String   // "PENDING", "SUCCESS", "FAILED"
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user          User     @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([transactionId])
+}
