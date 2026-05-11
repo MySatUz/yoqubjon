@@ -31,11 +31,9 @@ export async function uploadTest(formData: FormData) {
     for (const image of imageFiles) {
       if (!(image instanceof File) || image.size === 0) continue;
 
-      const fileExt = image.name.split('.').pop();
-      const fileName = `${test.id}/${image.name}`;
-      const filePath = fileName;
+      const filePath = `${test.id}/${image.name}`;
 
-      const { data, error } = await supabase.storage
+      const { error } = await supabase.storage
         .from('questions')
         .upload(filePath, image, {
           upsert: true,
@@ -83,17 +81,8 @@ export async function uploadTest(formData: FormData) {
 
 export async function deleteTest(testId: string) {
   try {
-    // Delete questions first (manual cascade)
-    await prisma.question.deleteMany({
-      where: { testId }
-    });
-
-    // Delete results
-    await prisma.result.deleteMany({
-      where: { testId }
-    });
-
-    // Delete the test itself
+    // Cascade deletions are handled at DB level (onDelete: Cascade),
+    // so we only need to delete the test itself.
     await prisma.test.delete({
       where: { id: testId }
     });

@@ -159,4 +159,3 @@ export default function SplitScreen({ questions }: { questions: Question[] }) {
     </div>
   );
 }
-
