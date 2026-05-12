@@ -1,28 +1,50 @@
 'use server';
 
 import { prisma } from '@/lib/prisma';
+import { auth } from '@/auth';
+import { answersMatch } from '@/lib/resultAnswers';
 
-export async function submitExam(testId: string, userId: string, answers: Record<string, string>, timeSpent: number) {
-  // Use `server-auth-actions` pattern: verify user is authenticated here
-  if (!userId) {
+export async function submitExam(testId: string, answers: Record<string, string>, timeSpent: number) {
+  const session = await auth();
+
+  if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }
 
-  // Fetch all questions for this test to grade them
-  const questions = await prisma.question.findMany({
-    where: { testId },
-    select: { id: true, correctAnswer: true }
+  const test = await prisma.test.findUnique({
+    where: { id: testId },
+    include: {
+      questions: {
+        orderBy: { order: 'asc' },
+        select: { id: true, correctAnswer: true }
+      }
+    }
   });
 
-  if (!questions || questions.length === 0) {
+  if (!test || test.questions.length === 0) {
     throw new Error('Test not found or has no questions');
   }
 
+  if (!test.isFree) {
+    const subscription = await prisma.subscription.findFirst({
+      where: {
+        userId: session.user.id,
+        isActive: true,
+        expiresAt: { gt: new Date() },
+      },
+    });
+
+    if (!subscription) {
+      throw new Error('Subscription required');
+    }
+  }
+
+  const questions = test.questions;
   let correctCount = 0;
   
   questions.forEach(q => {
     const userAnswer = answers[q.id];
-    if (userAnswer === q.correctAnswer) {
+    if (answersMatch(userAnswer || '', q.correctAnswer)) {
       correctCount++;
     }
   });
@@ -36,7 +58,7 @@ export async function submitExam(testId: string, userId: string, answers: Record
   // Create result record
   const result = await prisma.result.create({
     data: {
-      userId,
+      userId: session.user.id,
       testId,
       score,
       timeSpent,

@@ -21,7 +21,7 @@ async function initStorage() {
   try {
     console.log('Проверка бакета "questions"...');
 
-    const { data: bucket, error: bucketError } = await supabase.storage.createBucket('questions', {
+    const { error: bucketError } = await supabase.storage.createBucket('questions', {
       public: true,
       allowedMimeTypes: ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'],
       fileSizeLimit: 5242880
@@ -40,10 +40,11 @@ async function initStorage() {
     console.log('\n--- Настройка завершена! ---');
     console.log('Теперь вы можете загружать тесты с картинками через админку.');
     
-  } catch (err: any) {
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Unknown error';
     console.error('\n❌ Произошла ошибка при настройке:');
-    console.error(err.message);
-    if (err.message.includes('JWT')) {
+    console.error(message);
+    if (message.includes('JWT')) {
       console.error('СОВЕТ: Проверьте SUPABASE_SERVICE_ROLE_KEY. Он должен быть длинным (начинаться на ey...)');
     }
   }

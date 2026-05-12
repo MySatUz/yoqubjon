@@ -1,7 +1,7 @@
 import React from 'react';
 import { auth } from "@/auth";
 import Link from 'next/link';
-import { LayoutDashboard, User, CreditCard, LogOut, Settings, GraduationCap, ShieldCheck } from 'lucide-react';
+import { LayoutDashboard, User, CreditCard, LogOut, GraduationCap, ShieldCheck } from 'lucide-react';
 import { signOut } from "@/auth";
 
 export default async function DashboardLayout({

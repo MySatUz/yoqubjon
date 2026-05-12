@@ -14,13 +14,17 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) return null;
+        if (!credentials?.email || !credentials?.password) {
+          return null;
+        }
 
         const user = await prisma.user.findUnique({
           where: { email: credentials.email as string },
         });
 
-        if (!user || !user.passwordHash) return null;
+        if (!user || !user.passwordHash) {
+          return null;
+        }
 
         const isPasswordCorrect = await bcrypt.compare(
           credentials.password as string,

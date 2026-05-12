@@ -1,43 +1,37 @@
 import { prisma } from '@/lib/prisma';
 import { Suspense } from 'react';
 import VideoClient from '@/components/exam/VideoClient';
+import { auth } from '@/auth';
+import { notFound, redirect } from 'next/navigation';
+import { normalizeStoredAnswer } from '@/lib/resultAnswers';
 
-export default async function ReviewPage({ params }: { params: { resultId: string } }) {
-  const resultId = params.resultId;
+export default async function ReviewPage({ params }: { params: Promise<{ resultId: string }> }) {
+  const { resultId } = await params;
+  const session = await auth();
   
-  let result = null;
-  try {
-    result = await prisma.result.findUnique({
-      where: { id: resultId },
-      include: {
-        test: {
-          include: {
-            questions: true
-          }
-        }
-      }
-    });
-  } catch (e) {
-    console.error(e);
+  if (!session?.user?.id) {
+    redirect('/login');
   }
 
-  // Fallback for UI Development
-  if (!result) {
-    result = {
-      score: 680,
-      timeSpent: 2450,
-      answers: { "0": "A", "1": "C" },
+  const result = await prisma.result.findFirst({
+    where: {
+      id: resultId,
+      userId: session.user.id,
+    },
+    include: {
       test: {
-        title: "Digital SAT Practice Test 1",
-        questions: Array.from({ length: 27 }).map((_, i) => ({
-          id: i.toString(),
-          text: `Sample Question ${i + 1}`,
-          correctAnswer: ["A", "B", "C", "D"][i % 4],
-          videoUrl: i % 3 === 0 ? "https://www.youtube.com/embed/dQw4w9WgXcQ" : null
-        }))
-      }
-    } as any;
+        include: {
+          questions: { orderBy: { order: 'asc' } }
+        }
+      },
+    },
+  });
+
+  if (!result) {
+    notFound();
   }
+
+  const storedAnswers = result.answers as Record<string, unknown>;
 
   return (
     <div className="min-h-screen bg-slate-50 py-12 px-4 sm:px-6 lg:px-8">
@@ -59,9 +53,11 @@ export default async function ReviewPage({ params }: { params: { resultId: strin
           <h2 className="text-xl font-bold text-slate-900">Question Breakdown</h2>
           
           <div className="grid gap-4">
-            {result.test.questions.map((q: any, i: number) => {
-              const userAnswer = (result as any).answers[q.id] || (result as any).answers[i.toString()]; // support mock index keys
-              const isCorrect = userAnswer === q.correctAnswer;
+            {result.test.questions.map((q, i) => {
+              const { userAnswer, correctAnswer, isCorrect } = normalizeStoredAnswer(
+                storedAnswers[q.id] ?? storedAnswers[i.toString()],
+                q.correctAnswer
+              );
               
               return (
                 <div key={q.id} className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
@@ -75,7 +71,7 @@ export default async function ReviewPage({ params }: { params: { resultId: strin
                       <div>
                         <p className="font-medium text-slate-900">Your Answer: <span className="font-bold">{userAnswer || 'Omitted'}</span></p>
                         {!isCorrect && (
-                          <p className="text-sm text-slate-500 mt-1">Correct Answer: {q.correctAnswer}</p>
+                          <p className="text-sm text-slate-500 mt-1">Correct Answer: {correctAnswer}</p>
                         )}
                       </div>
                     </div>

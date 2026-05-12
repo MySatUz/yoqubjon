@@ -2,11 +2,14 @@
 
 import { prisma } from '@/lib/prisma';
 import { parseTexFile } from '@/lib/texParser';
-import { supabase } from '@/lib/supabase';
+import { getSupabaseAdmin } from '@/lib/supabase';
 import { revalidatePath } from 'next/cache';
+import { requireAdmin } from '@/lib/admin';
 
 export async function uploadTest(formData: FormData) {
   try {
+    await requireAdmin();
+
     const title = formData.get('title') as string;
     const isFree = formData.get('isFree') === 'true';
     const texFile = formData.get('texFile') as File;
@@ -26,6 +29,7 @@ export async function uploadTest(formData: FormData) {
     });
 
     // 2. Handle Images (Upload to Supabase Storage)
+    const supabase = getSupabaseAdmin();
     const imageMap: Record<string, string> = {};
 
     for (const image of imageFiles) {
@@ -66,32 +70,34 @@ export async function uploadTest(formData: FormData) {
           correctAnswer: q.correctAnswer,
           order: q.order,
           imageUrl: q.image ? imageMap[q.image] || null : null 
-        } as any
+        }
       });
     }
 
     revalidatePath('/dashboard');
     return { success: true, testId: test.id };
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Upload error:', error);
-    return { success: false, error: error.message };
+    return { success: false, error: error instanceof Error ? error.message : 'Upload failed' };
   }
 }
 
 export async function deleteTest(testId: string) {
   try {
-    // Cascade deletions are handled at DB level (onDelete: Cascade),
-    // so we only need to delete the test itself.
-    await prisma.test.delete({
-      where: { id: testId }
+    await requireAdmin();
+
+    await prisma.$transaction(async (tx) => {
+      await tx.result.deleteMany({ where: { testId } });
+      await tx.question.deleteMany({ where: { testId } });
+      await tx.test.delete({ where: { id: testId } });
     });
 
     revalidatePath('/admin');
     revalidatePath('/dashboard');
     return { success: true };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Delete Test Error:", error);
-    return { success: false, error: error.message };
+    return { success: false, error: error instanceof Error ? error.message : 'Delete failed' };
   }
 }

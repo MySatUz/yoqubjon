@@ -12,6 +12,11 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    ".agents/**",
+    "Free_data/**",
+    "scratch/**",
+    "server_log.txt",
+    "tsconfig.tsbuildinfo",
   ]),
 ]);
 

@@ -15,7 +15,7 @@ function extractTagContent(block: string, tagName: string): string | undefined {
   const startIdx = block.indexOf(tag);
   if (startIdx === -1) return undefined;
 
-  let contentStart = startIdx + tag.length;
+  const contentStart = startIdx + tag.length;
   let bracketCount = 1;
   let i = contentStart;
 

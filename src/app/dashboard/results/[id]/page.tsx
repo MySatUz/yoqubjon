@@ -1,15 +1,26 @@
 import { prisma } from '@/lib/prisma';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import Link from 'next/link';
 import { CheckCircle2, XCircle, Clock, Award, ArrowLeft } from 'lucide-react';
 import 'katex/dist/katex.min.css';
 import { InlineMath } from 'react-katex';
+import { auth } from '@/auth';
+import { normalizeStoredAnswer } from '@/lib/resultAnswers';
+import Image from 'next/image';
 
-export default async function ResultPage({ params }: { params: { id: string } }) {
+export default async function ResultPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  const session = await auth();
+
+  if (!session?.user?.id) {
+    redirect('/login');
+  }
   
-  const result = await prisma.result.findUnique({
-    where: { id },
+  const result = await prisma.result.findFirst({
+    where: {
+      id,
+      userId: session.user.id,
+    },
     include: { 
       test: {
         include: { questions: { orderBy: { order: 'asc' } } }
@@ -19,20 +30,23 @@ export default async function ResultPage({ params }: { params: { id: string } })
 
   if (!result) notFound();
 
-  const userAnswers = result.answers as Record<string, string>;
+  const userAnswers = result.answers as Record<string, unknown>;
   const questions = result.test.questions;
   
-  const detailedAnswers = questions.map(q => ({
-    id: q.id,
-    content: q.content,
-    imageUrl: q.imageUrl,
-    userAnswer: userAnswers[q.id] || '',
-    correctAnswer: q.correctAnswer,
-    isCorrect: userAnswers[q.id] === q.correctAnswer
-  }));
+  const detailedAnswers = questions.map(q => {
+    const answer = normalizeStoredAnswer(userAnswers[q.id], q.correctAnswer);
+
+    return {
+      id: q.id,
+      content: q.content,
+      imageUrl: q.imageUrl,
+      ...answer,
+    };
+  });
 
   const correctCount = detailedAnswers.filter(a => a.isCorrect).length;
   const totalCount = detailedAnswers.length;
+  const accuracy = totalCount > 0 ? Math.round((correctCount / totalCount) * 100) : 0;
   
   const formatTime = (seconds: number) => {
     const m = Math.floor(seconds / 60);
@@ -75,7 +89,7 @@ export default async function ResultPage({ params }: { params: { id: string } })
               <div className="w-px h-12 bg-white/10"></div>
               <div className="text-center">
                 <span className="block text-slate-400 text-xs font-bold uppercase tracking-widest mb-1">Accuracy</span>
-                <span className="text-3xl font-bold">{Math.round((correctCount / totalCount) * 100)}%</span>
+                <span className="text-3xl font-bold">{accuracy}%</span>
               </div>
             </div>
           </div>
@@ -154,7 +168,13 @@ export default async function ResultPage({ params }: { params: { id: string } })
                     </div>
                     {data.imageUrl && (
                       <div className="mt-4 p-2 bg-slate-50 rounded-xl border border-slate-100 inline-block">
-                        <img src={data.imageUrl} alt="Question" className="max-h-48 rounded-lg" />
+                        <Image
+                          src={data.imageUrl}
+                          alt="Question"
+                          width={800}
+                          height={480}
+                          className="max-h-48 w-auto rounded-lg"
+                        />
                       </div>
                     )}
                   </div>

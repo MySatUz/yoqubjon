@@ -1,15 +1,10 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { useExamStore } from '@/store/useExamStore';
 
 export default function BottomNav({ totalQuestions }: { totalQuestions: number }) {
   const { currentQuestionIndex, setCurrentQuestionIndex, markedForReview, toggleMarkForReview } = useExamStore();
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   return (
     <footer className="h-16 bg-white border-t border-slate-200 flex items-center justify-between px-4 sm:px-6 shrink-0 z-10 sticky bottom-0">
@@ -19,7 +14,7 @@ export default function BottomNav({ totalQuestions }: { totalQuestions: number }
       
       {/* Question Navigation Map */}
       <div className="flex-1 flex items-center justify-center gap-1.5 px-4 overflow-x-auto no-scrollbar">
-        {mounted && Array.from({ length: totalQuestions }).map((_, i) => {
+        {Array.from({ length: totalQuestions }).map((_, i) => {
           const isCurrent = i === currentQuestionIndex;
           const isMarked = markedForReview[i.toString()];
           return (
@@ -41,17 +36,15 @@ export default function BottomNav({ totalQuestions }: { totalQuestions: number }
       </div>
 
       <div className="flex items-center gap-3 min-w-[300px] justify-end">
-        {mounted && (
-          <label className="flex items-center gap-2 cursor-pointer group px-3 py-1.5 rounded-lg hover:bg-slate-50 transition-colors">
-            <input 
-              type="checkbox" 
-              checked={!!markedForReview[currentQuestionIndex.toString()]}
-              onChange={() => toggleMarkForReview(currentQuestionIndex.toString())}
-              className="w-4 h-4 rounded border-slate-300 text-red-600 focus:ring-red-600 cursor-pointer" 
-            />
-            <span className="text-sm font-medium text-slate-700 group-hover:text-slate-900 transition-colors hidden sm:inline-block">Mark for Review</span>
-          </label>
-        )}
+        <label className="flex items-center gap-2 cursor-pointer group px-3 py-1.5 rounded-lg hover:bg-slate-50 transition-colors">
+          <input 
+            type="checkbox" 
+            checked={!!markedForReview[currentQuestionIndex.toString()]}
+            onChange={() => toggleMarkForReview(currentQuestionIndex.toString())}
+            className="w-4 h-4 rounded border-slate-300 text-red-600 focus:ring-red-600 cursor-pointer" 
+          />
+          <span className="text-sm font-medium text-slate-700 group-hover:text-slate-900 transition-colors hidden sm:inline-block">Mark for Review</span>
+        </label>
         
         <div className="flex items-center gap-2">
           <button 

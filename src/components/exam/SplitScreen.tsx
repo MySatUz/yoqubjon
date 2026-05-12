@@ -1,14 +1,15 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { useExamStore } from '@/store/useExamStore';
 import 'katex/dist/katex.min.css';
 import { InlineMath, BlockMath } from 'react-katex';
+import Image from 'next/image';
 
 interface Question {
   id: string;
   content: string;
-  options: any; // Json from Prisma
+  options: unknown;
   correctAnswer: string;
   type?: string;
   imageUrl?: string | null;
@@ -17,16 +18,11 @@ interface Question {
 
 export default function SplitScreen({ questions }: { questions: Question[] }) {
   const { currentQuestionIndex, answers, setAnswer, isCalculatorOpen } = useExamStore();
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   if (!questions || questions.length === 0) return null;
 
   const question = questions[currentQuestionIndex % questions.length];
-  const currentAnswer = mounted ? answers[currentQuestionIndex.toString()] : undefined;
+  const currentAnswer = answers[currentQuestionIndex.toString()];
 
   // Determine type: if options is null or empty array, it's GRID_IN
   const isMultipleChoice = Array.isArray(question.options) && question.options.length > 0;
@@ -80,9 +76,11 @@ export default function SplitScreen({ questions }: { questions: Question[] }) {
 
             {question.imageUrl && (
               <div className={`my-6 rounded-2xl overflow-hidden border border-slate-200 bg-white p-4 shadow-md mx-auto ${isCalculatorOpen ? 'max-w-full' : 'max-w-2xl'}`}>
-                <img 
+                <Image 
                   src={question.imageUrl} 
                   alt="Question diagram" 
+                  width={800}
+                  height={480}
                   className="max-w-full h-auto mx-auto"
                 />
               </div>

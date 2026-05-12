@@ -92,7 +92,7 @@ export default async function SubscriptionPage() {
             </button>
           ) : (
             <Link 
-              href={`/payment/mock?userId=${session?.user?.id}&amount=99000&plan=Premium%20Pro`}
+              href="/payment/mock?amount=99000&plan=Premium%20Pro"
               className="w-full py-4 rounded-2xl text-sm font-black text-white bg-blue-600 hover:bg-blue-500 transition-all text-center transform active:scale-95 shadow-xl shadow-blue-900/50"
             >
               Upgrade Now

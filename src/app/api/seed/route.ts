@@ -1,8 +1,14 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
+import { requireAdmin } from "@/lib/admin";
 
 export async function GET() {
+  if (process.env.ENABLE_SEED_API !== "true") {
+    return NextResponse.json({ error: "Seed endpoint disabled" }, { status: 404 });
+  }
+
   try {
+    await requireAdmin();
     console.log('Seeding SAT Math Practice Test 1...');
 
     const test1 = await prisma.test.upsert({
@@ -73,8 +79,12 @@ export async function GET() {
     }
 
     return NextResponse.json({ message: "Seeding completed successfully" });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error(error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    const status = error instanceof Error && error.message === "Forbidden" ? 403 : 500;
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Seed failed" },
+      { status }
+    );
   }
 }

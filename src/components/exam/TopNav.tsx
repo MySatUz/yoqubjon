@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useExamStore } from '@/store/useExamStore';
 import ReferenceModal from '@/components/exam/ReferenceModal';
 
-export default function TopNav({ testId, totalQuestions }: { testId: string, totalQuestions: number }) {
+export default function TopNav({ testId }: { testId: string }) {
   const router = useRouter();
   const { 
     timeLeftSeconds, 
@@ -16,14 +16,10 @@ export default function TopNav({ testId, totalQuestions }: { testId: string, tot
     setReferenceOpen,
     answers,
     currentQuestionIndex,
-    setCurrentQuestionIndex,
-    markedForReview
   } = useExamStore();
-  const [mounted, setMounted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
     const interval = setInterval(() => {
       decrementTime();
     }, 1000);
@@ -61,7 +57,6 @@ export default function TopNav({ testId, totalQuestions }: { testId: string, tot
 
   // Format time as MM:SS
   const formatTime = (seconds: number) => {
-    if (!mounted) return "--:--"; // Prevent hydration mismatch
     const m = Math.floor(seconds / 60).toString().padStart(2, '0');
     const s = (seconds % 60).toString().padStart(2, '0');
     return `${m}:${s}`;

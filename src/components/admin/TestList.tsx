@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { deleteTest } from '@/app/admin/actions';
-import { Trash2, Loader2, AlertCircle } from 'lucide-react';
+import { Trash2, Loader2 } from 'lucide-react';
 
 interface TestListProps {
   tests: {

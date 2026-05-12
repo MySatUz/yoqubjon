@@ -5,7 +5,11 @@ export default auth((req) => {
   const { nextUrl } = req;
 
   const isAuthRoute = nextUrl.pathname.startsWith("/login") || nextUrl.pathname.startsWith("/register");
-  const isProtectedRoute = nextUrl.pathname.startsWith("/exam") || nextUrl.pathname.startsWith("/dashboard");
+  const isProtectedRoute =
+    nextUrl.pathname.startsWith("/admin") ||
+    nextUrl.pathname.startsWith("/dashboard") ||
+    nextUrl.pathname.startsWith("/exam") ||
+    nextUrl.pathname.startsWith("/payment/mock");
 
   if (isAuthRoute) {
     if (isLoggedIn) {

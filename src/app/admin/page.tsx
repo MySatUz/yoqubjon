@@ -2,10 +2,13 @@ import React from 'react';
 import { prisma } from '@/lib/prisma';
 import AdminForm from '@/components/admin/AdminForm';
 import TestList from '@/components/admin/TestList';
+import { requireAdminPage } from '@/lib/admin';
 
 export const dynamic = 'force-dynamic';
 
 export default async function AdminUploadPage() {
+  await requireAdminPage();
+
   const tests = await prisma.test.findMany({
     orderBy: { createdAt: 'desc' },
     include: {

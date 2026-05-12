@@ -2,13 +2,12 @@ import React from 'react';
 import { auth } from "@/auth";
 import Link from 'next/link';
 import { prisma } from '@/lib/prisma';
-import { History, LayoutDashboard, Settings, LogOut, CheckCircle2, Lock } from 'lucide-react';
+import { History, LayoutDashboard, CheckCircle2, Lock } from 'lucide-react';
 
-export default async function DashboardPage({
-  searchParams,
-}: {
-  searchParams: { [key: string]: string | string[] | undefined };
+export default async function DashboardPage(props: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
+  const searchParams = await props.searchParams;
   const session = await auth();
   const isSuccess = searchParams.payment === 'success';
   
@@ -97,7 +96,7 @@ export default async function DashboardPage({
                       ) : (
                         <div className="space-y-4">
                           <Link 
-                            href="/pricing"
+                            href="/dashboard/subscription"
                             className="inline-flex items-center justify-center w-full py-4 px-6 rounded-2xl text-sm font-black text-white bg-blue-600 hover:bg-blue-700 transition-all transform active:scale-95 shadow-xl shadow-blue-100"
                           >
                             Unlock with Premium

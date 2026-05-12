@@ -10,7 +10,6 @@ function PaymentContent() {
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<'idle' | 'success'>('idle');
 
-  const userId = searchParams.get('userId');
   const amount = searchParams.get('amount') || '99000';
   const plan = searchParams.get('plan') || 'Premium Pro';
 
@@ -25,7 +24,6 @@ function PaymentContent() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userId,
           amount: parseInt(amount),
           transactionId: `mock_${Math.random().toString(36).substr(2, 9)}`,
           status: 'PAID',
@@ -39,7 +37,7 @@ function PaymentContent() {
           router.push('/dashboard?payment=success');
         }, 3000);
       }
-    } catch (error) {
+    } catch {
       alert('Payment simulation failed');
     } finally {
       setLoading(false);
@@ -160,4 +158,3 @@ export default function MockPaymentPage() {
     </Suspense>
   );
 }
-

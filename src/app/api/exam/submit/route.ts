@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { auth } from '@/auth';
+import { answersMatch } from '@/lib/resultAnswers';
 
 export async function POST(req: Request) {
   try {
@@ -11,22 +12,57 @@ export async function POST(req: Request) {
 
     const { testId, answers, timeSpent } = await req.json();
 
-    if (!testId || !answers) {
+    if (
+      typeof testId !== 'string' ||
+      !answers ||
+      typeof answers !== 'object' ||
+      Array.isArray(answers)
+    ) {
       return NextResponse.json({ error: 'Missing data' }, { status: 400 });
     }
 
-    // Fetch questions to calculate score
-    const questions = await prisma.question.findMany({
-      where: { testId },
-      select: { id: true, correctAnswer: true }
+    const submittedAnswers = answers as Record<string, unknown>;
+
+    const test = await prisma.test.findUnique({
+      where: { id: testId },
+      include: {
+        questions: {
+          orderBy: { order: 'asc' },
+          select: { id: true, correctAnswer: true },
+        },
+      },
     });
 
-    let correctCount = 0;
-    const processedAnswers: Record<string, any> = {};
+    if (!test || test.questions.length === 0) {
+      return NextResponse.json({ error: 'Test not found' }, { status: 404 });
+    }
 
-    questions.forEach((q) => {
-      const userAnswer = answers[q.id] || answers[questions.indexOf(q).toString()]; // Support both ID and Index keys
-      const isCorrect = userAnswer?.toString().trim().toUpperCase() === q.correctAnswer.trim().toUpperCase();
+    if (!test.isFree) {
+      const subscription = await prisma.subscription.findFirst({
+        where: {
+          userId: session.user.id,
+          isActive: true,
+          expiresAt: { gt: new Date() },
+        },
+      });
+
+      if (!subscription) {
+        return NextResponse.json({ error: 'Subscription required' }, { status: 403 });
+      }
+    }
+
+    const questions = test.questions;
+    let correctCount = 0;
+    const processedAnswers: Record<string, {
+      userAnswer: string;
+      correctAnswer: string;
+      isCorrect: boolean;
+    }> = {};
+
+    questions.forEach((q, index) => {
+      const rawAnswer = submittedAnswers[q.id] ?? submittedAnswers[index.toString()];
+      const userAnswer = typeof rawAnswer === 'string' ? rawAnswer : '';
+      const isCorrect = answersMatch(userAnswer, q.correctAnswer);
       
       if (isCorrect) correctCount++;
       
