@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import Link from 'next/link';
 import { LayoutDashboard, User, CreditCard, LogOut, GraduationCap, ShieldCheck } from 'lucide-react';
 import { signOut } from "@/auth";
+import { isAdminEmail } from '@/lib/admin';
 
 export default async function DashboardLayout({
   children,
@@ -10,6 +11,7 @@ export default async function DashboardLayout({
   children: React.ReactNode;
 }) {
   const session = await auth();
+  const canManageTests = isAdminEmail(session?.user?.email);
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row">
@@ -17,9 +19,11 @@ export default async function DashboardLayout({
       <div className="md:hidden bg-white border-b border-slate-200 p-4 flex items-center justify-between">
         <span className="text-xl font-black text-slate-900">MYSATuz</span>
         <div className="flex items-center gap-3">
-          <Link href="/admin" className="p-2 text-slate-500 hover:text-blue-600">
-            <ShieldCheck className="w-5 h-5" />
-          </Link>
+          {canManageTests && (
+            <Link href="/admin" className="p-2 text-slate-500 hover:text-blue-600" aria-label="Admin panel">
+              <ShieldCheck className="w-5 h-5" />
+            </Link>
+          )}
           <div className="h-8 w-8 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold">
             {session?.user?.name?.[0] || 'U'}
           </div>
@@ -59,13 +63,15 @@ export default async function DashboardLayout({
             <CreditCard className="w-5 h-5" />
             Subscription
           </Link>
-          <Link 
-            href="/admin" 
-            className="flex items-center gap-3 px-4 py-3 text-slate-600 hover:bg-slate-50 hover:text-blue-600 rounded-xl transition-all font-bold"
-          >
-            <ShieldCheck className="w-5 h-5" />
-            Admin Panel
-          </Link>
+          {canManageTests && (
+            <Link 
+              href="/admin" 
+              className="flex items-center gap-3 px-4 py-3 text-slate-600 hover:bg-slate-50 hover:text-blue-600 rounded-xl transition-all font-bold"
+            >
+              <ShieldCheck className="w-5 h-5" />
+              Admin Panel
+            </Link>
+          )}
         </nav>
 
         <div className="p-4 border-t border-slate-100">

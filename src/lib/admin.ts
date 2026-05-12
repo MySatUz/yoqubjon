@@ -1,12 +1,14 @@
 import { auth } from "@/auth";
 import { notFound } from "next/navigation";
 
-function getAdminEmails() {
-  const configured = process.env.ADMIN_EMAILS;
-  const fallback = process.env.NODE_ENV === "production" ? "" : "admin@mysat.uz";
+const DEFAULT_ADMIN_EMAILS = ["abdunazarovmardon@gmail.com"];
 
-  return (configured || fallback)
-    .split(",")
+function getAdminEmails() {
+  const configured = process.env.ADMIN_EMAILS
+    ? process.env.ADMIN_EMAILS.split(",")
+    : [];
+
+  return [...DEFAULT_ADMIN_EMAILS, ...configured]
     .map((email) => email.trim().toLowerCase())
     .filter(Boolean);
 }
