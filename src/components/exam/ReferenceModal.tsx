@@ -1,117 +1,125 @@
 "use client";
 
 import React from 'react';
-import { X } from 'lucide-react';
+import { Calculator, Circle, Ruler, Sigma, Triangle, X } from 'lucide-react';
 
 interface ReferenceModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
+const referenceGroups = [
+  {
+    title: 'Geometry',
+    icon: Circle,
+    formulas: [
+      'Circle area: A = pi r^2',
+      'Circle circumference: C = 2 pi r',
+      'Rectangle area: A = l * w',
+      'Triangle area: A = (1/2) * b * h',
+    ],
+  },
+  {
+    title: 'Triangles',
+    icon: Triangle,
+    formulas: [
+      'a^2 + b^2 = c^2',
+      '30-60-90 sides: x, x sqrt(3), 2x',
+      '45-45-90 sides: x, x, x sqrt(2)',
+      'Sum of triangle angles = 180 deg',
+    ],
+  },
+  {
+    title: 'Volume',
+    icon: Ruler,
+    formulas: [
+      'Rectangular prism: V = l * w * h',
+      'Cylinder: V = pi r^2 h',
+      'Cone: V = (1/3) pi r^2 h',
+      'Sphere: V = (4/3) pi r^3',
+    ],
+  },
+  {
+    title: 'Algebra',
+    icon: Sigma,
+    formulas: [
+      'Slope: m = (y2 - y1) / (x2 - x1)',
+      'Quadratic formula: x = [-b +/- sqrt(b^2 - 4ac)] / 2a',
+      'Exponents: x^a * x^b = x^(a+b)',
+      'Roots: x^(1/2) = sqrt(x)',
+    ],
+  },
+];
+
 export default function ReferenceModal({ isOpen, onClose }: ReferenceModalProps) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
-        <div className="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
-          <h2 className="text-xl font-bold text-slate-900">SAT Math Reference Sheet</h2>
-          <button 
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/55 p-4 backdrop-blur-sm">
+      <div className="flex max-h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-[0_30px_80px_rgba(15,23,42,0.25)]">
+        <div className="flex items-start justify-between gap-4 border-b border-slate-200 bg-slate-50 px-6 py-5 sm:px-8">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.22em] text-blue-600">Math Reference</p>
+            <h2 className="mt-2 text-2xl font-black text-slate-900">SAT formulas at a glance</h2>
+            <p className="mt-2 max-w-2xl text-sm font-medium text-slate-500">
+              Use this sheet during the math module for the formulas students most often need quickly.
+            </p>
+          </div>
+          <button
             onClick={onClose}
-            className="p-2 hover:bg-slate-200 rounded-full transition-colors"
+            className="rounded-full p-2 text-slate-400 transition-colors hover:bg-slate-200 hover:text-slate-700"
+            aria-label="Close reference sheet"
           >
-            <X className="w-6 h-6 text-slate-500" />
+            <X className="h-5 w-5" />
           </button>
         </div>
-        
-        <div className="p-8 overflow-y-auto grid grid-cols-1 md:grid-cols-2 gap-8">
-          {/* Geometry Section */}
-          <section className="space-y-4">
-            <h3 className="text-lg font-bold text-slate-800 border-b pb-2">Geometry & Trigonometry</h3>
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div className="bg-slate-50 p-3 rounded-lg border border-slate-100">
-                <p className="font-semibold">Circle</p>
-                <p>Area: A = πr²</p>
-                <p>Circumference: C = 2πr</p>
-                <p>Degrees: 360°</p>
-                <p>Radians: 2π</p>
-              </div>
-              <div className="bg-slate-50 p-3 rounded-lg border border-slate-100">
-                <p className="font-semibold">Rectangle</p>
-                <p>Area: A = lw</p>
-              </div>
-              <div className="bg-slate-50 p-3 rounded-lg border border-slate-100">
-                <p className="font-semibold">Triangle</p>
-                <p>Area: A = ½bh</p>
-                <p>Sum of angles: 180°</p>
-              </div>
-              <div className="bg-slate-50 p-3 rounded-lg border border-slate-100">
-                <p className="font-semibold">Pythagorean Theorem</p>
-                <p>a² + b² = c²</p>
-              </div>
-            </div>
-          </section>
 
-          {/* Right Triangles Section */}
-          <section className="space-y-4">
-            <h3 className="text-lg font-bold text-slate-800 border-b pb-2">Special Right Triangles</h3>
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div className="bg-slate-50 p-3 rounded-lg border border-slate-100">
-                <p className="font-semibold">30°-60°-90°</p>
-                <p>Sides: x, x√3, 2x</p>
+        <div className="overflow-y-auto px-6 py-6 sm:px-8">
+          <div className="mb-6 rounded-3xl border border-blue-100 bg-blue-50/70 p-5">
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-600 text-white shadow-lg shadow-blue-200">
+                <Calculator className="h-5 w-5" />
               </div>
-              <div className="bg-slate-50 p-3 rounded-lg border border-slate-100">
-                <p className="font-semibold">45°-45°-90°</p>
-                <p>Sides: x, x, x√2</p>
+              <div>
+                <h3 className="text-sm font-black uppercase tracking-[0.18em] text-slate-900">Quick reminder</h3>
+                <p className="mt-1 text-sm font-medium text-slate-600">
+                  Keep units consistent, label what each variable means, and estimate before you lock an answer.
+                </p>
               </div>
             </div>
-          </section>
+          </div>
 
-          {/* Volume Section */}
-          <section className="space-y-4">
-            <h3 className="text-lg font-bold text-slate-800 border-b pb-2">Volume</h3>
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div className="bg-slate-50 p-3 rounded-lg border border-slate-100">
-                <p className="font-semibold">Rectangular Prism</p>
-                <p>V = lwh</p>
-              </div>
-              <div className="bg-slate-50 p-3 rounded-lg border border-slate-100">
-                <p className="font-semibold">Cylinder</p>
-                <p>V = πr²h</p>
-              </div>
-              <div className="bg-slate-50 p-3 rounded-lg border border-slate-100">
-                <p className="font-semibold">Sphere</p>
-                <p>V = 4/3 πr³</p>
-              </div>
-              <div className="bg-slate-50 p-3 rounded-lg border border-slate-100">
-                <p className="font-semibold">Cone</p>
-                <p>V = 1/3 πr²h</p>
-              </div>
-            </div>
-          </section>
+          <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+            {referenceGroups.map((group) => (
+              <section key={group.title} className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+                <div className="mb-4 flex items-center gap-3">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-900 text-white">
+                    <group.icon className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-black text-slate-900">{group.title}</h3>
+                    <p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-400">Most used formulas</p>
+                  </div>
+                </div>
 
-          {/* Equations Section */}
-          <section className="space-y-4">
-            <h3 className="text-lg font-bold text-slate-800 border-b pb-2">Algebra & Functions</h3>
-            <div className="grid grid-cols-1 gap-4 text-sm">
-              <div className="bg-slate-50 p-3 rounded-lg border border-slate-100">
-                <p className="font-semibold">Quadratic Formula</p>
-                <p>x = [-b ± √(b² - 4ac)] / 2a</p>
-              </div>
-              <div className="bg-slate-50 p-3 rounded-lg border border-slate-100">
-                <p className="font-semibold">Slope Formula</p>
-                <p>m = (y₂ - y₁) / (x₂ - x₁)</p>
-              </div>
-            </div>
-          </section>
+                <div className="space-y-3">
+                  {group.formulas.map((formula) => (
+                    <div key={formula} className="rounded-2xl bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-700">
+                      {formula}
+                    </div>
+                  ))}
+                </div>
+              </section>
+            ))}
+          </div>
         </div>
 
-        <div className="p-4 border-t border-slate-200 text-center">
-          <button 
+        <div className="border-t border-slate-200 bg-white px-6 py-4 text-right sm:px-8">
+          <button
             onClick={onClose}
-            className="px-6 py-2 bg-slate-900 text-white rounded-lg font-bold hover:bg-slate-800 transition-colors"
+            className="rounded-2xl bg-slate-900 px-6 py-3 text-sm font-black text-white transition-colors hover:bg-slate-800"
           >
-            Close Reference
+            Back to Questions
           </button>
         </div>
       </div>

@@ -3,7 +3,6 @@ import Link from "next/link";
 import {
   BookOpen,
   BarChart3,
-  Brain,
   Target,
   Sparkles,
   ArrowRight,
@@ -20,15 +19,15 @@ import Navbar from "@/components/layout/Navbar";
    ──────────────────────────────────────────────────── */
 const features = [
   {
-    icon: Brain,
-    title: "Adaptive Engine",
-    body: "Questions adapt in real-time to mirror the actual Digital SAT's difficulty algorithm, ensuring every session pushes your limits.",
+    icon: Target,
+    title: "Official-Style Practice",
+    body: "Work through SAT-style sets that match the pacing, question flow, and pressure of the real Digital SAT.",
     accent: "bg-indigo-50 text-indigo-600",
   },
   {
     icon: BarChart3,
-    title: "Deep Analytics",
-    body: "Track score progression, pinpoint weak domains, and receive actionable insights to optimise study time.",
+    title: "Progress Tracking",
+    body: "Track score progression, spot recurring mistakes, and see which modules need the most attention.",
     accent: "bg-amber-50 text-amber-600",
   },
   {
@@ -53,13 +52,13 @@ const steps = [
   },
   {
     num: "02",
-    title: "Take a diagnostic test",
-    body: "Our engine identifies your baseline level and maps out a personalised study plan.",
+    title: "Take your first practice set",
+    body: "Start with a focused module to see your current level and get a clear picture of your pacing.",
   },
   {
     num: "03",
     title: "Practice & improve",
-    body: "Work through adaptive modules and watch your scores climb with detailed feedback after every session.",
+    body: "Review each attempt, learn from mistakes, and build a stronger routine with every new session.",
   },
 ];
 
@@ -101,9 +100,9 @@ export default function Home() {
               </h1>
 
               <p className="mt-6 text-lg text-slate-500 leading-relaxed font-medium animate-fade-in-up opacity-0 delay-200">
-                MYSATuz combines adaptive practice, deep analytics, and an
-                exam-accurate question bank so you walk into test day with
-                total confidence.
+                MYSATuz combines official-style practice, clear progress
+                tracking, and an exam-accurate question bank so you walk into
+                test day with total confidence.
               </p>
 
               <div className="mt-8 flex flex-col sm:flex-row gap-4 animate-fade-in-up opacity-0 delay-300">

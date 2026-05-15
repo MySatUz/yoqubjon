@@ -42,7 +42,7 @@ export default async function SubscriptionPage() {
             </li>
             <li className="flex items-center gap-3 text-sm font-bold text-slate-400">
               <X className="w-5 h-5 text-slate-300" />
-              AI Error Explanation
+              Full solution review
             </li>
           </ul>
           
@@ -74,11 +74,11 @@ export default async function SubscriptionPage() {
             </li>
             <li className="flex items-center gap-3 text-sm font-bold text-slate-200">
               <Check className="w-5 h-5 text-blue-400" />
-              Detailed AI Error Breakdown
+              Full solution review
             </li>
             <li className="flex items-center gap-3 text-sm font-bold text-slate-200">
               <Check className="w-5 h-5 text-blue-400" />
-              Personalized Study Path
+              Progress dashboard
             </li>
             <li className="flex items-center gap-3 text-sm font-bold text-slate-200">
               <Check className="w-5 h-5 text-blue-400" />

@@ -67,8 +67,6 @@ export default function TopNav({ testId }: { testId: string }) {
       <header className="h-14 bg-white border-b border-slate-200 flex items-center justify-between px-4 sticky top-0 z-50 shrink-0">
         <div className="flex items-center gap-4">
           <h1 className="font-bold text-slate-900 tracking-tight">MYSATuz</h1>
-          <span className="text-sm font-medium text-slate-500 bg-slate-100 px-2 py-1 rounded hidden sm:inline-block">Section 2: Math</span>
-          <div className="w-px h-6 bg-slate-200 mx-1 hidden sm:block"></div>
           <span className="text-sm font-bold text-slate-900 uppercase tracking-widest">Question {currentQuestionIndex + 1}</span>
         </div>
         
@@ -89,7 +87,7 @@ export default function TopNav({ testId }: { testId: string }) {
               isCalculatorOpen ? 'bg-blue-100 text-blue-700' : 'text-slate-700 hover:bg-slate-100'
             }`}
           >
-            {isCalculatorOpen ? 'Close Calculator' : 'Desmos Calculator'}
+            {isCalculatorOpen ? 'Close Calculator' : 'Graphing Calculator'}
           </button>
           <div className="w-px h-6 bg-slate-200 mx-1 hidden sm:block"></div>
           <button 

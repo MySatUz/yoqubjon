@@ -64,7 +64,7 @@ export default function SplitScreen({ questions }: { questions: Question[] }) {
   return (
     <div className={`flex-1 flex overflow-hidden bg-white transition-all duration-500 ${isCalculatorOpen ? 'flex-row' : 'flex-col'}`}>
       {/* Question & Options Column */}
-      <div className={`flex-1 overflow-y-auto px-6 py-8 md:px-12 md:py-10 transition-all duration-500 ${isCalculatorOpen ? 'w-[40%] md:w-[45%] border-r border-slate-100 bg-slate-50/30' : 'w-full'}`}>
+      <div className={`flex-1 overflow-y-auto px-6 py-8 md:px-10 md:py-10 transition-all duration-500 ${isCalculatorOpen ? 'w-[42%] md:w-[46%] border-r border-slate-100 bg-slate-50/30' : 'w-full'}`}>
         <div className={`${isCalculatorOpen ? 'max-w-2xl' : 'max-w-4xl'} mx-auto w-full flex flex-col min-h-full`}>
           {/* Question Content */}
           <div className="mb-10 flex-grow">
@@ -75,13 +75,14 @@ export default function SplitScreen({ questions }: { questions: Question[] }) {
             </div>
 
             {question.imageUrl && (
-              <div className={`my-6 rounded-2xl overflow-hidden border border-slate-200 bg-white p-4 shadow-md mx-auto ${isCalculatorOpen ? 'max-w-full' : 'max-w-2xl'}`}>
+              <div className={`my-6 rounded-2xl overflow-hidden border border-slate-200 bg-white p-3 shadow-md mx-auto ${isCalculatorOpen ? 'max-w-md' : 'max-w-xl'}`}>
                 <Image 
                   src={question.imageUrl} 
                   alt="Question diagram" 
                   width={800}
                   height={480}
-                  className="max-w-full h-auto mx-auto"
+                  sizes={isCalculatorOpen ? '(min-width: 768px) 28rem, 70vw' : '(min-width: 768px) 36rem, 80vw'}
+                  className={`mx-auto h-auto w-full object-contain ${isCalculatorOpen ? 'max-h-[250px]' : 'max-h-[340px]'}`}
                 />
               </div>
             )}
@@ -100,19 +101,19 @@ export default function SplitScreen({ questions }: { questions: Question[] }) {
                       onClick={() => setAnswer(currentQuestionIndex.toString(), letter)}
                       className={`group flex items-center gap-4 p-5 rounded-2xl border-2 transition-all text-left ${
                         isSelected 
-                          ? 'border-blue-600 bg-blue-50 shadow-lg shadow-blue-100 ring-4 ring-blue-50 scale-[1.02]' 
-                          : 'border-slate-200 bg-white hover:border-blue-300 hover:bg-slate-50 shadow-sm'
+                          ? 'border-emerald-600 bg-emerald-50 shadow-lg shadow-emerald-100 ring-4 ring-emerald-50 scale-[1.02]' 
+                          : 'border-slate-200 bg-white hover:border-emerald-300 hover:bg-slate-50 shadow-sm'
                       }`}
                     >
                       <span className={`flex-shrink-0 w-10 h-10 rounded-xl border-2 flex items-center justify-center font-black transition-all ${
                         isSelected 
-                          ? 'bg-blue-600 border-blue-600 text-white rotate-3' 
-                          : 'border-slate-200 text-slate-400 group-hover:border-blue-300 group-hover:text-blue-500'
+                          ? 'bg-emerald-600 border-emerald-600 text-white rotate-3' 
+                          : 'border-slate-200 text-slate-400 group-hover:border-emerald-300 group-hover:text-emerald-600'
                       }`}>
                         {letter}
                       </span>
                       <span className={`font-bold transition-all ${
-                        isSelected ? 'text-blue-900' : 'text-slate-800'
+                        isSelected ? 'text-emerald-900' : 'text-slate-800'
                       } ${isCalculatorOpen ? 'text-base' : 'text-xl'}`}>
                         {renderMathText(option)}
                       </span>
@@ -148,9 +149,9 @@ export default function SplitScreen({ questions }: { questions: Question[] }) {
       {isCalculatorOpen && (
         <div className="w-[60%] md:w-[55%] flex flex-col bg-white animate-in slide-in-from-right duration-500 ease-out border-l border-slate-200 shadow-2xl">
           <iframe 
-            src="https://www.desmos.com/calculator" 
+            src="https://www.desmos.com/testing/collegeboard/graphing?lang=en"
             className="flex-1 w-full border-none"
-            title="Desmos Calculator"
+            title="College Board Desmos Calculator"
           />
         </div>
       )}

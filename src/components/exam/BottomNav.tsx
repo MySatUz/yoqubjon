@@ -4,7 +4,7 @@ import React from 'react';
 import { useExamStore } from '@/store/useExamStore';
 
 export default function BottomNav({ totalQuestions }: { totalQuestions: number }) {
-  const { currentQuestionIndex, setCurrentQuestionIndex, markedForReview, toggleMarkForReview } = useExamStore();
+  const { currentQuestionIndex, setCurrentQuestionIndex, markedForReview, toggleMarkForReview, answers } = useExamStore();
 
   return (
     <footer className="h-16 bg-white border-t border-slate-200 flex items-center justify-between px-4 sm:px-6 shrink-0 z-10 sticky bottom-0">
@@ -17,6 +17,7 @@ export default function BottomNav({ totalQuestions }: { totalQuestions: number }
         {Array.from({ length: totalQuestions }).map((_, i) => {
           const isCurrent = i === currentQuestionIndex;
           const isMarked = markedForReview[i.toString()];
+          const isAnswered = Boolean(answers[i.toString()]?.trim());
           return (
             <button
               key={i}
@@ -24,6 +25,8 @@ export default function BottomNav({ totalQuestions }: { totalQuestions: number }
               className={`flex-shrink-0 w-8 h-8 rounded-lg text-sm font-bold transition-all flex items-center justify-center border-2 ${
                 isCurrent 
                   ? 'border-blue-600 bg-blue-600 text-white shadow-md scale-110' 
+                  : isAnswered
+                    ? 'border-emerald-500 text-emerald-700 bg-emerald-50'
                   : isMarked
                     ? 'border-red-500 text-red-600 bg-red-50'
                     : 'border-slate-100 text-slate-500 hover:border-slate-300 hover:bg-slate-50'

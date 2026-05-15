@@ -40,9 +40,9 @@ export default function DesmosModal({ isOpen, onClose }: DesmosModalProps) {
         {/* Content */}
         <div className="flex-1 relative">
           <iframe 
-            src="https://www.desmos.com/calculator" 
+            src="https://www.desmos.com/testing/collegeboard/graphing?lang=en" 
             className="w-full h-full border-none"
-            title="Desmos Graphing Calculator"
+            title="College Board Desmos Graphing Calculator"
           />
         </div>
       </div>

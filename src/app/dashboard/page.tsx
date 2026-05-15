@@ -21,7 +21,7 @@ export default async function DashboardPage(props: {
       where: { userId: session.user.id },
       include: { test: true },
       orderBy: { createdAt: 'desc' },
-      take: 5
+      take: 20
     }),
     prisma.test.findMany({
       orderBy: { createdAt: 'desc' }
@@ -36,6 +36,14 @@ export default async function DashboardPage(props: {
   ]);
 
   const isPremium = !!subscription;
+  const seenTestIds = new Set<string>();
+  const recentResults = results
+    .filter((result) => {
+      if (seenTestIds.has(result.testId)) return false;
+      seenTestIds.add(result.testId);
+      return true;
+    })
+    .slice(0, 5);
 
   return (
     <div className="py-10 px-4 sm:px-6 lg:px-8">
@@ -127,12 +135,12 @@ export default async function DashboardPage(props: {
             </h2>
             
             <div className="space-y-4">
-              {results.length === 0 ? (
+              {recentResults.length === 0 ? (
                 <div className="bg-white rounded-2xl p-8 border border-dashed border-slate-300 text-center">
                   <p className="text-slate-400 text-sm font-medium">No tests completed yet. Start your first practice!</p>
                 </div>
               ) : (
-                results.map((res) => (
+                recentResults.map((res) => (
                   <Link 
                     key={res.id} 
                     href={`/dashboard/results/${res.id}`}
@@ -167,11 +175,14 @@ export default async function DashboardPage(props: {
               <div className="relative z-10">
                 <h3 className="font-black text-lg mb-2">Target Score: 800</h3>
                 <p className="text-slate-400 text-xs font-medium leading-relaxed mb-4">
-                  Keep practicing to reach your goal. Our AI analysis will help you identify weak areas.
+                  Keep working through timed practice sets and review your latest attempts to reach your goal.
                 </p>
-                <button className="text-xs font-black text-blue-400 hover:text-blue-300 transition-colors uppercase tracking-widest">
-                  View Analytics →
-                </button>
+                <Link
+                  href="/dashboard/profile"
+                  className="text-xs font-black text-blue-400 hover:text-blue-300 transition-colors uppercase tracking-widest"
+                >
+                  View Progress →
+                </Link>
               </div>
               <div className="absolute -bottom-4 -right-4 w-24 h-24 bg-blue-600/20 rounded-full blur-2xl"></div>
             </div>
