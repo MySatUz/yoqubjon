@@ -3,10 +3,10 @@ import { notFound, redirect } from 'next/navigation';
 import Link from 'next/link';
 import { CheckCircle2, XCircle, Clock, Award, ArrowLeft } from 'lucide-react';
 import 'katex/dist/katex.min.css';
-import { InlineMath } from 'react-katex';
 import { auth } from '@/auth';
 import { normalizeStoredAnswer } from '@/lib/resultAnswers';
 import Image from 'next/image';
+import { renderMathText } from '@/lib/renderMathText';
 
 export default async function ResultPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -52,17 +52,6 @@ export default async function ResultPage({ params }: { params: Promise<{ id: str
     const m = Math.floor(seconds / 60);
     const s = seconds % 60;
     return `${m}m ${s}s`;
-  };
-
-  const renderMathText = (text: string) => {
-    if (!text) return null;
-    const parts = text.toString().split(/(\$.*?\$)/);
-    return parts.map((part, index) => {
-      if (part.startsWith('$') && part.endsWith('$')) {
-        return <InlineMath key={index}>{part.slice(1, -1)}</InlineMath>;
-      }
-      return <span key={index}>{part}</span>;
-    });
   };
 
   return (

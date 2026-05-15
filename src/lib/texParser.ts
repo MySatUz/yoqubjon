@@ -6,6 +6,26 @@ export interface ParsedQuestion {
   image?: string;
 }
 
+function normalizeLatexText(value: string) {
+  return value
+    .replace(/\r\n/g, '\n')
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+function parseOptionsBlock(optionsRaw: string) {
+  const options: string[] = [];
+  const optionRegex = /^\s*([A-D]):\s*([\s\S]*?)(?=^\s*[A-D]:\s*|\s*$)/gm;
+  let optMatch: RegExpExecArray | null;
+
+  while ((optMatch = optionRegex.exec(optionsRaw)) !== null) {
+    options.push(normalizeLatexText(optMatch[2]));
+  }
+
+  return options;
+}
+
 /**
  * Helper to extract content inside a LaTeX command like \content{...}
  * handles nested braces correctly.
@@ -42,25 +62,19 @@ export function parseTexFile(texContent: string): ParsedQuestion[] {
     const block = blockMatch[1];
 
     // 1. Extract Content with nested brace support
-    const content = extractTagContent(block, 'content') || "Missing content";
+    const content = normalizeLatexText(
+      extractTagContent(block, 'content') || "Missing content"
+    );
 
     // 2. Extract Image
-    const image = extractTagContent(block, 'image');
+    const image = extractTagContent(block, 'image')?.trim();
 
     // 3. Extract Options
-    const options: string[] = [];
     const optionsRaw = extractTagContent(block, 'options');
-    if (optionsRaw) {
-      // Match "A: some text", "B: some text", etc.
-      const optionRegex = /([A-D]):\s*([\s\S]*?)(?=[A-D]:|$)/g;
-      let optMatch;
-      while ((optMatch = optionRegex.exec(optionsRaw)) !== null) {
-        options.push(optMatch[2].trim());
-      }
-    }
+    const options = optionsRaw ? parseOptionsBlock(optionsRaw) : [];
 
     // 4. Extract Answer
-    const correctAnswer = extractTagContent(block, 'answer') || "";
+    const correctAnswer = normalizeLatexText(extractTagContent(block, 'answer') || "");
 
     questions.push({
       order: order++,

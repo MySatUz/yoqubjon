@@ -3,8 +3,8 @@
 import React from 'react';
 import { useExamStore } from '@/store/useExamStore';
 import 'katex/dist/katex.min.css';
-import { InlineMath, BlockMath } from 'react-katex';
 import Image from 'next/image';
+import { renderMathText } from '@/lib/renderMathText';
 
 interface Question {
   id: string;
@@ -26,40 +26,6 @@ export default function SplitScreen({ questions }: { questions: Question[] }) {
 
   // Determine type: if options is null or empty array, it's GRID_IN
   const isMultipleChoice = Array.isArray(question.options) && question.options.length > 0;
-
-  // Helper to render text with LaTeX
-  const renderMathText = (text: string) => {
-    if (!text) return null;
-    
-    // Split by $, \( \), or \[ \]
-    // This regex looks for:
-    // 1. $...$
-    // 2. \(...\)
-    // 3. \[...\]
-    const parts = text.split(/(\$.*?\$|\\\(.*?\\\)|\\\[.*?\\\])/gs);
-    
-    return parts.map((part, index) => {
-      // Inline Math: $...$ or \(...\)
-      if (
-        (part.startsWith('$') && part.endsWith('$')) || 
-        (part.startsWith('\\(') && part.endsWith('\\)'))
-      ) {
-        const formula = part.startsWith('$') 
-          ? part.slice(1, -1) 
-          : part.slice(2, -2);
-        return <InlineMath key={index}>{formula}</InlineMath>;
-      }
-      
-      // Block Math: \[...\]
-      if (part.startsWith('\\[') && part.endsWith('\\]')) {
-        const formula = part.slice(2, -2);
-        return <BlockMath key={index}>{formula}</BlockMath>;
-      }
-      
-      // Regular text
-      return <span key={index}>{part}</span>;
-    });
-  };
 
   return (
     <div className={`flex-1 flex overflow-hidden bg-white transition-all duration-500 ${isCalculatorOpen ? 'flex-row' : 'flex-col'}`}>
@@ -122,22 +88,25 @@ export default function SplitScreen({ questions }: { questions: Question[] }) {
                 })}
               </div>
             ) : (
-              <div className="max-w-md mx-auto bg-blue-50 p-8 rounded-3xl border-2 border-blue-200 shadow-xl ring-8 ring-blue-50/50">
-                <div className="flex flex-col items-center gap-4">
-                  <h4 className="text-[10px] font-black text-blue-600 uppercase tracking-[0.2em] mb-2 bg-white px-4 py-1.5 rounded-full border border-blue-100 shadow-sm">
+              <div className="mx-auto max-w-sm rounded-[2rem] border border-blue-100 bg-gradient-to-b from-blue-50 to-white p-5 shadow-[0_18px_40px_rgba(59,130,246,0.12)]">
+                <div className="flex flex-col items-center gap-3">
+                  <h4 className="mb-1 rounded-full border border-blue-100 bg-white px-4 py-1.5 text-[10px] font-black uppercase tracking-[0.2em] text-blue-600 shadow-sm">
                     Student-Produced Response
                   </h4>
-                  <div className="relative w-full">
+                  <div className="relative mx-auto w-full max-w-[220px]">
                     <input 
                       type="text" 
                       value={currentAnswer || ''}
                       onChange={(e) => setAnswer(currentQuestionIndex.toString(), e.target.value)}
                       placeholder="Enter value"
-                      className="w-full p-5 text-4xl font-black text-slate-900 border-4 border-white bg-white rounded-2xl shadow-inner focus:border-blue-600 focus:ring-4 focus:ring-blue-200 focus:outline-none transition-all placeholder:text-slate-200 text-center tracking-tight"
+                      inputMode="decimal"
+                      className="w-full rounded-2xl border-2 border-blue-300 bg-white px-4 py-3 text-center text-3xl font-black tracking-tight text-slate-900 shadow-[0_10px_22px_rgba(37,99,235,0.12)] transition-all placeholder:text-slate-200 focus:border-blue-600 focus:outline-none focus:ring-4 focus:ring-blue-100"
                     />
-                    <div className="absolute inset-0 rounded-2xl pointer-events-none border border-blue-100/50"></div>
+                    <div className="pointer-events-none absolute inset-0 rounded-2xl border border-white/80"></div>
                   </div>
-                  <p className="text-[11px] text-blue-500 font-bold uppercase tracking-wide">Enter your answer above</p>
+                  <p className="text-center text-[11px] font-bold uppercase tracking-[0.18em] text-blue-500">
+                    Enter your answer above
+                  </p>
                 </div>
               </div>
             )}
