@@ -22,14 +22,13 @@ export default function Navbar() {
 
   return (
     <nav
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+      className={`fixed top-0 left-0 right-0 z-50 border-b border-slate-200 bg-white transition-[box-shadow,padding] duration-300 ${
         scrolled
-          ? "glass shadow-lg shadow-slate-900/[0.03] py-3"
-          : "bg-transparent py-5"
+          ? "py-3 shadow-lg shadow-slate-900/[0.03]"
+          : "py-5 shadow-sm shadow-slate-900/[0.03]"
       }`}
     >
       <div className="mx-auto max-w-7xl px-6 lg:px-8 flex items-center justify-between">
-        {/* Logo */}
         <Link
           href="/"
           className="flex items-center gap-2 group"
@@ -43,20 +42,18 @@ export default function Navbar() {
           </span>
         </Link>
 
-        {/* Desktop nav */}
         <div className="hidden md:flex items-center gap-8">
           {navLinks.map((link) => (
             <a
               key={link.href}
               href={link.href}
-              className="text-sm font-semibold text-slate-500 hover:text-slate-900 transition-colors relative after:absolute after:bottom-[-4px] after:left-0 after:w-0 after:h-[2px] after:bg-indigo-600 after:transition-all hover:after:w-full"
+              className="text-sm font-semibold text-slate-500 hover:text-slate-900 transition-colors relative after:absolute after:bottom-[-4px] after:left-0 after:w-0 after:h-[2px] after:bg-indigo-600 after:transition-[width] hover:after:w-full"
             >
               {link.label}
             </a>
           ))}
         </div>
 
-        {/* Auth buttons (desktop) */}
         <div className="hidden md:flex items-center gap-3">
           <Link
             href="/login"
@@ -72,23 +69,21 @@ export default function Navbar() {
           </Link>
         </div>
 
-        {/* Mobile hamburger */}
         <button
-          className="md:hidden p-2 rounded-xl hover:bg-slate-100 transition-colors"
+          className="md:hidden p-2 rounded-xl hover:bg-slate-100 text-slate-700 transition-colors"
           onClick={() => setMobileOpen(!mobileOpen)}
           aria-label="Toggle menu"
         >
           {mobileOpen ? (
-            <X className="w-5 h-5 text-slate-700" />
+            <X className="w-5 h-5" />
           ) : (
-            <Menu className="w-5 h-5 text-slate-700" />
+            <Menu className="w-5 h-5" />
           )}
         </button>
       </div>
 
-      {/* Mobile dropdown */}
       {mobileOpen && (
-        <div className="md:hidden glass mx-4 mt-2 rounded-2xl p-4 animate-scale-in shadow-xl">
+        <div className="md:hidden bg-white border border-slate-200 mx-4 mt-2 rounded-2xl p-4 animate-scale-in shadow-xl">
           <div className="flex flex-col gap-1">
             {navLinks.map((link) => (
               <a

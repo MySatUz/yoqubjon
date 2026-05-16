@@ -1,45 +1,42 @@
 import Image from "next/image";
 import Link from "next/link";
 import {
-  BookOpen,
-  BarChart3,
-  Target,
-  Sparkles,
   ArrowRight,
+  BarChart3,
+  BookOpen,
   CheckCircle2,
-  Zap,
   Clock,
-  Trophy,
   GraduationCap,
+  Sparkles,
+  Target,
+  Trophy,
+  Zap,
 } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
 
-/* ────────────────────────────────────────────────────
-   FEATURES DATA
-   ──────────────────────────────────────────────────── */
 const features = [
   {
     icon: Target,
-    title: "Official-Style Practice",
-    body: "Work through SAT-style sets that match the pacing, question flow, and pressure of the real Digital SAT.",
+    title: "Hard Math Practice",
+    body: "Train with difficult SAT Math questions in algebra, advanced math, geometry, functions, and grid-in formats.",
     accent: "bg-indigo-50 text-indigo-600",
   },
   {
     icon: BarChart3,
     title: "Progress Tracking",
-    body: "Track score progression, spot recurring mistakes, and see which modules need the most attention.",
+    body: "Track attempts, scores, and recurring mistakes so every practice session has a clear purpose.",
     accent: "bg-amber-50 text-amber-600",
   },
   {
     icon: BookOpen,
-    title: "Curated Question Bank",
-    body: "Hundreds of SAT-grade questions across Reading, Writing, and Math — authored and verified by certified tutors.",
+    title: "Math Question Bank",
+    body: "Focused SAT Math practice built for students who want to master the hardest question types.",
     accent: "bg-emerald-50 text-emerald-600",
   },
   {
     icon: Clock,
     title: "Timed Practice",
-    body: "Built-in section timers replicate exam-day pressure so you develop the pacing instincts that matter most.",
+    body: "Built-in timers help you develop the pacing and accuracy needed for high-score Math performance.",
     accent: "bg-rose-50 text-rose-600",
   },
 ];
@@ -48,61 +45,55 @@ const steps = [
   {
     num: "01",
     title: "Create your account",
-    body: "Sign up in seconds — no credit card required. Your progress starts saving immediately.",
+    body: "Sign up in seconds and start saving your SAT Math practice progress immediately.",
   },
   {
     num: "02",
-    title: "Take your first practice set",
-    body: "Start with a focused module to see your current level and get a clear picture of your pacing.",
+    title: "Practice hard Math sets",
+    body: "Work through focused modules made for challenging SAT Math questions, not basic warm-up drills.",
   },
   {
     num: "03",
-    title: "Practice & improve",
-    body: "Review each attempt, learn from mistakes, and build a stronger routine with every new session.",
+    title: "Review and improve",
+    body: "Study your mistakes, repeat difficult topics, and build the confidence needed for a top Math score.",
   },
 ];
 
 const stats = [
-  { value: "1 400+", label: "Practice Questions" },
-  { value: "92%", label: "Score Improvement" },
-  { value: "50+", label: "Practice Tests" },
-  { value: "4.9★", label: "Student Rating" },
+  { value: "Hard", label: "Math Focus" },
+  { value: "Timed", label: "Practice Sets" },
+  { value: "Grid-In", label: "Answer Training" },
+  { value: "Review", label: "Mistake Analysis" },
 ];
 
-/* ────────────────────────────────────────────────────
-   PAGE
-   ──────────────────────────────────────────────────── */
 export default function Home() {
   return (
     <>
       <Navbar />
 
-      {/* ══════════ HERO ══════════ */}
       <section className="relative gradient-hero noise-overlay overflow-hidden pt-32 pb-20 lg:pt-40 lg:pb-28">
-        {/* Decorative orbs */}
         <div className="pointer-events-none absolute top-24 left-[10%] w-72 h-72 rounded-full bg-indigo-400/10 blur-3xl animate-pulse-glow" />
         <div className="pointer-events-none absolute bottom-0 right-[5%] w-96 h-96 rounded-full bg-amber-300/10 blur-3xl animate-pulse-glow delay-500" />
 
         <div className="relative z-10 mx-auto max-w-7xl px-6 lg:px-8">
           <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
-            {/* Copy */}
             <div className="max-w-xl">
               <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-indigo-50 border border-indigo-100 mb-6 animate-fade-in-up opacity-0">
-                <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
+                <Sparkles className="w-3.5 h-3.5 text-indigo-600" aria-hidden="true" />
                 <span className="text-xs font-bold text-indigo-700 tracking-wide uppercase">
-                  #1 SAT Prep in Uzbekistan
+                  Advanced SAT Math Practice
                 </span>
               </div>
 
               <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-[1.08] text-slate-900 animate-fade-in-up opacity-0 delay-100">
-                Your path to a{" "}
-                <span className="gradient-text">perfect SAT score</span>
+                Master the{" "}
+                <span className="gradient-text">hardest SAT Math questions</span>
               </h1>
 
               <p className="mt-6 text-lg text-slate-500 leading-relaxed font-medium animate-fade-in-up opacity-0 delay-200">
-                MYSATuz combines official-style practice, clear progress
-                tracking, and an exam-accurate question bank so you walk into
-                test day with total confidence.
+                MYSATuz helps ambitious students practice the difficult Math
+                problems that can decide a maximum score. The better you know
+                hard questions, the stronger your chance of reaching the top.
               </p>
 
               <div className="mt-8 flex flex-col sm:flex-row gap-4 animate-fade-in-up opacity-0 delay-300">
@@ -110,62 +101,60 @@ export default function Home() {
                   href="/register"
                   className="btn-primary inline-flex items-center justify-center gap-2 gradient-cta text-white font-bold px-7 py-4 rounded-2xl text-base shadow-xl shadow-indigo-200/50"
                 >
-                  Start Practicing — Free
-                  <ArrowRight className="w-4 h-4" />
+                  Start Practicing Free
+                  <ArrowRight className="w-4 h-4" aria-hidden="true" />
                 </Link>
                 <Link
                   href="/login"
-                  className="inline-flex items-center justify-center gap-2 bg-white border border-slate-200 text-slate-700 font-bold px-7 py-4 rounded-2xl text-base hover:border-slate-300 hover:bg-slate-50 transition-all shadow-sm"
+                  className="inline-flex items-center justify-center gap-2 bg-white border border-slate-200 text-slate-700 font-bold px-7 py-4 rounded-2xl text-base hover:border-slate-300 hover:bg-slate-50 transition-colors shadow-sm"
                 >
                   Sign In
                 </Link>
               </div>
 
-              <div className="mt-8 flex items-center gap-6 animate-fade-in-up opacity-0 delay-400">
+              <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3 animate-fade-in-up opacity-0 delay-400">
                 <div className="flex items-center gap-2 text-sm text-slate-500 font-medium">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                  Free practice tests
+                  <CheckCircle2 className="w-4 h-4 text-emerald-500" aria-hidden="true" />
+                  Math-only practice
                 </div>
                 <div className="flex items-center gap-2 text-sm text-slate-500 font-medium">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                  No credit card
+                  <CheckCircle2 className="w-4 h-4 text-emerald-500" aria-hidden="true" />
+                  Hard questions first
                 </div>
               </div>
             </div>
 
-            {/* Illustration */}
             <div className="relative animate-fade-in-up opacity-0 delay-300 hidden lg:block">
-              <div className="relative z-10 rounded-3xl overflow-hidden shadow-2xl shadow-indigo-900/10 border border-white/60">
+              <div className="relative z-10 rounded-3xl overflow-hidden shadow-2xl shadow-indigo-900/10 border border-white/60 bg-white">
                 <Image
-                  src="/images/hero-illustration.png"
-                  alt="MYSATuz Digital SAT Preparation Platform"
-                  width={640}
-                  height={480}
+                  src="/images/hard-questions-hero.png"
+                  alt="Hard SAT Math questions increase the chance of a maximum score"
+                  width={1280}
+                  height={960}
                   priority
                   className="w-full h-auto"
                 />
               </div>
-              {/* Floating badges */}
+
               <div className="absolute -top-4 -right-4 animate-float glass rounded-2xl px-4 py-3 shadow-lg z-20">
                 <div className="flex items-center gap-2">
-                  <Trophy className="w-5 h-5 text-amber-500" />
-                  <span className="text-sm font-black text-slate-800">1500+</span>
+                  <Trophy className="w-5 h-5 text-amber-500" aria-hidden="true" />
+                  <span className="text-sm font-black text-slate-800">Hard Sets</span>
                 </div>
-                <span className="text-[10px] font-semibold text-slate-500">Avg. Score</span>
+                <span className="text-[10px] font-semibold text-slate-500">Top-score focus</span>
               </div>
               <div className="absolute -bottom-3 -left-3 animate-float delay-300 glass rounded-2xl px-4 py-3 shadow-lg z-20">
                 <div className="flex items-center gap-2">
-                  <GraduationCap className="w-5 h-5 text-indigo-600" />
-                  <span className="text-sm font-black text-slate-800">2 000+</span>
+                  <GraduationCap className="w-5 h-5 text-indigo-600" aria-hidden="true" />
+                  <span className="text-sm font-black text-slate-800">Math Only</span>
                 </div>
-                <span className="text-[10px] font-semibold text-slate-500">Students</span>
+                <span className="text-[10px] font-semibold text-slate-500">Focused practice</span>
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* ══════════ FEATURES ══════════ */}
       <section id="features" className="py-24 lg:py-32 bg-white">
         <div className="mx-auto max-w-7xl px-6 lg:px-8">
           <div className="text-center max-w-2xl mx-auto mb-16">
@@ -174,11 +163,11 @@ export default function Home() {
             </span>
             <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-slate-900">
               Everything you need to{" "}
-              <span className="gradient-text">ace the SAT</span>
+              <span className="gradient-text">improve SAT Math</span>
             </h2>
             <p className="mt-4 text-slate-500 text-lg leading-relaxed font-medium">
-              Purpose-built for Uzbekistan&apos;s ambitious students. Every feature
-              is designed to maximise score gains in minimum time.
+              Purpose-built for students who want focused practice on the most
+              difficult SAT Math questions.
             </p>
           </div>
 
@@ -189,11 +178,10 @@ export default function Home() {
                 className="card-hover bg-white rounded-3xl border border-slate-100 p-8 group relative overflow-hidden"
                 style={{ animationDelay: `${i * 0.1}s` }}
               >
-                {/* accent glow */}
                 <div className="absolute -top-12 -right-12 w-32 h-32 rounded-full bg-indigo-50 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-2xl" />
 
                 <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${f.accent} mb-5 relative z-10`}>
-                  <f.icon className="w-5 h-5" />
+                  <f.icon className="w-5 h-5" aria-hidden="true" />
                 </div>
                 <h3 className="text-lg font-black text-slate-900 mb-2 relative z-10">
                   {f.title}
@@ -207,7 +195,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ══════════ HOW IT WORKS ══════════ */}
       <section id="how-it-works" className="py-24 lg:py-32 bg-slate-50">
         <div className="mx-auto max-w-7xl px-6 lg:px-8">
           <div className="text-center max-w-2xl mx-auto mb-16">
@@ -215,14 +202,14 @@ export default function Home() {
               How it works
             </span>
             <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-slate-900">
-              Three steps to your <span className="gradient-text">dream score</span>
+              Three steps to stronger{" "}
+              <span className="gradient-text">SAT Math performance</span>
             </h2>
           </div>
 
           <div className="grid md:grid-cols-3 gap-8">
             {steps.map((s, i) => (
               <div key={s.num} className="relative group">
-                {/* connector line */}
                 {i < steps.length - 1 && (
                   <div className="hidden md:block absolute top-12 left-[calc(50%+40px)] w-[calc(100%-80px)] h-px bg-gradient-to-r from-slate-200 via-indigo-200 to-slate-200" />
                 )}
@@ -243,20 +230,18 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ══════════ STATS ══════════ */}
       <section id="results" className="py-20 lg:py-28 bg-slate-900 text-white relative overflow-hidden noise-overlay">
-        {/* decorative orbs */}
         <div className="pointer-events-none absolute top-0 right-0 w-96 h-96 rounded-full bg-indigo-500/10 blur-3xl" />
         <div className="pointer-events-none absolute bottom-0 left-0 w-72 h-72 rounded-full bg-amber-500/10 blur-3xl" />
 
         <div className="relative z-10 mx-auto max-w-7xl px-6 lg:px-8">
           <div className="text-center max-w-2xl mx-auto mb-14">
             <span className="inline-block text-xs font-black uppercase tracking-[0.2em] text-indigo-400 mb-3">
-              By the numbers
+              Practice focus
             </span>
             <h2 className="text-3xl sm:text-4xl font-black tracking-tight">
-              Proven results that{" "}
-              <span className="text-indigo-400">speak for themselves</span>
+              Built around{" "}
+              <span className="text-indigo-400">hard Math improvement</span>
             </h2>
           </div>
 
@@ -279,22 +264,21 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ══════════ CTA ══════════ */}
       <section className="py-24 lg:py-32 bg-white">
         <div className="mx-auto max-w-4xl px-6 lg:px-8 text-center">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-50 border border-amber-100 mb-6">
-            <Zap className="w-3.5 h-3.5 text-amber-600" />
+            <Zap className="w-3.5 h-3.5 text-amber-600" aria-hidden="true" />
             <span className="text-xs font-bold text-amber-700 tracking-wide uppercase">
-              Limited free spots
+              Hard Math practice
             </span>
           </div>
 
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight text-slate-900 leading-tight">
-            Ready to crush the SAT?
+            Ready to train the hardest SAT Math questions?
           </h2>
           <p className="mt-5 text-lg text-slate-500 leading-relaxed font-medium max-w-xl mx-auto">
-            Join thousands of Uzbek students already on their way to top
-            scores. Start with a free diagnostic test today.
+            Start with focused practice and build the confidence needed for a
+            stronger Math score.
           </p>
 
           <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center">
@@ -303,20 +287,19 @@ export default function Home() {
               className="btn-primary inline-flex items-center justify-center gap-2 gradient-cta text-white font-bold px-8 py-4 rounded-2xl text-base shadow-xl shadow-indigo-200/50"
             >
               Create Free Account
-              <ArrowRight className="w-4 h-4" />
+              <ArrowRight className="w-4 h-4" aria-hidden="true" />
             </Link>
             <Link
               href="/dashboard"
               className="inline-flex items-center justify-center gap-2 bg-slate-900 text-white font-bold px-8 py-4 rounded-2xl text-base hover:bg-slate-800 transition-colors shadow-xl shadow-slate-200/50"
             >
-              <Target className="w-4 h-4" />
+              <Target className="w-4 h-4" aria-hidden="true" />
               Go to Dashboard
             </Link>
           </div>
         </div>
       </section>
 
-      {/* ══════════ FOOTER ══════════ */}
       <footer className="bg-slate-50 border-t border-slate-100">
         <div className="mx-auto max-w-7xl px-6 lg:px-8 py-12">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
@@ -335,8 +318,45 @@ export default function Home() {
               <Link href="/register" className="hover:text-slate-900 transition-colors">Register</Link>
             </div>
             <p className="text-xs text-slate-400 font-medium">
-              © {new Date().getFullYear()} MYSATuz. All rights reserved.
+              Copyright {new Date().getFullYear()} MYSATuz. All rights reserved.
             </p>
+          </div>
+
+          <div className="mt-10 border-t border-slate-200 pt-8">
+            <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">
+              Project Developers
+            </h3>
+            <div className="mt-5 grid gap-4 md:grid-cols-2">
+              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                <h4 className="text-base font-black text-slate-900">Mr Mardon</h4>
+                <div className="mt-4 space-y-2 text-sm font-semibold text-slate-500">
+                  <a className="block hover:text-indigo-600" href="mailto:abdunazarovmardon@gmail.com">
+                    abdunazarovmardon@gmail.com
+                  </a>
+                  <a className="block hover:text-indigo-600" href="tel:+998915502025">
+                    +998 91 550 20 25
+                  </a>
+                  <a className="block hover:text-indigo-600" href="https://t.me/Abd_mardon" target="_blank" rel="noreferrer">
+                    @Abd_mardon
+                  </a>
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                <h4 className="text-base font-black text-slate-900">Mr Yoqubjon</h4>
+                <div className="mt-4 space-y-2 text-sm font-semibold text-slate-500">
+                  <a className="block hover:text-indigo-600" href="mailto:yoqubjon.isaqjonov@mail.ru">
+                    yoqubjon.isaqjonov@mail.ru
+                  </a>
+                  <a className="block hover:text-indigo-600" href="tel:+998999214595">
+                    +998 99 921 45 95
+                  </a>
+                  <a className="block hover:text-indigo-600" href="https://t.me/Yokubjon_Isaqjonov" target="_blank" rel="noreferrer">
+                    @Yokubjon_Isaqjonov
+                  </a>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </footer>
