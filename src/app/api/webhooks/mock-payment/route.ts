@@ -59,6 +59,8 @@ export async function POST(req: NextRequest) {
           planId: PREMIUM_PLAN_ID,
           isActive: true,
           expiresAt: endDate,
+          provider: 'MOCK',
+          providerStatus: 'COMPLETED',
         }
       })
     ]);

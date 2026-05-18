@@ -1,9 +1,9 @@
 import React from 'react';
 import { Check, X } from 'lucide-react';
 import { auth } from "@/auth";
-import Link from 'next/link';
 import { prisma } from '@/lib/prisma';
 import { PREMIUM_MONTHLY_AMOUNT_UZS } from '@/lib/plans';
+import { LemonSqueezyCheckoutButton } from './LemonSqueezyCheckoutButton';
 
 export default async function SubscriptionPage() {
   const session = await auth();
@@ -92,12 +92,7 @@ export default async function SubscriptionPage() {
               Subscription Active
             </button>
           ) : (
-            <Link 
-              href="/payment/mock"
-              className="w-full py-4 rounded-2xl text-sm font-black text-white bg-blue-600 hover:bg-blue-500 transition-all text-center transform active:scale-95 shadow-xl shadow-blue-900/50"
-            >
-              Upgrade Now
-            </Link>
+            <LemonSqueezyCheckoutButton />
           )}
         </div>
       </div>

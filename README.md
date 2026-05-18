@@ -1,36 +1,83 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# MYSAT App
 
-## Getting Started
+Next.js app for SAT-style practice, result tracking, subscriptions, and admin test uploads.
 
-First, run the development server:
+## Local Setup
 
 ```bash
+npm install
+npx prisma generate
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open http://localhost:3000 after the dev server starts.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Required Environment
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+DATABASE_URL="postgresql://..."
+AUTH_SECRET="..."
+NEXT_PUBLIC_APP_URL="http://localhost:3000"
 
-## Learn More
+LEMONSQUEEZY_API_KEY="..."
+LEMONSQUEEZY_STORE_ID="..."
+LEMONSQUEEZY_PREMIUM_VARIANT_ID="..."
+LEMONSQUEEZY_WEBHOOK_SECRET="..."
+LEMONSQUEEZY_TEST_MODE="true"
+```
 
-To learn more about Next.js, take a look at the following resources:
+`LEMONSQUEEZY_TEST_MODE` is optional. Set it to `true` only when you want API-created checkouts to be test-mode checkouts.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Lemon Squeezy
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+The Premium button creates a hosted Lemon Squeezy checkout from:
 
-## Deploy on Vercel
+```text
+POST /api/payments/lemonsqueezy/checkout
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Configure the Lemon Squeezy webhook callback URL as:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```text
+https://your-domain.com/api/webhooks/lemonsqueezy
+```
+
+Subscribe the webhook to:
+
+```text
+subscription_created
+subscription_updated
+subscription_cancelled
+subscription_resumed
+subscription_expired
+subscription_paused
+subscription_unpaused
+subscription_payment_success
+subscription_payment_failed
+subscription_payment_recovered
+subscription_payment_refunded
+```
+
+The webhook validates `X-Signature` with `LEMONSQUEEZY_WEBHOOK_SECRET`, syncs the local `Subscription`, and records subscription invoice payments in `Payment`.
+
+## Database
+
+Apply migrations before running in production:
+
+```bash
+npx prisma migrate deploy
+```
+
+For local development:
+
+```bash
+npx prisma migrate dev
+```
+
+## Checks
+
+```bash
+npm run lint
+npx tsc --noEmit
+npm run build
+```
