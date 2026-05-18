@@ -3,6 +3,10 @@ import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin";
 
 export async function GET() {
+  return NextResponse.json({ error: "Method not allowed" }, { status: 405 });
+}
+
+export async function POST() {
   if (process.env.ENABLE_SEED_API !== "true") {
     return NextResponse.json({ error: "Seed endpoint disabled" }, { status: 404 });
   }

@@ -6,36 +6,62 @@ import { getSupabaseAdmin } from '@/lib/supabase';
 import { revalidatePath } from 'next/cache';
 import { requireAdmin } from '@/lib/admin';
 
+const MAX_TEX_FILE_SIZE = 2 * 1024 * 1024;
+const MAX_IMAGE_FILE_SIZE = 5 * 1024 * 1024;
+const ALLOWED_IMAGE_TYPES = new Set(['image/png', 'image/jpeg', 'image/jpg', 'image/webp']);
+
+function sanitizeFileName(fileName: string) {
+  const normalized = fileName.trim().replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 120);
+  return normalized || `${crypto.randomUUID()}.bin`;
+}
+
 export async function uploadTest(formData: FormData) {
   try {
     await requireAdmin();
 
-    const title = formData.get('title') as string;
+    const title = typeof formData.get('title') === 'string'
+      ? (formData.get('title') as string).trim()
+      : '';
     const isFree = formData.get('isFree') === 'true';
     const texFile = formData.get('texFile') as File;
     const imageFiles = formData.getAll('images') as File[];
 
-    if (!texFile || !title) {
+    if (!texFile || !(texFile instanceof File) || texFile.size === 0 || !title) {
       throw new Error('Title and .tex file are required');
     }
 
-    // 1. Create the Test entry
-    const test = await prisma.test.create({
-      data: {
-        title,
-        description: `Imported from ${texFile.name}`,
-        isFree,
-      }
-    });
+    if (!texFile.name.toLowerCase().endsWith('.tex') || texFile.size > MAX_TEX_FILE_SIZE) {
+      throw new Error('Upload a valid .tex file up to 2MB');
+    }
 
-    // 2. Handle Images (Upload to Supabase Storage)
+    const texContent = await texFile.text();
+    const parsedQuestions = parseTexFile(texContent);
+
+    if (parsedQuestions.length === 0) {
+      throw new Error('No questions found in the .tex file');
+    }
+
+    const invalidQuestion = parsedQuestions.find(
+      (q) => !q.content || q.content === 'Missing content' || !q.correctAnswer
+    );
+
+    if (invalidQuestion) {
+      throw new Error(`Question ${invalidQuestion.order} is missing content or answer`);
+    }
+
+    const testId = crypto.randomUUID();
+
     const supabase = getSupabaseAdmin();
     const imageMap: Record<string, string> = {};
 
     for (const image of imageFiles) {
       if (!(image instanceof File) || image.size === 0) continue;
 
-      const filePath = `${test.id}/${image.name}`;
+      if (image.size > MAX_IMAGE_FILE_SIZE || !ALLOWED_IMAGE_TYPES.has(image.type)) {
+        throw new Error(`Invalid image file: ${image.name}`);
+      }
+
+      const filePath = `${testId}/${sanitizeFileName(image.name)}`;
 
       const { error } = await supabase.storage
         .from('questions')
@@ -45,11 +71,9 @@ export async function uploadTest(formData: FormData) {
         });
 
       if (error) {
-        console.error(`Error uploading image ${image.name}:`, error);
-        continue;
+        throw new Error(`Error uploading image ${image.name}: ${error.message}`);
       }
 
-      // Get public URL
       const { data: { publicUrl } } = supabase.storage
         .from('questions')
         .getPublicUrl(filePath);
@@ -57,25 +81,37 @@ export async function uploadTest(formData: FormData) {
       imageMap[image.name] = publicUrl;
     }
 
-    // 3. Parse and Save Questions
-    const texContent = await texFile.text();
-    const parsedQuestions = parseTexFile(texContent);
-
-    for (const q of parsedQuestions) {
-      await prisma.question.create({
-        data: {
-          testId: test.id,
-          content: q.content,
-          options: q.options,
-          correctAnswer: q.correctAnswer,
-          order: q.order,
-          imageUrl: q.image ? imageMap[q.image] || null : null 
-        }
-      });
+    const missingImageQuestion = parsedQuestions.find((q) => q.image && !imageMap[q.image]);
+    if (missingImageQuestion?.image) {
+      throw new Error(`Missing image for question ${missingImageQuestion.order}: ${missingImageQuestion.image}`);
     }
 
+    await prisma.$transaction(async (tx) => {
+      await tx.test.create({
+        data: {
+          id: testId,
+          title,
+          description: `Imported from ${texFile.name}`,
+          isFree,
+        }
+      });
+
+      for (const q of parsedQuestions) {
+        await tx.question.create({
+          data: {
+            testId,
+            content: q.content,
+            options: q.options,
+            correctAnswer: q.correctAnswer,
+            order: q.order,
+            imageUrl: q.image ? imageMap[q.image] || null : null
+          }
+        });
+      }
+    });
+
     revalidatePath('/dashboard');
-    return { success: true, testId: test.id };
+    return { success: true, testId };
 
   } catch (error: unknown) {
     console.error('Upload error:', error);

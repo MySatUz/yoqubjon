@@ -3,8 +3,10 @@
 import React from 'react';
 import { useExamStore } from '@/store/useExamStore';
 
-export default function BottomNav({ totalQuestions }: { totalQuestions: number }) {
+export default function BottomNav({ questionIds }: { questionIds: string[] }) {
   const { currentQuestionIndex, setCurrentQuestionIndex, markedForReview, toggleMarkForReview, answers } = useExamStore();
+  const totalQuestions = questionIds.length;
+  const currentQuestionId = questionIds[currentQuestionIndex] ?? questionIds[0];
 
   return (
     <footer className="h-16 bg-white border-t border-slate-200 flex items-center justify-between px-4 sm:px-6 shrink-0 z-10 sticky bottom-0">
@@ -14,13 +16,13 @@ export default function BottomNav({ totalQuestions }: { totalQuestions: number }
       
       {/* Question Navigation Map */}
       <div className="flex-1 flex items-center justify-center gap-1.5 px-4 overflow-x-auto no-scrollbar">
-        {Array.from({ length: totalQuestions }).map((_, i) => {
+        {questionIds.map((questionId, i) => {
           const isCurrent = i === currentQuestionIndex;
-          const isMarked = markedForReview[i.toString()];
-          const isAnswered = Boolean(answers[i.toString()]?.trim());
+          const isMarked = markedForReview[questionId];
+          const isAnswered = Boolean(answers[questionId]?.trim());
           return (
             <button
-              key={i}
+              key={questionId}
               onClick={() => setCurrentQuestionIndex(i)}
               className={`flex-shrink-0 w-8 h-8 rounded-lg text-sm font-bold transition-all flex items-center justify-center border-2 ${
                 isCurrent 
@@ -42,8 +44,8 @@ export default function BottomNav({ totalQuestions }: { totalQuestions: number }
         <label className="flex items-center gap-2 cursor-pointer group px-3 py-1.5 rounded-lg hover:bg-slate-50 transition-colors">
           <input 
             type="checkbox" 
-            checked={!!markedForReview[currentQuestionIndex.toString()]}
-            onChange={() => toggleMarkForReview(currentQuestionIndex.toString())}
+            checked={!!currentQuestionId && !!markedForReview[currentQuestionId]}
+            onChange={() => currentQuestionId && toggleMarkForReview(currentQuestionId)}
             className="w-4 h-4 rounded border-slate-300 text-red-600 focus:ring-red-600 cursor-pointer" 
           />
           <span className="text-sm font-medium text-slate-700 group-hover:text-slate-900 transition-colors hidden sm:inline-block">Mark for Review</span>

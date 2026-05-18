@@ -3,6 +3,7 @@ import { Check, X } from 'lucide-react';
 import { auth } from "@/auth";
 import Link from 'next/link';
 import { prisma } from '@/lib/prisma';
+import { PREMIUM_MONTHLY_AMOUNT_UZS } from '@/lib/plans';
 
 export default async function SubscriptionPage() {
   const session = await auth();
@@ -45,7 +46,7 @@ export default async function SubscriptionPage() {
               Full solution review
             </li>
           </ul>
-          
+
           <button disabled className="w-full py-4 rounded-2xl text-sm font-black text-slate-400 bg-slate-50 border border-slate-100 cursor-not-allowed">
             {isPremium ? 'Downgrade Unavailable' : 'Current Plan'}
           </button>
@@ -65,7 +66,7 @@ export default async function SubscriptionPage() {
           )}
           <h3 className="text-xl font-bold text-white mb-2">Premium Pro</h3>
           <p className="text-slate-400 text-sm mb-6">Advanced features for high scores.</p>
-          <div className="text-4xl font-black text-white mb-8">99,000 UZS <span className="text-sm text-slate-400 font-bold">/ month</span></div>
+          <div className="text-4xl font-black text-white mb-8">{PREMIUM_MONTHLY_AMOUNT_UZS.toLocaleString()} UZS <span className="text-sm text-slate-400 font-bold">/ month</span></div>
           
           <ul className="space-y-4 mb-12 flex-1">
             <li className="flex items-center gap-3 text-sm font-bold text-slate-200">
@@ -85,14 +86,14 @@ export default async function SubscriptionPage() {
               Priority Support
             </li>
           </ul>
-          
+
           {isPremium ? (
             <button disabled className="w-full py-4 rounded-2xl text-sm font-black text-green-500 bg-green-500/10 border border-green-500/20">
               Subscription Active
             </button>
           ) : (
             <Link 
-              href="/payment/mock?amount=99000&plan=Premium%20Pro"
+              href="/payment/mock"
               className="w-full py-4 rounded-2xl text-sm font-black text-white bg-blue-600 hover:bg-blue-500 transition-all text-center transform active:scale-95 shadow-xl shadow-blue-900/50"
             >
               Upgrade Now

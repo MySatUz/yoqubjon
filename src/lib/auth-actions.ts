@@ -4,14 +4,30 @@ import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { signIn } from "@/auth";
 import { AuthError } from "next-auth";
+import { Prisma } from "@prisma/client";
+
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function getFormString(formData: FormData, key: string) {
+  const value = formData.get(key);
+  return typeof value === "string" ? value.trim() : "";
+}
 
 export async function register(formData: FormData) {
-  const email = formData.get("email") as string;
-  const password = formData.get("password") as string;
-  const name = formData.get("name") as string;
+  const email = getFormString(formData, "email").toLowerCase();
+  const password = getFormString(formData, "password");
+  const name = getFormString(formData, "name");
 
   if (!email || !password) {
     return { error: "Email and password are required" };
+  }
+
+  if (!EMAIL_PATTERN.test(email)) {
+    return { error: "Enter a valid email address" };
+  }
+
+  if (password.length < 8) {
+    return { error: "Password must be at least 8 characters" };
   }
 
   const existingUser = await prisma.user.findUnique({
@@ -24,20 +40,35 @@ export async function register(formData: FormData) {
 
   const passwordHash = await bcrypt.hash(password, 10);
 
-  await prisma.user.create({
-    data: {
-      email,
-      passwordHash,
-      name,
-    },
-  });
+  try {
+    await prisma.user.create({
+      data: {
+        email,
+        passwordHash,
+        name,
+      },
+    });
+  } catch (error) {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2002"
+    ) {
+      return { error: "User already exists" };
+    }
+
+    throw error;
+  }
 
   return await login(formData);
 }
 
 export async function login(formData: FormData) {
-  const email = formData.get("email") as string;
-  const password = formData.get("password") as string;
+  const email = getFormString(formData, "email").toLowerCase();
+  const password = getFormString(formData, "password");
+
+  if (!email || !password) {
+    return { error: "Email and password are required" };
+  }
 
   try {
     await signIn("credentials", {

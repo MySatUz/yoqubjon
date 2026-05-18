@@ -1,0 +1,2 @@
+export const PREMIUM_PLAN_ID = 'PREMIUM';
+export const PREMIUM_MONTHLY_AMOUNT_UZS = 99000;

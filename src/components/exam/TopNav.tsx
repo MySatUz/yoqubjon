@@ -1,14 +1,22 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useExamStore } from '@/store/useExamStore';
 import ReferenceModal from '@/components/exam/ReferenceModal';
 
-export default function TopNav({ testId }: { testId: string }) {
+interface TopNavProps {
+  testId: string;
+  questionIds: string[];
+  initialTimeSeconds: number;
+}
+
+export default function TopNav({ testId, questionIds, initialTimeSeconds }: TopNavProps) {
   const router = useRouter();
   const { 
     timeLeftSeconds, 
+    initializeExam,
+    resetExam,
     decrementTime, 
     isCalculatorOpen, 
     setCalculatorOpen,
@@ -18,6 +26,11 @@ export default function TopNav({ testId }: { testId: string }) {
     currentQuestionIndex,
   } = useExamStore();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const autoSubmittedRef = useRef(false);
+
+  useEffect(() => {
+    initializeExam(testId, initialTimeSeconds, questionIds);
+  }, [initializeExam, initialTimeSeconds, questionIds, testId]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -26,32 +39,63 @@ export default function TopNav({ testId }: { testId: string }) {
     return () => clearInterval(interval);
   }, [decrementTime]);
 
-  const handleEndSection = async () => {
-    if (confirm("Are you sure you want to end this section? Your answers will be saved.")) {
-      setIsSubmitting(true);
-      try {
-        const response = await fetch('/api/exam/submit', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            testId,
-            answers,
-            timeSpent: (45 * 60) - timeLeftSeconds
-          })
-        });
+  const submitSection = useCallback(async (requireConfirmation: boolean) => {
+    if (isSubmitting) return;
 
-        const data = await response.json();
-        if (data.success) {
-          router.push(`/dashboard/results/${data.resultId}`);
-        } else {
-          alert("Failed to submit results. Please try again.");
-        }
-      } catch (error) {
-        console.error("Submit error:", error);
-        alert("An error occurred. Check your connection.");
-      } finally {
-        setIsSubmitting(false);
+    if (
+      requireConfirmation &&
+      !confirm("Are you sure you want to end this section? Your answers will be saved.")
+    ) {
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const response = await fetch('/api/exam/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          testId,
+          answers,
+          timeSpent: initialTimeSeconds - timeLeftSeconds
+        })
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        resetExam(testId, initialTimeSeconds);
+        router.push(`/dashboard/results/${data.resultId}`);
+      } else {
+        alert(data.error || "Failed to submit results. Please try again.");
       }
+    } catch (error) {
+      console.error("Submit error:", error);
+      alert("An error occurred. Check your connection.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [
+    answers,
+    initialTimeSeconds,
+    isSubmitting,
+    resetExam,
+    router,
+    testId,
+    timeLeftSeconds,
+  ]);
+
+  useEffect(() => {
+    if (timeLeftSeconds > 0 || autoSubmittedRef.current) return;
+
+    autoSubmittedRef.current = true;
+    void submitSection(false);
+  }, [submitSection, timeLeftSeconds]);
+
+  const handleEndSection = async () => {
+    if (timeLeftSeconds === 0) {
+      void submitSection(false);
+    } else {
+      void submitSection(true);
     }
   };
 

@@ -21,8 +21,9 @@ export default function SplitScreen({ questions }: { questions: Question[] }) {
 
   if (!questions || questions.length === 0) return null;
 
-  const question = questions[currentQuestionIndex % questions.length];
-  const currentAnswer = answers[currentQuestionIndex.toString()];
+  const safeQuestionIndex = Math.min(currentQuestionIndex, questions.length - 1);
+  const question = questions[safeQuestionIndex];
+  const currentAnswer = answers[question.id];
 
   // Determine type: if options is null or empty array, it's GRID_IN
   const isMultipleChoice = Array.isArray(question.options) && question.options.length > 0;
@@ -64,7 +65,7 @@ export default function SplitScreen({ questions }: { questions: Question[] }) {
                   return (
                     <button
                       key={idx}
-                      onClick={() => setAnswer(currentQuestionIndex.toString(), letter)}
+                      onClick={() => setAnswer(question.id, letter)}
                       className={`group flex items-center gap-4 p-5 rounded-2xl border-2 transition-all text-left ${
                         isSelected 
                           ? 'border-emerald-600 bg-emerald-50 shadow-lg shadow-emerald-100 ring-4 ring-emerald-50 scale-[1.02]' 
@@ -97,7 +98,7 @@ export default function SplitScreen({ questions }: { questions: Question[] }) {
                     <input 
                       type="text" 
                       value={currentAnswer || ''}
-                      onChange={(e) => setAnswer(currentQuestionIndex.toString(), e.target.value)}
+                      onChange={(e) => setAnswer(question.id, e.target.value)}
                       placeholder="Enter value"
                       inputMode="decimal"
                       className="w-full rounded-2xl border-2 border-blue-300 bg-white px-4 py-3 text-center text-3xl font-black tracking-tight text-slate-900 shadow-[0_10px_22px_rgba(37,99,235,0.12)] transition-all placeholder:text-slate-200 focus:border-blue-600 focus:outline-none focus:ring-4 focus:ring-blue-100"

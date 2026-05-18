@@ -10,11 +10,14 @@ async function main() {
   const adminEmail = 'admin@mysat.uz';
   await prisma.user.upsert({
     where: { email: adminEmail },
-    update: {},
+    update: {
+      role: 'ADMIN',
+    },
     create: {
       email: adminEmail,
       name: 'Test Admin',
       passwordHash: await bcrypt.hash('password123', 10),
+      role: 'ADMIN',
     },
   });
   console.log('Admin user seeded.');

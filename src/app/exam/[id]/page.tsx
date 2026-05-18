@@ -4,6 +4,7 @@ import SplitScreen from '@/components/exam/SplitScreen';
 import BottomNav from '@/components/exam/BottomNav';
 import { notFound, redirect } from 'next/navigation';
 import { auth } from '@/auth';
+import { EXAM_DURATION_SECONDS } from '@/lib/examConfig';
 
 export default async function DynamicExamPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -39,12 +40,17 @@ export default async function DynamicExamPage({ params }: { params: Promise<{ id
     where: { testId: id },
     orderBy: { order: 'asc' },
   });
+  const questionIds = questions.map((question) => question.id);
 
   return (
     <main className="flex flex-col h-screen bg-slate-50 overflow-hidden">
-      <TopNav testId={id} />
+      <TopNav
+        testId={id}
+        questionIds={questionIds}
+        initialTimeSeconds={EXAM_DURATION_SECONDS}
+      />
       <SplitScreen questions={questions} />
-      <BottomNav totalQuestions={questions.length} />
+      <BottomNav questionIds={questionIds} />
     </main>
   );
 }

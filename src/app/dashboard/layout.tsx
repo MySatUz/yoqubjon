@@ -3,7 +3,7 @@ import { auth } from "@/auth";
 import Link from 'next/link';
 import { LayoutDashboard, User, CreditCard, LogOut, GraduationCap, ShieldCheck } from 'lucide-react';
 import { signOut } from "@/auth";
-import { isAdminEmail } from '@/lib/admin';
+import { isAdminUser } from '@/lib/admin';
 
 export default async function DashboardLayout({
   children,
@@ -11,7 +11,7 @@ export default async function DashboardLayout({
   children: React.ReactNode;
 }) {
   const session = await auth();
-  const canManageTests = isAdminEmail(session?.user?.email);
+  const canManageTests = await isAdminUser(session?.user?.id);
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row">

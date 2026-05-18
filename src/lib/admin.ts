@@ -1,27 +1,22 @@
 import { auth } from "@/auth";
+import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 
-const DEFAULT_ADMIN_EMAILS = ["abdunazarovmardon@gmail.com"];
+export async function isAdminUser(userId?: string | null) {
+  if (!userId) return false;
 
-function getAdminEmails() {
-  const configured = process.env.ADMIN_EMAILS
-    ? process.env.ADMIN_EMAILS.split(",")
-    : [];
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { role: true },
+  });
 
-  return [...DEFAULT_ADMIN_EMAILS, ...configured]
-    .map((email) => email.trim().toLowerCase())
-    .filter(Boolean);
-}
-
-export function isAdminEmail(email?: string | null) {
-  if (!email) return false;
-  return getAdminEmails().includes(email.toLowerCase());
+  return user?.role === "ADMIN";
 }
 
 export async function requireAdmin() {
   const session = await auth();
 
-  if (!isAdminEmail(session?.user?.email)) {
+  if (!await isAdminUser(session?.user?.id)) {
     throw new Error("Forbidden");
   }
 
