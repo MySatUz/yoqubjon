@@ -24,7 +24,6 @@ model User {
   results       Result[]
   subscriptions Subscription[]
   payments      Payment[]
-  paymentOrders PaymentOrder[]
   manualPaymentRequests ManualPaymentRequest[]
 }
 
@@ -95,7 +94,7 @@ model Payment {
   userId        String
   amount        Int      // in tiyin/cents
   currency      String   @default("UZS")
-  provider      String   // e.g. "LEMON_SQUEEZY" or "MOCK"
+  provider      String   // e.g. "MANUAL_TRANSFER" or "MOCK"
   transactionId String?  @unique
   status        String   // "PENDING", "SUCCESS", "FAILED"
   createdAt     DateTime @default(now())
@@ -105,34 +104,6 @@ model Payment {
 
   @@index([userId])
   @@index([transactionId])
-}
-
-model PaymentOrder {
-  id                    String    @id @default(uuid())
-  prepareId             BigInt    @unique @default(autoincrement())
-  userId                String
-  provider              String    @default("CLICK")
-  status                String    @default("PENDING")
-  amount                Int
-  currency              String    @default("UZS")
-  months                Int       @default(1)
-  providerTransactionId String?
-  providerPaymentId     String?
-  providerPrepareId     String?
-  providerConfirmId     String?
-  providerError         Int?
-  providerErrorNote     String?
-  providerPayload       Json      @default("{}")
-  paidAt                DateTime?
-  expiresAt             DateTime
-  createdAt             DateTime  @default(now())
-  updatedAt             DateTime  @updatedAt
-
-  user                  User      @relation(fields: [userId], references: [id])
-
-  @@unique([provider, providerTransactionId])
-  @@index([userId, status, createdAt])
-  @@index([prepareId])
 }
 
 model ManualPaymentRequest {

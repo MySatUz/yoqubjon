@@ -8,7 +8,6 @@ import {
   MANUAL_TRANSFER_DETAILS,
 } from '@/lib/manual-payments';
 import { ManualPaymentForm } from './ManualPaymentForm';
-import { ClickPaymentButton } from './ClickPaymentButton';
 
 export default async function SubscriptionPage() {
   const session = await auth();
@@ -128,16 +127,13 @@ export default async function SubscriptionPage() {
               Subscription Active
             </button>
           ) : (
-            <div className="space-y-3">
-              <ClickPaymentButton />
-              <a
-                href="#manual-payment"
-                className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-700 bg-white/5 py-4 text-sm font-black text-white transition-all hover:bg-white/10 active:scale-95"
-              >
-                <ShieldCheck className="h-5 w-5" />
-                Pay by transfer
-              </a>
-            </div>
+            <a
+              href="#manual-payment"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-blue-600 py-4 text-sm font-black text-white shadow-xl shadow-blue-900/50 transition-all hover:bg-blue-500 active:scale-95"
+            >
+              <ShieldCheck className="h-5 w-5" />
+              Pay by transfer
+            </a>
           )}
         </div>
       </div>
