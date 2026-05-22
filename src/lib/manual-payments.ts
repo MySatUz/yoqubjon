@@ -127,6 +127,7 @@ export async function notifyManualPaymentTelegram(input: {
   }
 
   const adminBaseUrl =
+    process.env.TELEGRAM_ADMIN_URL_SAT ||
     process.env.TELEGRAM_ADMIN_URL ||
     process.env.NEXTAUTH_URL ||
     process.env.NEXT_PUBLIC_APP_URL ||

@@ -23,10 +23,10 @@ SUPABASE_SERVICE_ROLE_KEY="..."
 
 TELEGRAM_BOT_TOKEN="..."
 TELEGRAM_PAYMENT_CHAT_ID="..."
-TELEGRAM_ADMIN_URL="https://your-domain.com"
+TELEGRAM_ADMIN_URL_SAT="https://mysat-omega.vercel.app"
 ```
 
-`TELEGRAM_*` variables are optional for local development. Without them, payment requests are still saved, but Telegram notifications are skipped.
+`TELEGRAM_*` variables are optional for local development. Without them, payment requests are still saved, but Telegram notifications are skipped. `TELEGRAM_ADMIN_URL_SAT` is preferred for MYSAT notifications; `TELEGRAM_ADMIN_URL` is still accepted as a fallback for older deployments.
 
 ## Manual Payments
 
