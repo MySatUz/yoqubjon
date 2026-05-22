@@ -187,25 +187,50 @@ async function getManualRequest(requestId: string) {
   return request;
 }
 
-function buildResultText(action: 'approved' | 'rejected', request: Awaited<ReturnType<typeof getManualRequest>>) {
-  return [
+function formatAccessUntil(date: Date) {
+  return date.toLocaleString('ru-RU', {
+    timeZone: 'Asia/Tashkent',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  });
+}
+
+function buildResultText(
+  action: 'approved' | 'rejected',
+  request: Awaited<ReturnType<typeof getManualRequest>>,
+  expiresAt?: Date
+) {
+  const lines = [
     `<b>${action === 'approved' ? 'Subscription activated' : 'Payment request rejected'}</b>`,
     '',
     `<b>Request:</b> <code>${escapeHtml(request.id)}</code>`,
     `<b>User:</b> ${escapeHtml(request.payerName || request.user.name || 'User')}`,
     `<b>Email:</b> ${escapeHtml(request.user.email)}`,
     `<b>Amount:</b> ${escapeHtml(formatManualPaymentAmount(request.amount))}`,
-  ].join('\n');
+  ];
+
+  if (action === 'approved' && expiresAt) {
+    lines.push(`<b>Access until:</b> ${escapeHtml(formatAccessUntil(expiresAt))}`);
+  }
+
+  return lines.join('\n');
 }
 
 async function approveRequest(requestId: string, reviewer: TelegramUser) {
   const adminNote = `Approved in Telegram by ${reviewerLabel(reviewer)} (${reviewer.id}).`;
-  await activateManualSubscription({
+  const result = await activateManualSubscription({
     requestId,
     adminUserId: `telegram:${reviewer.id}`,
     adminNote,
   });
-  return getManualRequest(requestId);
+  return {
+    request: await getManualRequest(requestId),
+    expiresAt: result.expiresAt,
+  };
 }
 
 async function rejectRequest(requestId: string, reviewer: TelegramUser, reason = 'Rejected in Telegram.') {
@@ -224,10 +249,12 @@ async function handleCallback(callback: TelegramCallbackQuery) {
 
   try {
     if (action === 'approve') {
-      const request = await approveRequest(requestId, callback.from!);
+      const result = await approveRequest(requestId, callback.from!);
       await answerCallbackQuery(callback.id, 'Subscription activated');
       if (callback.message) await editActions(callback.message.chat.id, callback.message.message_id);
-      if (callback.message) await sendMessage(callback.message.chat.id, buildResultText('approved', request));
+      if (callback.message) {
+        await sendMessage(callback.message.chat.id, buildResultText('approved', result.request, result.expiresAt));
+      }
       return { ok: true };
     }
 
@@ -261,8 +288,8 @@ async function handleMessage(message: TelegramMessage) {
   }
 
   if (command.command === 'approve') {
-    const request = await approveRequest(command.requestId, message.from!);
-    await sendMessage(message.chat.id, buildResultText('approved', request));
+    const result = await approveRequest(command.requestId, message.from!);
+    await sendMessage(message.chat.id, buildResultText('approved', result.request, result.expiresAt));
     return { ok: true };
   }
 

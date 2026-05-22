@@ -73,11 +73,12 @@ export async function POST(req: Request) {
     const notification = await notifyManualPaymentTelegram({
       requestId: manualRequest.id,
       userEmail: session.user.email,
-      userName: session.user.name,
+      userName: manualRequest.payerName || session.user.name,
       amount: manualRequest.amount,
       receiptUrl,
       contact: manualRequest.contact,
       paymentReference: manualRequest.paymentReference,
+      message: manualRequest.message,
     });
 
     if (!notification.ok && !notification.skipped) {

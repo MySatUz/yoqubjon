@@ -136,6 +136,7 @@ export async function notifyManualPaymentTelegram(input: {
   receiptUrl?: string | null;
   contact?: string | null;
   paymentReference?: string | null;
+  message?: string | null;
 }) {
   const token = process.env.TELEGRAM_BOT_TOKEN;
   const chatId = process.env.TELEGRAM_PAYMENT_CHAT_ID;
@@ -149,13 +150,21 @@ export async function notifyManualPaymentTelegram(input: {
   const lines = [
     '<b>MYSAT: new manual payment request</b>',
     '',
+    `<b>Receiver:</b> ${escapeTelegramHtml(MANUAL_TRANSFER_DETAILS.cardHolder)}`,
+    `<b>Card:</b> ${escapeTelegramHtml(MANUAL_TRANSFER_DETAILS.cardType)} ${escapeTelegramHtml(MANUAL_TRANSFER_DETAILS.cardNumber)}`,
     `<b>Amount:</b> ${escapeTelegramHtml(formatManualPaymentAmount(input.amount))}`,
+    `<b>Access:</b> ${MANUAL_PAYMENT_DAYS} days`,
+    '',
     `<b>User:</b> ${escapeTelegramHtml(input.userName || 'User')}`,
     `<b>Email:</b> ${escapeTelegramHtml(input.userEmail)}`,
     input.contact ? `<b>Contact:</b> ${escapeTelegramHtml(input.contact)}` : null,
-    input.paymentReference ? `<b>Payment note:</b> ${escapeTelegramHtml(input.paymentReference)}` : null,
+    input.paymentReference ? `<b>Payment ID/comment:</b> ${escapeTelegramHtml(input.paymentReference)}` : null,
+    '<b>Status:</b> pending',
     `<b>Request:</b> <code>${escapeTelegramHtml(input.requestId)}</code>`,
-  ].filter(Boolean);
+    input.message ? ['', `<b>Message:</b> ${escapeTelegramHtml(input.message)}`] : null,
+    input.receiptUrl ? ['', '<b>Receipt:</b>', escapeTelegramHtml(input.receiptUrl)] : null,
+    adminUrl ? ['', `<a href="${escapeTelegramHtml(adminUrl)}">Open admin panel</a>`] : null,
+  ].flat().filter(Boolean);
   const linkRow = [
     input.receiptUrl ? { text: 'Open receipt', url: input.receiptUrl } : null,
     adminUrl ? { text: 'Open admin', url: adminUrl } : null,
@@ -253,7 +262,7 @@ export async function activateManualSubscription(input: {
       },
     });
 
-    return { success: true };
+    return { success: true, expiresAt: endDate };
   });
 }
 
