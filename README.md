@@ -24,9 +24,11 @@ SUPABASE_SERVICE_ROLE_KEY="..."
 TELEGRAM_BOT_TOKEN="..."
 TELEGRAM_PAYMENT_CHAT_ID="..."
 TELEGRAM_ADMIN_URL_SAT="https://mysat-omega.vercel.app"
+TELEGRAM_ADMIN_IDS="123456789,987654321"
+TELEGRAM_WEBHOOK_SECRET="optional-random-secret"
 ```
 
-`TELEGRAM_*` variables are optional for local development. Without them, payment requests are still saved, but Telegram notifications are skipped. `TELEGRAM_ADMIN_URL_SAT` is preferred for MYSAT notifications; `TELEGRAM_ADMIN_URL` is still accepted as a fallback for older deployments.
+`TELEGRAM_BOT_TOKEN` and `TELEGRAM_PAYMENT_CHAT_ID` enable Telegram payment notifications with approve/reject buttons. `TELEGRAM_ADMIN_URL_SAT` is preferred for MYSAT notifications; `TELEGRAM_ADMIN_URL` is still accepted as a fallback for older deployments. `TELEGRAM_ADMIN_IDS` is recommended for button security. If `TELEGRAM_WEBHOOK_SECRET` is omitted, the app derives one from the bot token.
 
 ## Manual Payments
 
@@ -38,6 +40,18 @@ The Premium page uses a manual transfer workflow:
 4. Telegram receives a notification if bot secrets are configured.
 5. An admin reviews the request in `/admin` and approves or rejects it.
 6. Approval creates a `Payment` and activates a 30-day `Subscription`.
+
+Telegram button actions are handled by:
+
+```text
+POST /api/telegram/payment-bot
+```
+
+Register the bot webhook to:
+
+```text
+https://mysat-omega.vercel.app/api/telegram/payment-bot
+```
 
 ## Database
 

@@ -110,6 +110,24 @@ export function readManualPaymentFields(formData: FormData) {
   };
 }
 
+function escapeTelegramHtml(value: unknown) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+export function getTelegramAdminBaseUrl() {
+  return (
+    process.env.TELEGRAM_ADMIN_URL_SAT ||
+    process.env.TELEGRAM_ADMIN_URL ||
+    process.env.NEXTAUTH_URL ||
+    process.env.NEXT_PUBLIC_APP_URL ||
+    ''
+  ).replace(/\/$/, '');
+}
+
 export async function notifyManualPaymentTelegram(input: {
   requestId: string;
   userEmail: string;
@@ -126,23 +144,29 @@ export async function notifyManualPaymentTelegram(input: {
     return { ok: false, skipped: true };
   }
 
-  const adminBaseUrl =
-    process.env.TELEGRAM_ADMIN_URL_SAT ||
-    process.env.TELEGRAM_ADMIN_URL ||
-    process.env.NEXTAUTH_URL ||
-    process.env.NEXT_PUBLIC_APP_URL ||
-    '';
-  const adminUrl = adminBaseUrl ? `${adminBaseUrl.replace(/\/$/, '')}/admin` : '';
+  const adminBaseUrl = getTelegramAdminBaseUrl();
+  const adminUrl = adminBaseUrl ? `${adminBaseUrl}/admin` : '';
   const lines = [
-    'New MYSAT payment request',
-    `Request ID: ${input.requestId}`,
-    `User: ${input.userName || 'User'} <${input.userEmail}>`,
-    `Amount: ${formatManualPaymentAmount(input.amount)}`,
-    input.contact ? `Contact: ${input.contact}` : null,
-    input.paymentReference ? `Reference: ${input.paymentReference}` : null,
-    input.receiptUrl ? `Receipt: ${input.receiptUrl}` : null,
-    adminUrl ? `Admin: ${adminUrl}` : null,
+    '<b>MYSAT: new manual payment request</b>',
+    '',
+    `<b>Amount:</b> ${escapeTelegramHtml(formatManualPaymentAmount(input.amount))}`,
+    `<b>User:</b> ${escapeTelegramHtml(input.userName || 'User')}`,
+    `<b>Email:</b> ${escapeTelegramHtml(input.userEmail)}`,
+    input.contact ? `<b>Contact:</b> ${escapeTelegramHtml(input.contact)}` : null,
+    input.paymentReference ? `<b>Payment note:</b> ${escapeTelegramHtml(input.paymentReference)}` : null,
+    `<b>Request:</b> <code>${escapeTelegramHtml(input.requestId)}</code>`,
   ].filter(Boolean);
+  const linkRow = [
+    input.receiptUrl ? { text: 'Open receipt', url: input.receiptUrl } : null,
+    adminUrl ? { text: 'Open admin', url: adminUrl } : null,
+  ].filter(Boolean);
+  const inlineKeyboard = [
+    linkRow,
+    [
+      { text: 'Approve', callback_data: `mysat:approve:${input.requestId}` },
+      { text: 'Reject', callback_data: `mysat:reject:${input.requestId}` },
+    ],
+  ].filter((row) => row.length);
 
   const response = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
     method: 'POST',
@@ -150,7 +174,11 @@ export async function notifyManualPaymentTelegram(input: {
     body: JSON.stringify({
       chat_id: chatId,
       text: lines.join('\n'),
-      disable_web_page_preview: false,
+      parse_mode: 'HTML',
+      disable_web_page_preview: true,
+      reply_markup: {
+        inline_keyboard: inlineKeyboard,
+      },
     }),
   });
 
@@ -227,4 +255,29 @@ export async function activateManualSubscription(input: {
 
     return { success: true };
   });
+}
+
+export async function rejectManualPaymentRequestById(input: {
+  requestId: string;
+  reviewerId: string;
+  adminNote?: string | null;
+}) {
+  const result = await prisma.manualPaymentRequest.updateMany({
+    where: {
+      id: input.requestId,
+      status: 'PENDING',
+    },
+    data: {
+      status: 'REJECTED',
+      adminNote: input.adminNote,
+      reviewedById: input.reviewerId,
+      reviewedAt: new Date(),
+    },
+  });
+
+  if (result.count !== 1) {
+    throw new Error('Payment request has already been reviewed');
+  }
+
+  return { success: true };
 }

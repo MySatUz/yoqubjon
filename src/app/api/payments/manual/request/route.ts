@@ -70,7 +70,7 @@ export async function POST(req: Request) {
     });
 
     const receiptUrl = await createManualReceiptSignedUrl(receiptPath, 60 * 60 * 24 * 7);
-    await notifyManualPaymentTelegram({
+    const notification = await notifyManualPaymentTelegram({
       requestId: manualRequest.id,
       userEmail: session.user.email,
       userName: session.user.name,
@@ -80,9 +80,16 @@ export async function POST(req: Request) {
       paymentReference: manualRequest.paymentReference,
     });
 
+    if (!notification.ok && !notification.skipped) {
+      console.warn('Manual payment Telegram notification failed', {
+        requestId: manualRequest.id,
+      });
+    }
+
     return NextResponse.json({
       success: true,
       requestId: manualRequest.id,
+      notification,
     });
   } catch (error) {
     console.error('Manual payment request failed:', error);

@@ -2,8 +2,10 @@
 
 import { revalidatePath } from 'next/cache';
 import { requireAdmin } from '@/lib/admin';
-import { prisma } from '@/lib/prisma';
-import { activateManualSubscription } from '@/lib/manual-payments';
+import {
+  activateManualSubscription,
+  rejectManualPaymentRequestById,
+} from '@/lib/manual-payments';
 
 function getRequestId(formData: FormData) {
   const requestId = formData.get('requestId');
@@ -52,22 +54,11 @@ export async function rejectManualPaymentRequest(formData: FormData) {
     const requestId = getRequestId(formData);
     const adminNote = getAdminNote(formData);
 
-    const result = await prisma.manualPaymentRequest.updateMany({
-      where: {
-        id: requestId,
-        status: 'PENDING',
-      },
-      data: {
-        status: 'REJECTED',
-        adminNote,
-        reviewedById: adminUserId,
-        reviewedAt: new Date(),
-      },
+    await rejectManualPaymentRequestById({
+      requestId,
+      reviewerId: adminUserId,
+      adminNote,
     });
-
-    if (result.count !== 1) {
-      throw new Error('Payment request has already been reviewed');
-    }
 
     revalidatePath('/admin');
     revalidatePath('/dashboard/subscription');
