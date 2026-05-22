@@ -97,14 +97,26 @@ export function ManualPaymentForm({
         method: 'POST',
         body: new FormData(event.currentTarget),
       });
-      const data = await response.json().catch(() => null) as { error?: string } | null;
+      const data = await response.json().catch(() => null) as {
+        error?: string;
+        notification?: {
+          ok?: boolean;
+          skipped?: boolean;
+        };
+      } | null;
 
       if (!response.ok) {
         throw new Error(data?.error || 'Could not submit payment request');
       }
 
       formRef.current?.reset();
-      setSuccess('Request sent. Admin will review your receipt soon.');
+      if (data?.notification?.skipped) {
+        setSuccess('Request saved. Telegram notification is not configured on the server.');
+      } else if (data?.notification && !data.notification.ok) {
+        setSuccess('Request saved, but Telegram notification failed. Admin can still review it here.');
+      } else {
+        setSuccess('Request sent. Admin will review your receipt soon.');
+      }
       router.refresh();
     } catch (submitError) {
       setError(
