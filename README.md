@@ -18,47 +18,49 @@ Open http://localhost:3000 after the dev server starts.
 DATABASE_URL="postgresql://..."
 AUTH_SECRET="..."
 NEXT_PUBLIC_APP_URL="http://localhost:3000"
+NEXT_PUBLIC_SUPABASE_URL="https://..."
+SUPABASE_SERVICE_ROLE_KEY="..."
 
-LEMONSQUEEZY_API_KEY="..."
-LEMONSQUEEZY_STORE_ID="..."
-LEMONSQUEEZY_PREMIUM_VARIANT_ID="..."
-LEMONSQUEEZY_WEBHOOK_SECRET="..."
-LEMONSQUEEZY_TEST_MODE="true"
+TELEGRAM_BOT_TOKEN="..."
+TELEGRAM_PAYMENT_CHAT_ID="..."
+TELEGRAM_ADMIN_URL="https://your-domain.com"
+
+CLICK_MERCHANT_ID="..."
+CLICK_MERCHANT_USER_ID="..."
+CLICK_SERVICE_ID="..."
+CLICK_SECRET_KEY="..."
+CLICK_SUBSCRIPTION_AMOUNT="99000"
+CLICK_SUBSCRIPTION_MONTHS="1"
+CLICK_RETURN_URL="https://your-domain.com/dashboard/subscription"
 ```
 
-`LEMONSQUEEZY_TEST_MODE` is optional. Set it to `true` only when you want API-created checkouts to be test-mode checkouts.
+`TELEGRAM_*` variables are optional for local development. Without them, payment requests are still saved, but Telegram notifications are skipped.
 
-## Lemon Squeezy
+## Click Payments
 
-The Premium button creates a hosted Lemon Squeezy checkout from:
+The Premium page starts a direct Click payment with `POST /api/payments/click`.
+
+1. The app creates a `PaymentOrder` for the signed-in user.
+2. The user is redirected to Click with the order id as `transaction_param`.
+3. Click calls `/api/payments/click` for prepare and complete callbacks.
+4. A successful complete callback records a `Payment` and activates a monthly `Subscription`.
+
+Configure the Click merchant callback URL to:
 
 ```text
-POST /api/payments/lemonsqueezy/checkout
+https://your-domain.com/api/payments/click
 ```
 
-Configure the Lemon Squeezy webhook callback URL as:
+## Manual Payments
 
-```text
-https://your-domain.com/api/webhooks/lemonsqueezy
-```
+The Premium page also keeps a manual transfer fallback:
 
-Subscribe the webhook to:
-
-```text
-subscription_created
-subscription_updated
-subscription_cancelled
-subscription_resumed
-subscription_expired
-subscription_paused
-subscription_unpaused
-subscription_payment_success
-subscription_payment_failed
-subscription_payment_recovered
-subscription_payment_refunded
-```
-
-The webhook validates `X-Signature` with `LEMONSQUEEZY_WEBHOOK_SECRET`, syncs the local `Subscription`, and records subscription invoice payments in `Payment`.
+1. The user transfers the monthly amount to the HUMO card shown on `/dashboard/subscription`.
+2. The user uploads a receipt with `POST /api/payments/manual/request`.
+3. The receipt is stored in the private Supabase Storage bucket `mysat-payment-receipts`.
+4. Telegram receives a notification if bot secrets are configured.
+5. An admin reviews the request in `/admin` and approves or rejects it.
+6. Approval creates a `Payment` and activates a 30-day `Subscription`.
 
 ## Database
 

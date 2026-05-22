@@ -24,6 +24,8 @@ model User {
   results       Result[]
   subscriptions Subscription[]
   payments      Payment[]
+  paymentOrders PaymentOrder[]
+  manualPaymentRequests ManualPaymentRequest[]
 }
 
 model Test {
@@ -79,7 +81,6 @@ model Subscription {
   provider               String   @default("MANUAL")
   providerSubscriptionId String?  @unique
   providerCustomerId     String?
-  providerVariantId      String?
   providerStatus         String?
   createdAt              DateTime @default(now())
   updatedAt              DateTime @updatedAt
@@ -104,4 +105,57 @@ model Payment {
 
   @@index([userId])
   @@index([transactionId])
+}
+
+model PaymentOrder {
+  id                    String    @id @default(uuid())
+  prepareId             BigInt    @unique @default(autoincrement())
+  userId                String
+  provider              String    @default("CLICK")
+  status                String    @default("PENDING")
+  amount                Int
+  currency              String    @default("UZS")
+  months                Int       @default(1)
+  providerTransactionId String?
+  providerPaymentId     String?
+  providerPrepareId     String?
+  providerConfirmId     String?
+  providerError         Int?
+  providerErrorNote     String?
+  providerPayload       Json      @default("{}")
+  paidAt                DateTime?
+  expiresAt             DateTime
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  user                  User      @relation(fields: [userId], references: [id])
+
+  @@unique([provider, providerTransactionId])
+  @@index([userId, status, createdAt])
+  @@index([prepareId])
+}
+
+model ManualPaymentRequest {
+  id               String   @id @default(uuid())
+  userId           String
+  amount           Int
+  currency         String   @default("UZS")
+  status           String   @default("PENDING")
+  payerName        String?
+  contact          String?
+  paymentReference String?
+  receiptPath      String?
+  receiptFileName  String?
+  receiptMimeType  String?
+  message          String?
+  adminNote        String?
+  reviewedById     String?
+  reviewedAt       DateTime?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  user             User     @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([status, createdAt])
 }
