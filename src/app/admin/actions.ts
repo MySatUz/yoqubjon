@@ -15,6 +15,36 @@ function sanitizeFileName(fileName: string) {
   return normalized || `${crypto.randomUUID()}.bin`;
 }
 
+type UploadedImage = {
+  name: string;
+  publicUrl: string;
+};
+
+function readUploadedImages(value: FormDataEntryValue | null) {
+  if (typeof value !== 'string' || !value) return [];
+
+  const parsed = JSON.parse(value) as UploadedImage[];
+  if (!Array.isArray(parsed)) {
+    throw new Error('Invalid uploaded image metadata');
+  }
+
+  return parsed.map((image) => {
+    if (
+      typeof image?.name !== 'string' ||
+      typeof image?.publicUrl !== 'string' ||
+      !image.name ||
+      !image.publicUrl
+    ) {
+      throw new Error('Invalid uploaded image metadata');
+    }
+
+    return {
+      name: image.name,
+      publicUrl: image.publicUrl,
+    };
+  });
+}
+
 export async function uploadTest(formData: FormData) {
   try {
     await requireAdmin();
@@ -25,6 +55,8 @@ export async function uploadTest(formData: FormData) {
     const isFree = formData.get('isFree') === 'true';
     const texFile = formData.get('texFile') as File;
     const imageFiles = formData.getAll('images') as File[];
+    const uploadedImages = readUploadedImages(formData.get('uploadedImages'));
+    const requestedTestId = formData.get('testId');
 
     if (!texFile || !(texFile instanceof File) || texFile.size === 0 || !title) {
       throw new Error('Title and .tex file are required');
@@ -49,10 +81,15 @@ export async function uploadTest(formData: FormData) {
       throw new Error(`Question ${invalidQuestion.order} is missing content or answer`);
     }
 
-    const testId = crypto.randomUUID();
+    const testId = typeof requestedTestId === 'string' && /^[0-9a-f-]{36}$/i.test(requestedTestId)
+      ? requestedTestId
+      : crypto.randomUUID();
 
     const supabase = getSupabaseAdmin();
     const imageMap: Record<string, string> = {};
+    for (const image of uploadedImages) {
+      imageMap[image.name] = image.publicUrl;
+    }
 
     await Promise.all(imageFiles.map(async (image) => {
       if (!(image instanceof File) || image.size === 0) return;

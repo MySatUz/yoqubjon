@@ -4,22 +4,106 @@ import React, { useState } from 'react';
 import { uploadTest } from '@/app/admin/actions';
 import { FileText, Image as ImageIcon, Upload, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
 
+type PreparedUpload = {
+  name: string;
+  path: string;
+  token: string;
+  signedUrl: string;
+  publicUrl: string;
+};
+
 export default function AdminForm() {
   const [loading, setLoading] = useState(false);
+  const [statusText, setStatusText] = useState('Processing LaTeX...');
   const [result, setResult] = useState<{ success?: boolean; error?: string; testId?: string } | null>(null);
+
+  async function uploadImageToSignedUrl(file: File, upload: PreparedUpload) {
+    const body = new FormData();
+    body.append('cacheControl', '3600');
+    body.append('', file);
+
+    const response = await fetch(upload.signedUrl, {
+      method: 'PUT',
+      body,
+    });
+
+    if (!response.ok) {
+      const message = await response.text().catch(() => '');
+      throw new Error(`Image upload failed for ${file.name}: ${message || response.statusText}`);
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    const form = e.currentTarget;
     setLoading(true);
+    setStatusText('Preparing upload...');
     setResult(null);
 
     try {
-      const formData = new FormData(e.currentTarget);
-      const response = await uploadTest(formData);
+      const formData = new FormData(form);
+      const title = formData.get('title');
+      const isFree = formData.get('isFree');
+      const texFile = formData.get('texFile');
+      const imageFiles = formData.getAll('images').filter(
+        (file): file is File => file instanceof File && file.size > 0
+      );
+      let uploadedImages: { name: string; publicUrl: string }[] = [];
+      let testId = '';
+
+      if (imageFiles.length > 0) {
+        setStatusText('Preparing image uploads...');
+        const prepareResponse = await fetch('/api/admin/test-upload/signed-urls', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            files: imageFiles.map((file) => ({
+              name: file.name,
+              type: file.type,
+              size: file.size,
+            })),
+          }),
+        });
+        const prepareData = await prepareResponse.json().catch(() => null) as {
+          testId?: string;
+          uploads?: PreparedUpload[];
+          error?: string;
+        } | null;
+
+        if (!prepareResponse.ok || !prepareData?.uploads || !prepareData.testId) {
+          throw new Error(prepareData?.error || 'Could not prepare image uploads');
+        }
+
+        testId = prepareData.testId;
+        setStatusText(`Uploading images 0/${imageFiles.length}...`);
+        let completed = 0;
+        await Promise.all(imageFiles.map(async (file) => {
+          const upload = prepareData.uploads?.find((item) => item.name === file.name);
+          if (!upload) throw new Error(`No upload URL for ${file.name}`);
+          await uploadImageToSignedUrl(file, upload);
+          completed += 1;
+          setStatusText(`Uploading images ${completed}/${imageFiles.length}...`);
+        }));
+
+        uploadedImages = prepareData.uploads.map((upload) => ({
+          name: upload.name,
+          publicUrl: upload.publicUrl,
+        }));
+      }
+
+      setStatusText('Creating test...');
+      const serverFormData = new FormData();
+      if (typeof title === 'string') serverFormData.set('title', title);
+      if (isFree === 'true') serverFormData.set('isFree', 'true');
+      if (texFile instanceof File) serverFormData.set('texFile', texFile);
+      if (testId) serverFormData.set('testId', testId);
+      serverFormData.set('uploadedImages', JSON.stringify(uploadedImages));
+
+      const response = await uploadTest(serverFormData);
 
       setResult(response);
       if (response.success) {
-        (e.target as HTMLFormElement).reset();
+        form.reset();
       }
     } catch (error) {
       setResult({
@@ -30,6 +114,7 @@ export default function AdminForm() {
       });
     } finally {
       setLoading(false);
+      setStatusText('Processing LaTeX...');
     }
   }
 
@@ -105,7 +190,7 @@ export default function AdminForm() {
         {loading ? (
           <>
             <Loader2 className="w-6 h-6 animate-spin" />
-            Processing LaTeX...
+            {statusText}
           </>
         ) : (
           <>
