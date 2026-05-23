@@ -37,6 +37,8 @@ model Test {
 
   questions   Question[]
   results     Result[]
+
+  @@index([createdAt])
 }
 
 model Question {
@@ -53,6 +55,8 @@ model Question {
   updatedAt     DateTime @updatedAt
 
   test          Test     @relation(fields: [testId], references: [id])
+
+  @@index([testId, order])
 }
 
 model Result {
@@ -69,6 +73,8 @@ model Result {
   test        Test     @relation(fields: [testId], references: [id])
 
   @@index([userId])
+  @@index([userId, createdAt])
+  @@index([testId])
 }
 
 model Subscription {
@@ -87,6 +93,7 @@ model Subscription {
   user                   User     @relation(fields: [userId], references: [id])
 
   @@index([userId])
+  @@index([userId, isActive, expiresAt])
 }
 
 model Payment {

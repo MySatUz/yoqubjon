@@ -4,14 +4,14 @@ import AdminForm from '@/components/admin/AdminForm';
 import TestList from '@/components/admin/TestList';
 import ManualPaymentRequests from '@/components/admin/ManualPaymentRequests';
 import AdminUsersPanel from '@/components/admin/AdminUsersPanel';
-import { isOwnerAdmin, OWNER_ADMIN_EMAIL, requireAdminPage } from '@/lib/admin';
+import { isOwnerSessionUser, OWNER_ADMIN_EMAIL, requireAdminPage } from '@/lib/admin';
 import { createManualReceiptSignedUrl } from '@/lib/manual-payments';
 
 export const dynamic = 'force-dynamic';
 
 export default async function AdminUploadPage() {
   const session = await requireAdminPage();
-  const canManageAdmins = await isOwnerAdmin(session?.user?.id);
+  const canManageAdmins = isOwnerSessionUser(session?.user);
 
   const [tests, paymentRequests, users] = await Promise.all([
     prisma.test.findMany({

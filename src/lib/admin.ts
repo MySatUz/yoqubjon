@@ -12,6 +12,14 @@ function isOwnerEmail(email?: string | null) {
   return normalizeEmail(email) === OWNER_ADMIN_EMAIL;
 }
 
+export function isAdminSessionUser(user?: { email?: string | null; role?: string | null } | null) {
+  return user?.role === "ADMIN" || isOwnerEmail(user?.email);
+}
+
+export function isOwnerSessionUser(user?: { email?: string | null } | null) {
+  return isOwnerEmail(user?.email);
+}
+
 export async function isAdminUser(userId?: string | null) {
   if (!userId) return false;
 
@@ -20,7 +28,7 @@ export async function isAdminUser(userId?: string | null) {
     select: { email: true, role: true },
   });
 
-  return user?.role === "ADMIN" || isOwnerEmail(user?.email);
+  return isAdminSessionUser(user);
 }
 
 export async function isOwnerAdmin(userId?: string | null) {

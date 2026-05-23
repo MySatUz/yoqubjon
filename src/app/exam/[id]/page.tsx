@@ -16,6 +16,11 @@ export default async function DynamicExamPage({ params }: { params: Promise<{ id
 
   const test = await prisma.test.findUnique({
     where: { id },
+    include: {
+      questions: {
+        orderBy: { order: 'asc' },
+      },
+    },
   });
 
   if (!test) {
@@ -36,10 +41,7 @@ export default async function DynamicExamPage({ params }: { params: Promise<{ id
     }
   }
 
-  const questions = await prisma.question.findMany({
-    where: { testId: id },
-    orderBy: { order: 'asc' },
-  });
+  const questions = test.questions;
   const questionIds = questions.map((question) => question.id);
 
   return (
