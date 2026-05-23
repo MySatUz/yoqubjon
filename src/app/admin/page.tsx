@@ -4,6 +4,7 @@ import AdminForm from '@/components/admin/AdminForm';
 import TestList from '@/components/admin/TestList';
 import ManualPaymentRequests from '@/components/admin/ManualPaymentRequests';
 import AdminUsersPanel from '@/components/admin/AdminUsersPanel';
+import AdminSectionHub from '@/components/admin/AdminSectionHub';
 import { isOwnerSessionUser, OWNER_ADMIN_EMAIL, requireAdminPage } from '@/lib/admin';
 import { createManualReceiptSignedUrl } from '@/lib/manual-payments';
 
@@ -27,7 +28,7 @@ export default async function AdminUploadPage() {
         { status: 'asc' },
         { createdAt: 'desc' },
       ],
-      take: 40,
+      take: 120,
       include: {
         user: {
           select: {
@@ -60,6 +61,8 @@ export default async function AdminUploadPage() {
       receiptSignedUrl: await createManualReceiptSignedUrl(request.receiptPath, 60 * 60 * 24),
     }))
   );
+  const adminCount = users.filter((user) => user.role === 'ADMIN' || user.email === OWNER_ADMIN_EMAIL).length;
+  const pendingPaymentCount = paymentRequests.filter((request) => request.status === 'PENDING').length;
 
   return (
     <div className="min-h-screen bg-slate-50 py-12 px-4 sm:px-6 lg:px-8">
@@ -69,17 +72,21 @@ export default async function AdminUploadPage() {
           <p className="text-slate-500 font-medium">Upload tests and review manual subscription payments.</p>
         </div>
 
-        {canManageAdmins && (
-          <AdminUsersPanel users={users} ownerEmail={OWNER_ADMIN_EMAIL} />
-        )}
-
-        <ManualPaymentRequests requests={paymentRequestsWithReceipts} />
-
-        {/* Upload Form */}
-        <AdminForm />
-
-        {/* Existing Tests List */}
-        <TestList tests={tests} />
+        <AdminSectionHub
+          canManageAdmins={canManageAdmins}
+          adminCount={adminCount}
+          paymentCount={paymentRequests.length}
+          pendingPaymentCount={pendingPaymentCount}
+          testCount={tests.length}
+          adminAccess={<AdminUsersPanel users={users} ownerEmail={OWNER_ADMIN_EMAIL} />}
+          payments={<ManualPaymentRequests requests={paymentRequestsWithReceipts} />}
+          tests={(
+            <div className="space-y-10">
+              <AdminForm />
+              <TestList tests={tests} />
+            </div>
+          )}
+        />
       </div>
     </div>
   );
