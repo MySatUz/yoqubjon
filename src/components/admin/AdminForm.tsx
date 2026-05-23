@@ -13,13 +13,23 @@ export default function AdminForm() {
     setLoading(true);
     setResult(null);
 
-    const formData = new FormData(e.currentTarget);
-    const response = await uploadTest(formData);
-    
-    setResult(response);
-    setLoading(false);
-    if (response.success) {
-      (e.target as HTMLFormElement).reset();
+    try {
+      const formData = new FormData(e.currentTarget);
+      const response = await uploadTest(formData);
+
+      setResult(response);
+      if (response.success) {
+        (e.target as HTMLFormElement).reset();
+      }
+    } catch (error) {
+      setResult({
+        success: false,
+        error: error instanceof Error
+          ? error.message
+          : 'Upload failed. Please try again.',
+      });
+    } finally {
+      setLoading(false);
     }
   }
 

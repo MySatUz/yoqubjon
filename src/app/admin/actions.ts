@@ -54,8 +54,8 @@ export async function uploadTest(formData: FormData) {
     const supabase = getSupabaseAdmin();
     const imageMap: Record<string, string> = {};
 
-    for (const image of imageFiles) {
-      if (!(image instanceof File) || image.size === 0) continue;
+    await Promise.all(imageFiles.map(async (image) => {
+      if (!(image instanceof File) || image.size === 0) return;
 
       if (image.size > MAX_IMAGE_FILE_SIZE || !ALLOWED_IMAGE_TYPES.has(image.type)) {
         throw new Error(`Invalid image file: ${image.name}`);
@@ -79,7 +79,7 @@ export async function uploadTest(formData: FormData) {
         .getPublicUrl(filePath);
       
       imageMap[image.name] = publicUrl;
-    }
+    }));
 
     const missingImageQuestion = parsedQuestions.find((q) => q.image && !imageMap[q.image]);
     if (missingImageQuestion?.image) {
