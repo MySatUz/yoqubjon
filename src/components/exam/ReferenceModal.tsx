@@ -1,55 +1,113 @@
 "use client";
 
 import React from 'react';
-import { Calculator, Circle, Ruler, Sigma, Triangle, X } from 'lucide-react';
+import { Calculator, Circle, Cuboid, Sigma, Triangle, X } from 'lucide-react';
 
 interface ReferenceModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-const referenceGroups = [
+type ReferenceFormula = {
+  label: string;
+  value: React.ReactNode;
+};
+
+const referenceGroups: {
+  title: string;
+  icon: typeof Circle;
+  formulas: ReferenceFormula[];
+}[] = [
   {
     title: 'Geometry',
     icon: Circle,
     formulas: [
-      'Circle area: A = pi r^2',
-      'Circle circumference: C = 2 pi r',
-      'Rectangle area: A = l * w',
-      'Triangle area: A = (1/2) * b * h',
+      { label: 'Circle area', value: <>A = πr<sup>2</sup></> },
+      { label: 'Circle circumference', value: <>C = 2πr</> },
+      { label: 'Rectangle area', value: <>A = l × w</> },
+      { label: 'Triangle area', value: <>A = ½bh</> },
     ],
   },
   {
     title: 'Triangles',
     icon: Triangle,
     formulas: [
-      'a^2 + b^2 = c^2',
-      '30-60-90 sides: x, x sqrt(3), 2x',
-      '45-45-90 sides: x, x, x sqrt(2)',
-      'Sum of triangle angles = 180 deg',
+      { label: 'Pythagorean theorem', value: <>a<sup>2</sup> + b<sup>2</sup> = c<sup>2</sup></> },
+      { label: '30-60-90 sides', value: <>x, x√3, 2x</> },
+      { label: '45-45-90 sides', value: <>x, x, x√2</> },
+      { label: 'Angle sum', value: <>180°</> },
     ],
   },
   {
     title: 'Volume',
-    icon: Ruler,
+    icon: Cuboid,
     formulas: [
-      'Rectangular prism: V = l * w * h',
-      'Cylinder: V = pi r^2 h',
-      'Cone: V = (1/3) pi r^2 h',
-      'Sphere: V = (4/3) pi r^3',
+      { label: 'Rectangular prism', value: <>V = lwh</> },
+      { label: 'Cylinder', value: <>V = πr<sup>2</sup>h</> },
+      { label: 'Cone', value: <>V = ⅓πr<sup>2</sup>h</> },
+      { label: 'Sphere', value: <>V = ⁴⁄₃πr<sup>3</sup></> },
     ],
   },
   {
     title: 'Algebra',
     icon: Sigma,
     formulas: [
-      'Slope: m = (y2 - y1) / (x2 - x1)',
-      'Quadratic formula: x = [-b +/- sqrt(b^2 - 4ac)] / 2a',
-      'Exponents: x^a * x^b = x^(a+b)',
-      'Roots: x^(1/2) = sqrt(x)',
+      { label: 'Slope', value: <>m = (y<sub>2</sub> − y<sub>1</sub>) / (x<sub>2</sub> − x<sub>1</sub>)</> },
+      { label: 'Quadratic formula', value: <>x = (-b ± √(b<sup>2</sup> − 4ac)) / 2a</> },
+      { label: 'Exponent rule', value: <>x<sup>a</sup> · x<sup>b</sup> = x<sup>a+b</sup></> },
+      { label: 'Square root', value: <>√x = x<sup>½</sup></> },
     ],
   },
 ];
+
+function MiniFigures() {
+  return (
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+      <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="mb-3 flex items-center justify-between">
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">Circle</p>
+          <span className="rounded-full bg-blue-50 px-2 py-1 text-xs font-black text-blue-700">r</span>
+        </div>
+        <svg viewBox="0 0 180 112" className="h-28 w-full" role="img" aria-label="Circle with radius">
+          <circle cx="82" cy="56" r="42" fill="#eff6ff" stroke="#2563eb" strokeWidth="4" />
+          <line x1="82" y1="56" x2="124" y2="56" stroke="#0f172a" strokeWidth="3" />
+          <circle cx="82" cy="56" r="4" fill="#0f172a" />
+          <text x="100" y="49" fill="#0f172a" fontSize="14" fontWeight="800">r</text>
+        </svg>
+      </div>
+
+      <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="mb-3 flex items-center justify-between">
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">Right triangle</p>
+          <span className="rounded-full bg-emerald-50 px-2 py-1 text-xs font-black text-emerald-700">a²+b²</span>
+        </div>
+        <svg viewBox="0 0 180 112" className="h-28 w-full" role="img" aria-label="Right triangle">
+          <path d="M38 86 L138 86 L38 26 Z" fill="#ecfdf5" stroke="#059669" strokeWidth="4" />
+          <path d="M38 72 L52 72 L52 86" fill="none" stroke="#0f172a" strokeWidth="2" />
+          <text x="83" y="102" fill="#0f172a" fontSize="13" fontWeight="800">b</text>
+          <text x="22" y="60" fill="#0f172a" fontSize="13" fontWeight="800">a</text>
+          <text x="88" y="52" fill="#0f172a" fontSize="13" fontWeight="800">c</text>
+        </svg>
+      </div>
+
+      <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="mb-3 flex items-center justify-between">
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">Cylinder</p>
+          <span className="rounded-full bg-amber-50 px-2 py-1 text-xs font-black text-amber-700">πr²h</span>
+        </div>
+        <svg viewBox="0 0 180 112" className="h-28 w-full" role="img" aria-label="Cylinder with radius and height">
+          <ellipse cx="90" cy="28" rx="46" ry="16" fill="#fffbeb" stroke="#d97706" strokeWidth="4" />
+          <path d="M44 28 V80 C44 89 136 89 136 80 V28" fill="#fffbeb" stroke="#d97706" strokeWidth="4" />
+          <path d="M44 80 C44 98 136 98 136 80" fill="none" stroke="#d97706" strokeWidth="4" />
+          <line x1="90" y1="28" x2="136" y2="28" stroke="#0f172a" strokeWidth="3" />
+          <line x1="148" y1="28" x2="148" y2="80" stroke="#0f172a" strokeWidth="3" />
+          <text x="111" y="22" fill="#0f172a" fontSize="13" fontWeight="800">r</text>
+          <text x="154" y="58" fill="#0f172a" fontSize="13" fontWeight="800">h</text>
+        </svg>
+      </div>
+    </div>
+  );
+}
 
 export default function ReferenceModal({ isOpen, onClose }: ReferenceModalProps) {
   if (!isOpen) return null;
@@ -89,6 +147,10 @@ export default function ReferenceModal({ isOpen, onClose }: ReferenceModalProps)
             </div>
           </div>
 
+          <div className="mb-6">
+            <MiniFigures />
+          </div>
+
           <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
             {referenceGroups.map((group) => (
               <section key={group.title} className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -104,8 +166,15 @@ export default function ReferenceModal({ isOpen, onClose }: ReferenceModalProps)
 
                 <div className="space-y-3">
                   {group.formulas.map((formula) => (
-                    <div key={formula} className="rounded-2xl bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-700">
-                      {formula}
+                    <div key={formula.label} className="rounded-2xl bg-slate-50 px-4 py-3">
+                      <div className="flex flex-wrap items-baseline justify-between gap-3">
+                        <span className="text-xs font-black uppercase tracking-[0.14em] text-slate-400">
+                          {formula.label}
+                        </span>
+                        <span className="text-base font-black text-slate-900">
+                          {formula.value}
+                        </span>
+                      </div>
                     </div>
                   ))}
                 </div>

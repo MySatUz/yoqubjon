@@ -15,30 +15,44 @@ export default async function SubscriptionPage() {
     redirect('/login');
   }
   
-  const [subscription, manualRequests] = await Promise.all([
-        prisma.subscription.findFirst({
-          where: {
-            userId: session.user.id,
-            isActive: true,
-            expiresAt: { gt: new Date() }
-          }
-        }),
-        prisma.manualPaymentRequest.findMany({
-          where: { userId: session.user.id },
-          orderBy: { createdAt: 'desc' },
-          take: 8,
-          select: {
-            id: true,
-            status: true,
-            amount: true,
-            currency: true,
-            receiptFileName: true,
-            adminNote: true,
-            createdAt: true,
-            reviewedAt: true,
-          },
-        }),
-      ]);
+  const [subscription, manualRequests, payments] = await Promise.all([
+    prisma.subscription.findFirst({
+      where: {
+        userId: session.user.id,
+        isActive: true,
+        expiresAt: { gt: new Date() }
+      },
+      orderBy: { expiresAt: 'desc' },
+    }),
+    prisma.manualPaymentRequest.findMany({
+      where: { userId: session.user.id },
+      orderBy: { createdAt: 'desc' },
+      take: 8,
+      select: {
+        id: true,
+        status: true,
+        amount: true,
+        currency: true,
+        receiptFileName: true,
+        adminNote: true,
+        createdAt: true,
+        reviewedAt: true,
+      },
+    }),
+    prisma.payment.findMany({
+      where: { userId: session.user.id },
+      orderBy: { createdAt: 'desc' },
+      take: 8,
+      select: {
+        id: true,
+        amount: true,
+        currency: true,
+        provider: true,
+        status: true,
+        createdAt: true,
+      },
+    }),
+  ]);
 
   const isPremium = subscription?.planId === 'PREMIUM';
   const serializedRequests = manualRequests.map((request) => ({
@@ -46,17 +60,50 @@ export default async function SubscriptionPage() {
     createdAt: request.createdAt.toISOString(),
     reviewedAt: request.reviewedAt?.toISOString() || null,
   }));
+  const serializedPayments = payments.map((payment) => ({
+    ...payment,
+    createdAt: payment.createdAt.toISOString(),
+  }));
+  const serializedSubscription = subscription
+    ? {
+        id: subscription.id,
+        planId: subscription.planId,
+        isActive: subscription.isActive,
+        expiresAt: subscription.expiresAt.toISOString(),
+        provider: subscription.provider,
+        providerStatus: subscription.providerStatus,
+        createdAt: subscription.createdAt.toISOString(),
+      }
+    : null;
 
   return (
-    <div className="py-10 px-4 sm:px-6 lg:px-8">
-      <header className="mb-12 text-center">
-        <p className="mb-3 text-[10px] font-black uppercase tracking-[0.3em] text-blue-600">
-          MYSATuz Premium
-        </p>
-        <h1 className="text-4xl font-black text-slate-900 tracking-tight mb-4">Subscription</h1>
-        <p className="text-slate-500 text-lg font-medium">
-          Upload your transfer receipt here. Admin approval activates premium access for 30 days.
-        </p>
+    <div className="px-4 py-10 sm:px-6 lg:px-8">
+      <header className="mx-auto mb-10 max-w-6xl overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-sm">
+        <div className="grid gap-0 lg:grid-cols-[0.95fr_1.05fr]">
+          <div className="bg-slate-900 p-8 text-white sm:p-10">
+            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-blue-300">
+              MYSATuz Premium
+            </p>
+            <h1 className="mt-3 text-4xl font-black tracking-tight">Subscription</h1>
+            <p className="mt-4 max-w-xl text-base font-bold leading-relaxed text-slate-300">
+              Send one transfer receipt, get admin-reviewed premium access, and track every subscription detail here.
+            </p>
+          </div>
+          <div className="grid gap-4 p-8 sm:grid-cols-3 sm:p-10">
+            <div className="rounded-3xl bg-blue-50 p-5">
+              <p className="text-[10px] font-black uppercase tracking-widest text-blue-600">Access</p>
+              <p className="mt-2 text-2xl font-black text-slate-900">30 days</p>
+            </div>
+            <div className="rounded-3xl bg-emerald-50 p-5">
+              <p className="text-[10px] font-black uppercase tracking-widest text-emerald-600">Status</p>
+              <p className="mt-2 text-2xl font-black text-slate-900">{isPremium ? 'Active' : 'Free'}</p>
+            </div>
+            <div className="rounded-3xl bg-amber-50 p-5">
+              <p className="text-[10px] font-black uppercase tracking-widest text-amber-600">Review</p>
+              <p className="mt-2 text-2xl font-black text-slate-900">Manual</p>
+            </div>
+          </div>
+        </div>
       </header>
 
       <SubscriptionCheckout
@@ -64,6 +111,8 @@ export default async function SubscriptionPage() {
         userEmail={session?.user?.email || ''}
         isPremium={isPremium}
         requests={serializedRequests}
+        payments={serializedPayments}
+        subscription={serializedSubscription}
         transfer={MANUAL_TRANSFER_DETAILS}
         amountLabel={formatManualPaymentAmount()}
       />

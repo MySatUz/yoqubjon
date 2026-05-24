@@ -68,13 +68,8 @@ export default function BottomNav({ testId, questionIds, initialTimeSeconds }: B
   };
 
   return (
-    <footer className="h-16 bg-white border-t border-slate-200 flex items-center justify-between px-4 sm:px-6 shrink-0 z-10 sticky bottom-0">
-      <div className="flex items-center gap-2 hidden lg:flex min-w-[200px]">
-        <span className="text-sm font-semibold text-slate-900 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100">MYSATuz Student</span>
-      </div>
-      
-      {/* Question Navigation Map */}
-      <div className="flex-1 flex items-center justify-center gap-1.5 px-4 overflow-x-auto no-scrollbar">
+    <footer className="min-h-16 bg-white border-t border-slate-200 flex items-center gap-3 px-3 sm:px-5 shrink-0 z-10 sticky bottom-0 shadow-[0_-12px_30px_rgba(15,23,42,0.06)]">
+      <div className="flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto overscroll-x-contain rounded-2xl bg-slate-50/80 px-2 py-2 no-scrollbar">
         {questionIds.map((questionId, i) => {
           const isCurrent = i === currentQuestionIndex;
           const isMarked = markedForReview[questionId];
@@ -83,14 +78,14 @@ export default function BottomNav({ testId, questionIds, initialTimeSeconds }: B
             <button
               key={questionId}
               onClick={() => setCurrentQuestionIndex(i)}
-              className={`flex-shrink-0 w-8 h-8 rounded-lg text-sm font-bold transition-all flex items-center justify-center border-2 ${
+              className={`flex-shrink-0 w-9 h-9 rounded-xl text-sm font-black transition-all flex items-center justify-center border ${
                 isCurrent 
-                  ? 'border-blue-600 bg-blue-600 text-white shadow-md scale-110' 
+                  ? 'border-blue-600 bg-blue-600 text-white shadow-md shadow-blue-200 scale-105' 
                   : isAnswered
-                    ? 'border-emerald-500 text-emerald-700 bg-emerald-50'
+                    ? 'border-emerald-200 text-emerald-700 bg-emerald-50'
                   : isMarked
-                    ? 'border-red-500 text-red-600 bg-red-50'
-                    : 'border-slate-100 text-slate-500 hover:border-slate-300 hover:bg-slate-50'
+                    ? 'border-red-200 text-red-600 bg-red-50'
+                    : 'border-slate-200 text-slate-600 bg-white hover:border-slate-300 hover:text-slate-900'
               }`}
             >
               {i + 1}
@@ -99,15 +94,15 @@ export default function BottomNav({ testId, questionIds, initialTimeSeconds }: B
         })}
       </div>
 
-      <div className="flex items-center gap-3 min-w-[300px] justify-end">
-        <label className="flex items-center gap-2 cursor-pointer group px-3 py-1.5 rounded-lg hover:bg-slate-50 transition-colors">
+      <div className="flex shrink-0 items-center gap-2">
+        <label className="flex items-center gap-2 cursor-pointer group rounded-xl border border-slate-200 bg-white px-2.5 py-2 transition-colors hover:border-slate-300">
           <input 
             type="checkbox" 
             checked={!!currentQuestionId && !!markedForReview[currentQuestionId]}
             onChange={() => currentQuestionId && toggleMarkForReview(currentQuestionId)}
             className="w-4 h-4 rounded border-slate-300 text-red-600 focus:ring-red-600 cursor-pointer" 
           />
-          <span className="text-sm font-medium text-slate-700 group-hover:text-slate-900 transition-colors hidden sm:inline-block">Mark for Review</span>
+          <span className="text-sm font-bold text-slate-700 group-hover:text-slate-900 transition-colors hidden xl:inline-block">Mark for Review</span>
         </label>
         
         <div className="flex items-center gap-2">
@@ -122,7 +117,7 @@ export default function BottomNav({ testId, questionIds, initialTimeSeconds }: B
           <button 
             onClick={handleNextOrFinish}
             disabled={isSubmitting || totalQuestions === 0}
-            className="flex min-w-[7.5rem] items-center justify-center gap-2 px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-bold rounded-xl shadow-md shadow-blue-200 transition-all active:scale-95"
+            className="flex min-w-[6.8rem] items-center justify-center gap-2 px-4 sm:px-5 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-black rounded-xl shadow-md shadow-blue-200 transition-all active:scale-95"
           >
             {isSubmitting ? (
               <>
