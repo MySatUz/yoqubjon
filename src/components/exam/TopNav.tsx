@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useExamStore } from '@/store/useExamStore';
 import ReferenceModal from '@/components/exam/ReferenceModal';
+import { BookOpen, Calculator } from 'lucide-react';
 
 interface TopNavProps {
   testId: string;
@@ -108,17 +109,36 @@ export default function TopNav({ testId, questionIds, initialTimeSeconds }: TopN
 
   return (
     <>
-      <header className="h-14 bg-white border-b border-slate-200 flex items-center justify-between px-4 sticky top-0 z-50 shrink-0">
-        <div className="flex items-center gap-4">
-          <h1 className="font-bold text-slate-900 tracking-tight">MYSATuz</h1>
-          <span className="text-sm font-bold text-slate-900 uppercase tracking-widest">Question {currentQuestionIndex + 1}</span>
+      <header className="relative h-14 bg-white border-b border-slate-200 flex items-center justify-between gap-2 px-2 sm:px-4 sticky top-0 z-50 shrink-0">
+        <div className="flex min-w-0 items-center gap-2 sm:gap-4">
+          <h1 className="hidden font-bold text-slate-900 tracking-tight sm:block">MYSATuz</h1>
+          <span className="truncate text-xs font-bold text-slate-900 uppercase tracking-widest sm:text-sm">
+            <span className="sm:hidden">Q {currentQuestionIndex + 1}</span>
+            <span className="hidden sm:inline">Question {currentQuestionIndex + 1}</span>
+          </span>
         </div>
         
-        <div className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center">
-          <span className="text-lg font-bold tabular-nums text-slate-900 bg-slate-50 px-4 py-1 rounded-full border border-slate-100 shadow-sm">{formatTime(timeLeftSeconds)}</span>
+        <div className="flex flex-col items-center sm:absolute sm:left-1/2 sm:-translate-x-1/2">
+          <span className="rounded-full border border-slate-100 bg-slate-50 px-3 py-1 text-base font-bold tabular-nums text-slate-900 shadow-sm sm:px-4 sm:text-lg">{formatTime(timeLeftSeconds)}</span>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-1 sm:gap-3">
+          <button
+            onClick={() => setReferenceOpen(true)}
+            className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-slate-700 transition-colors hover:bg-slate-100 sm:hidden"
+            aria-label="Reference Sheet"
+          >
+            <BookOpen className="h-4 w-4" />
+          </button>
+          <button
+            onClick={() => setCalculatorOpen(!isCalculatorOpen)}
+            className={`inline-flex h-9 w-9 items-center justify-center rounded-xl transition-colors sm:hidden ${
+              isCalculatorOpen ? 'bg-blue-100 text-blue-700' : 'text-slate-700 hover:bg-slate-100'
+            }`}
+            aria-label={isCalculatorOpen ? 'Close Calculator' : 'Graphing Calculator'}
+          >
+            <Calculator className="h-4 w-4" />
+          </button>
           <button 
             onClick={() => setReferenceOpen(true)}
             className="text-sm font-medium text-slate-700 hover:bg-slate-100 px-3 py-1.5 rounded transition-colors hidden sm:inline-block"
@@ -137,9 +157,9 @@ export default function TopNav({ testId, questionIds, initialTimeSeconds }: TopN
           <button 
             onClick={handleEndSection}
             disabled={isSubmitting}
-            className="text-sm font-bold text-red-600 hover:bg-red-50 px-3 py-1.5 rounded transition-colors disabled:opacity-50"
+            className="rounded px-2 py-1.5 text-xs font-bold text-red-600 transition-colors hover:bg-red-50 disabled:opacity-50 sm:px-3 sm:text-sm"
           >
-            {isSubmitting ? 'Submitting...' : 'End Section'}
+            {isSubmitting ? 'Submitting...' : <><span className="sm:hidden">End</span><span className="hidden sm:inline">End Section</span></>}
           </button>
         </div>
       </header>

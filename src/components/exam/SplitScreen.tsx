@@ -29,14 +29,14 @@ export default function SplitScreen({ questions }: { questions: Question[] }) {
   const isMultipleChoice = Array.isArray(question.options) && question.options.length > 0;
 
   return (
-    <div className={`flex-1 flex overflow-hidden bg-white transition-all duration-500 ${isCalculatorOpen ? 'flex-row' : 'flex-col'}`}>
+    <div className={`flex-1 flex overflow-hidden bg-white transition-all duration-500 ${isCalculatorOpen ? 'flex-col md:flex-row' : 'flex-col'}`}>
       {/* Question & Options Column */}
-      <div className={`flex-1 overflow-y-auto px-6 py-8 md:px-10 md:py-10 transition-all duration-500 ${isCalculatorOpen ? 'w-[42%] md:w-[46%] border-r border-slate-100 bg-slate-50/30' : 'w-full'}`}>
+      <div className={`flex-1 overflow-y-auto px-4 py-6 md:px-10 md:py-10 transition-all duration-500 ${isCalculatorOpen ? 'w-full md:w-[46%] border-b md:border-b-0 md:border-r border-slate-100 bg-slate-50/30' : 'w-full'}`}>
         <div className={`${isCalculatorOpen ? 'max-w-2xl' : 'max-w-4xl'} mx-auto w-full flex flex-col min-h-full`}>
           {/* Question Content */}
           <div className="mb-10 flex-grow">
             <div className="prose prose-slate max-w-none">
-              <div className={`${isCalculatorOpen ? 'text-lg md:text-xl' : 'text-xl md:text-2xl'} font-medium text-slate-800 leading-relaxed mb-6 transition-all duration-500`}>
+              <div className={`${isCalculatorOpen ? 'text-base md:text-xl' : 'text-lg md:text-2xl'} font-medium text-slate-800 leading-relaxed mb-6 transition-all duration-500`}>
                 {renderMathText(question.content)}
               </div>
             </div>
@@ -117,7 +117,7 @@ export default function SplitScreen({ questions }: { questions: Question[] }) {
 
       {/* Calculator Panel */}
       {isCalculatorOpen && (
-        <div className="w-[60%] md:w-[55%] flex flex-col bg-white animate-in slide-in-from-right duration-500 ease-out border-l border-slate-200 shadow-2xl">
+        <div className="h-[45vh] w-full md:h-auto md:w-[55%] flex flex-col bg-white animate-in slide-in-from-right duration-500 ease-out border-l border-slate-200 shadow-2xl">
           <iframe 
             src="https://www.desmos.com/testing/collegeboard/graphing?lang=en"
             className="flex-1 w-full border-none"

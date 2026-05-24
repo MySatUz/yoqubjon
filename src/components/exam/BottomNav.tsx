@@ -68,8 +68,8 @@ export default function BottomNav({ testId, questionIds, initialTimeSeconds }: B
   };
 
   return (
-    <footer className="min-h-16 bg-white border-t border-slate-200 flex items-center gap-3 px-3 sm:px-5 shrink-0 z-10 sticky bottom-0 shadow-[0_-12px_30px_rgba(15,23,42,0.06)]">
-      <div className="flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto overscroll-x-contain rounded-2xl bg-slate-50/80 px-2 py-2 no-scrollbar">
+    <footer className="min-h-16 bg-white border-t border-slate-200 flex items-center gap-2 px-2 sm:gap-3 sm:px-5 shrink-0 z-10 sticky bottom-0 shadow-[0_-12px_30px_rgba(15,23,42,0.06)]">
+      <div className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto overscroll-x-contain rounded-2xl bg-slate-50/80 px-1.5 py-2 no-scrollbar sm:gap-1.5 sm:px-2">
         {questionIds.map((questionId, i) => {
           const isCurrent = i === currentQuestionIndex;
           const isMarked = markedForReview[questionId];
@@ -78,7 +78,7 @@ export default function BottomNav({ testId, questionIds, initialTimeSeconds }: B
             <button
               key={questionId}
               onClick={() => setCurrentQuestionIndex(i)}
-              className={`flex-shrink-0 w-9 h-9 rounded-xl text-sm font-black transition-all flex items-center justify-center border ${
+              className={`flex-shrink-0 w-8 h-8 rounded-xl text-xs font-black transition-all flex items-center justify-center border sm:h-9 sm:w-9 sm:text-sm ${
                 isCurrent 
                   ? 'border-blue-600 bg-blue-600 text-white shadow-md shadow-blue-200 scale-105' 
                   : isAnswered
@@ -94,8 +94,8 @@ export default function BottomNav({ testId, questionIds, initialTimeSeconds }: B
         })}
       </div>
 
-      <div className="flex shrink-0 items-center gap-2">
-        <label className="flex items-center gap-2 cursor-pointer group rounded-xl border border-slate-200 bg-white px-2.5 py-2 transition-colors hover:border-slate-300">
+      <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+        <label className="flex items-center gap-2 cursor-pointer group rounded-xl border border-slate-200 bg-white px-2 py-2 transition-colors hover:border-slate-300 sm:px-2.5">
           <input 
             type="checkbox" 
             checked={!!currentQuestionId && !!markedForReview[currentQuestionId]}
@@ -109,7 +109,7 @@ export default function BottomNav({ testId, questionIds, initialTimeSeconds }: B
           <button 
             onClick={() => setCurrentQuestionIndex(Math.max(0, currentQuestionIndex - 1))}
             disabled={currentQuestionIndex === 0}
-            className="flex items-center justify-center w-10 h-10 bg-white border border-slate-200 hover:border-slate-300 hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed text-slate-700 rounded-xl transition-all shadow-sm"
+            className="flex items-center justify-center w-9 h-9 bg-white border border-slate-200 hover:border-slate-300 hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed text-slate-700 rounded-xl transition-all shadow-sm sm:h-10 sm:w-10"
             title="Previous"
           >
             <ChevronLeft className="w-5 h-5" />
@@ -117,7 +117,7 @@ export default function BottomNav({ testId, questionIds, initialTimeSeconds }: B
           <button 
             onClick={handleNextOrFinish}
             disabled={isSubmitting || totalQuestions === 0}
-            className="flex min-w-[6.8rem] items-center justify-center gap-2 px-4 sm:px-5 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-black rounded-xl shadow-md shadow-blue-200 transition-all active:scale-95"
+            className="flex min-w-[5.4rem] items-center justify-center gap-1.5 px-3 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-black rounded-xl shadow-md shadow-blue-200 transition-all active:scale-95 sm:min-w-[6.8rem] sm:gap-2 sm:px-5 sm:text-sm"
           >
             {isSubmitting ? (
               <>

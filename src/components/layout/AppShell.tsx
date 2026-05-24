@@ -24,10 +24,13 @@ const navItems = [
 
 export default function AppShell({ children, session, canManageTests }: AppShellProps) {
   const userInitial = session?.user?.name?.[0] || session?.user?.email?.[0] || 'U';
+  const mobileNavItems = canManageTests
+    ? [...navItems, { href: '/admin', label: 'Admin', icon: ShieldCheck }]
+    : navItems;
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row">
-      <div className="md:hidden bg-white border-b border-slate-200 p-4 flex items-center justify-between">
+      <div className="sticky top-0 z-40 md:hidden bg-white/95 backdrop-blur border-b border-slate-200 p-3 flex items-center justify-between">
         <Link href="/dashboard" className="flex items-center gap-3">
           <div className="h-9 w-9 rounded-xl bg-slate-900 flex items-center justify-center text-white shadow-lg shadow-slate-200">
             <GraduationCap className="h-5 w-5" />
@@ -35,14 +38,17 @@ export default function AppShell({ children, session, canManageTests }: AppShell
           <span className="text-xl font-black text-slate-900">MYSATuz</span>
         </Link>
         <div className="flex items-center gap-3">
-          {canManageTests && (
-            <Link href="/admin" className="p-2 text-slate-500 hover:text-blue-600" aria-label="Admin panel">
-              <ShieldCheck className="w-5 h-5" />
-            </Link>
-          )}
           <div className="h-8 w-8 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold uppercase">
             {userInitial}
           </div>
+          <form action={async () => {
+            "use server";
+            await signOut({ redirectTo: "/" });
+          }}>
+            <button className="flex h-8 w-8 items-center justify-center rounded-lg text-red-500 transition-colors hover:bg-red-50" aria-label="Sign out">
+              <LogOut className="h-4 w-4" />
+            </button>
+          </form>
         </div>
       </div>
 
@@ -107,9 +113,34 @@ export default function AppShell({ children, session, canManageTests }: AppShell
         </div>
       </aside>
 
-      <main className="flex-1 overflow-y-auto">
+      <main className="flex-1 overflow-y-auto pb-24 md:pb-0">
         {children}
       </main>
+
+      <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-slate-200 bg-white/95 px-2 pb-[max(env(safe-area-inset-bottom),0.5rem)] pt-2 shadow-[0_-12px_30px_rgba(15,23,42,0.08)] backdrop-blur md:hidden">
+        <div className={`mx-auto grid max-w-md gap-1 ${mobileNavItems.length === 4 ? 'grid-cols-4' : 'grid-cols-3'}`}>
+          {mobileNavItems.map((item) => {
+            const Icon = item.icon;
+
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className="flex min-w-0 flex-col items-center justify-center gap-1 rounded-2xl px-1 py-2 text-[10px] font-black text-slate-500 transition-colors hover:bg-blue-50 hover:text-blue-600"
+              >
+                <Icon className="h-5 w-5" />
+                <span className="max-w-full truncate">
+                  {item.label === 'Practice Center'
+                    ? 'Practice'
+                    : item.label === 'Personal Cabinet'
+                      ? 'Cabinet'
+                      : item.label}
+                </span>
+              </Link>
+            );
+          })}
+        </div>
+      </nav>
     </div>
   );
 }
