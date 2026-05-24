@@ -67,6 +67,9 @@ export default async function DashboardPage(props: {
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
               {tests.map((test) => {
                 const canAccess = test.isFree || isPremium;
+                const description = test.description?.startsWith('Imported from ')
+                  ? null
+                  : test.description;
                 
                 return (
                   <div 
@@ -91,7 +94,7 @@ export default async function DashboardPage(props: {
                       
                       <h3 className="text-2xl font-black text-slate-900 mb-3">{test.title}</h3>
                       <p className="text-slate-500 text-sm mb-8 font-medium leading-relaxed">
-                        {test.description || 'Standard Digital SAT practice module.'}
+                        {description || 'Standard Digital SAT practice module.'}
                       </p>
 
                       {canAccess ? (

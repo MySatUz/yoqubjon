@@ -127,7 +127,7 @@ export async function uploadTest(formData: FormData) {
       data: {
         id: testId,
         title,
-        description: `Imported from ${texFile.name}`,
+        description: null,
         isFree,
         questions: {
           createMany: {

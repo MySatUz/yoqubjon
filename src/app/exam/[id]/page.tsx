@@ -52,7 +52,11 @@ export default async function DynamicExamPage({ params }: { params: Promise<{ id
         initialTimeSeconds={EXAM_DURATION_SECONDS}
       />
       <SplitScreen questions={questions} />
-      <BottomNav questionIds={questionIds} />
+      <BottomNav
+        testId={id}
+        questionIds={questionIds}
+        initialTimeSeconds={EXAM_DURATION_SECONDS}
+      />
     </main>
   );
 }

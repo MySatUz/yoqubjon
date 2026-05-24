@@ -1,12 +1,71 @@
 "use client";
 
-import React from 'react';
+import React, { useState } from 'react';
+import { Check, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { useExamStore } from '@/store/useExamStore';
 
-export default function BottomNav({ questionIds }: { questionIds: string[] }) {
-  const { currentQuestionIndex, setCurrentQuestionIndex, markedForReview, toggleMarkForReview, answers } = useExamStore();
+interface BottomNavProps {
+  testId: string;
+  questionIds: string[];
+  initialTimeSeconds: number;
+}
+
+export default function BottomNav({ testId, questionIds, initialTimeSeconds }: BottomNavProps) {
+  const router = useRouter();
+  const {
+    currentQuestionIndex,
+    setCurrentQuestionIndex,
+    markedForReview,
+    toggleMarkForReview,
+    answers,
+    timeLeftSeconds,
+    resetExam,
+  } = useExamStore();
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const totalQuestions = questionIds.length;
   const currentQuestionId = questionIds[currentQuestionIndex] ?? questionIds[0];
+  const isLastQuestion = currentQuestionIndex === totalQuestions - 1;
+
+  const handleNextOrFinish = async () => {
+    if (!isLastQuestion) {
+      setCurrentQuestionIndex(Math.min(totalQuestions - 1, currentQuestionIndex + 1));
+      return;
+    }
+
+    if (
+      isSubmitting ||
+      !confirm("Are you sure you want to finish this test? Your answers will be saved.")
+    ) {
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const response = await fetch('/api/exam/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          testId,
+          answers,
+          timeSpent: initialTimeSeconds - timeLeftSeconds,
+        }),
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        resetExam(testId, initialTimeSeconds);
+        router.push(`/dashboard/results/${data.resultId}`);
+      } else {
+        alert(data.error || "Failed to submit results. Please try again.");
+      }
+    } catch (error) {
+      console.error("Submit error:", error);
+      alert("An error occurred. Check your connection.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <footer className="h-16 bg-white border-t border-slate-200 flex items-center justify-between px-4 sm:px-6 shrink-0 z-10 sticky bottom-0">
@@ -58,15 +117,29 @@ export default function BottomNav({ questionIds }: { questionIds: string[] }) {
             className="flex items-center justify-center w-10 h-10 bg-white border border-slate-200 hover:border-slate-300 hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed text-slate-700 rounded-xl transition-all shadow-sm"
             title="Previous"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+            <ChevronLeft className="w-5 h-5" />
           </button>
           <button 
-            onClick={() => setCurrentQuestionIndex(Math.min(totalQuestions - 1, currentQuestionIndex + 1))}
-            disabled={currentQuestionIndex === totalQuestions - 1}
-            className="flex items-center gap-2 px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-30 disabled:cursor-not-allowed text-white text-sm font-bold rounded-xl shadow-md shadow-blue-200 transition-all active:scale-95"
+            onClick={handleNextOrFinish}
+            disabled={isSubmitting || totalQuestions === 0}
+            className="flex min-w-[7.5rem] items-center justify-center gap-2 px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-bold rounded-xl shadow-md shadow-blue-200 transition-all active:scale-95"
           >
-            Next
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+            {isSubmitting ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Submitting
+              </>
+            ) : isLastQuestion ? (
+              <>
+                Finish
+                <Check className="w-4 h-4" />
+              </>
+            ) : (
+              <>
+                Next
+                <ChevronRight className="w-4 h-4" />
+              </>
+            )}
           </button>
         </div>
       </div>
