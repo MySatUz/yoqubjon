@@ -123,30 +123,27 @@ export async function uploadTest(formData: FormData) {
       throw new Error(`Missing image for question ${missingImageQuestion.order}: ${missingImageQuestion.image}`);
     }
 
-    await prisma.$transaction(async (tx) => {
-      await tx.test.create({
-        data: {
-          id: testId,
-          title,
-          description: `Imported from ${texFile.name}`,
-          isFree,
-        }
-      });
-
-      for (const q of parsedQuestions) {
-        await tx.question.create({
-          data: {
-            testId,
-            content: q.content,
-            options: q.options,
-            correctAnswer: q.correctAnswer,
-            order: q.order,
-            imageUrl: q.image ? imageMap[q.image] || null : null
-          }
-        });
+    await prisma.test.create({
+      data: {
+        id: testId,
+        title,
+        description: `Imported from ${texFile.name}`,
+        isFree,
+        questions: {
+          createMany: {
+            data: parsedQuestions.map((q) => ({
+              content: q.content,
+              options: q.options,
+              correctAnswer: q.correctAnswer,
+              order: q.order,
+              imageUrl: q.image ? imageMap[q.image] || null : null
+            })),
+          },
+        },
       }
     });
 
+    revalidatePath('/admin');
     revalidatePath('/dashboard');
     return { success: true, testId };
 
