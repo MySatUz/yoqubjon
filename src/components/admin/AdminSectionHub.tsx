@@ -69,6 +69,11 @@ export default function AdminSectionHub({
 
   if (activeSection !== 'home') {
     const currentTitle = cards.find((card) => card.id === activeSection)?.title;
+    const sectionContent = activeSection === 'admins'
+      ? adminAccess
+      : activeSection === 'payments'
+        ? payments
+        : tests;
 
     return (
       <div>
@@ -84,9 +89,7 @@ export default function AdminSectionHub({
           <h2 className="text-2xl font-black tracking-tight text-slate-900">{currentTitle}</h2>
         </div>
 
-        {activeSection === 'admins' && adminAccess}
-        {activeSection === 'payments' && payments}
-        {activeSection === 'tests' && tests}
+        <div key={activeSection}>{sectionContent}</div>
       </div>
     );
   }

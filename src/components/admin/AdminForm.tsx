@@ -2,7 +2,8 @@
 
 import React, { useState } from 'react';
 import { uploadTest } from '@/app/admin/actions';
-import { FileText, Image as ImageIcon, Upload, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
+import { FileText, Image as ImageIcon, Upload, CheckCircle2, AlertCircle, Loader2, Layers3, Sparkles } from 'lucide-react';
+import { TEST_CATEGORY_OPTIONS } from '@/lib/testCatalog';
 
 type PreparedUpload = {
   name: string;
@@ -44,6 +45,7 @@ export default function AdminForm() {
       const formData = new FormData(form);
       const title = formData.get('title');
       const isFree = formData.get('isFree');
+      const testCategory = formData.get('testCategory');
       const texFile = formData.get('texFile');
       const imageFiles = formData.getAll('images').filter(
         (file): file is File => file instanceof File && file.size > 0
@@ -95,6 +97,7 @@ export default function AdminForm() {
       const serverFormData = new FormData();
       if (typeof title === 'string') serverFormData.set('title', title);
       if (isFree === 'true') serverFormData.set('isFree', 'true');
+      if (testCategory === 'ADVANCED') serverFormData.set('testCategory', 'ADVANCED');
       if (texFile instanceof File) serverFormData.set('texFile', texFile);
       if (testId) serverFormData.set('testId', testId);
       serverFormData.set('uploadedImages', JSON.stringify(uploadedImages));
@@ -131,6 +134,36 @@ export default function AdminForm() {
             placeholder="e.g., March SAT Math Practice"
             className="w-full px-5 py-4 rounded-2xl bg-slate-50 border border-slate-100 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all font-bold text-slate-900"
           />
+        </div>
+
+        <div>
+          <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-3">Test Collection</label>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {TEST_CATEGORY_OPTIONS.map((option) => {
+              const Icon = option.value === 'ADVANCED' ? Sparkles : Layers3;
+
+              return (
+                <label key={option.value} className="group relative cursor-pointer">
+                  <input
+                    type="radio"
+                    name="testCategory"
+                    value={option.value}
+                    defaultChecked={option.value === 'STANDARD'}
+                    className="peer sr-only"
+                  />
+                  <div className="h-full rounded-2xl border border-slate-200 bg-slate-50 p-4 transition-all peer-checked:border-blue-500 peer-checked:bg-blue-50 peer-checked:ring-4 peer-checked:ring-blue-100 group-hover:border-blue-200">
+                    <div className="mb-3 flex items-center gap-3">
+                      <span className="rounded-xl bg-white p-2 text-blue-600 shadow-sm">
+                        <Icon className="h-5 w-5" />
+                      </span>
+                      <span className="text-sm font-black text-slate-900">{option.label}</span>
+                    </div>
+                    <p className="text-xs font-bold leading-relaxed text-slate-500">{option.description}</p>
+                  </div>
+                </label>
+              );
+            })}
+          </div>
         </div>
         
         <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-2xl border border-slate-100">

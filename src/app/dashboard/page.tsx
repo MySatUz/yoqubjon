@@ -2,7 +2,14 @@ import React from 'react';
 import { auth } from "@/auth";
 import Link from 'next/link';
 import { prisma } from '@/lib/prisma';
-import { History, LayoutDashboard, CheckCircle2, Lock } from 'lucide-react';
+import { History, LayoutDashboard, CheckCircle2, Lock, ArrowLeft, ArrowRight, Layers3, Sparkles } from 'lucide-react';
+import {
+  compareCatalogTests,
+  getCategoryLabel,
+  getTestCategory,
+  getTestDescription,
+  type TestCategory,
+} from '@/lib/testCatalog';
 
 export default async function DashboardPage(props: {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
@@ -10,6 +17,12 @@ export default async function DashboardPage(props: {
   const searchParams = await props.searchParams;
   const session = await auth();
   const isSuccess = searchParams.payment === 'success';
+  const requestedSet = searchParams.set;
+  const activeCategory: TestCategory | null = requestedSet === 'advanced'
+    ? 'ADVANCED'
+    : requestedSet === 'standard'
+      ? 'STANDARD'
+      : null;
   
   if (!session?.user?.id) {
     return <div>Unauthorized</div>;
@@ -24,7 +37,7 @@ export default async function DashboardPage(props: {
       take: 20
     }),
     prisma.test.findMany({
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: 'asc' }
     }),
     prisma.subscription.findFirst({
       where: { 
@@ -36,6 +49,17 @@ export default async function DashboardPage(props: {
   ]);
 
   const isPremium = !!subscription;
+  const standardTests = tests
+    .filter((test) => getTestCategory(test) === 'STANDARD')
+    .sort(compareCatalogTests);
+  const advancedTests = tests
+    .filter((test) => getTestCategory(test) === 'ADVANCED')
+    .sort(compareCatalogTests);
+  const visibleTests = activeCategory === 'ADVANCED'
+    ? advancedTests
+    : activeCategory === 'STANDARD'
+      ? standardTests
+      : [];
   const seenTestIds = new Set<string>();
   const recentResults = results
     .filter((result) => {
@@ -60,74 +84,142 @@ export default async function DashboardPage(props: {
           {/* Main Content */}
           <div className="lg:col-span-3">
             <header className="mb-10">
-              <h1 className="text-4xl font-black text-slate-900 tracking-tight">Practice Center</h1>
-              <p className="text-slate-500 mt-2 text-lg font-medium">Select a module to sharpen your skills.</p>
+              {activeCategory ? (
+                <Link
+                  href="/dashboard"
+                  className="mb-5 inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-black text-slate-600 transition hover:border-blue-200 hover:text-blue-600"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                  Back to collections
+                </Link>
+              ) : null}
+              <h1 className="text-4xl font-black text-slate-900 tracking-tight">
+                {activeCategory ? getCategoryLabel(activeCategory) : 'Practice Center'}
+              </h1>
+              <p className="text-slate-500 mt-2 text-lg font-medium">
+                {activeCategory === 'ADVANCED'
+                  ? 'Work through the advanced sets in order, from Advanced set 1 upward.'
+                  : activeCategory === 'STANDARD'
+                    ? 'Start with the standard SAT Math practice modules.'
+                    : 'Choose a collection, then select the module you want to practice.'}
+              </p>
             </header>
 
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-              {tests.map((test) => {
-                const canAccess = test.isFree || isPremium;
-                const description = test.description?.startsWith('Imported from ')
-                  ? null
-                  : test.description;
-                
-                return (
-                  <div 
-                    key={test.id}
-                    className="bg-white rounded-3xl p-8 shadow-sm border border-slate-200 hover:shadow-xl hover:shadow-blue-900/5 transition-all group relative overflow-hidden"
-                  >
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-bl-full -mr-16 -mt-16 transition-transform group-hover:scale-110"></div>
-                    
-                    <div className="relative z-10">
-                      <div className="flex justify-between items-start mb-6">
-                        <div className={`p-4 rounded-2xl ${canAccess ? 'bg-blue-600' : 'bg-slate-100'} text-white shadow-lg ${canAccess ? 'shadow-blue-200' : ''}`}>
-                          {canAccess ? <LayoutDashboard className="w-6 h-6" /> : <Lock className="w-6 h-6 text-slate-400" />}
+            {!activeCategory ? (
+              <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+                {[
+                  {
+                    href: '/dashboard?set=standard',
+                    title: 'Standard tests',
+                    count: standardTests.length,
+                    description: 'Core Digital SAT Math modules for steady practice and baseline review.',
+                    icon: Layers3,
+                    theme: 'bg-blue-600 text-white shadow-blue-200',
+                  },
+                  {
+                    href: '/dashboard?set=advanced',
+                    title: 'Advanced set',
+                    count: advancedTests.length,
+                    description: 'Harder sets for students targeting top scores and deeper problem solving.',
+                    icon: Sparkles,
+                    theme: 'bg-slate-900 text-white shadow-slate-200',
+                  },
+                ].map((collection) => {
+                  const Icon = collection.icon;
+
+                  return (
+                    <Link
+                      key={collection.href}
+                      href={collection.href}
+                      className="group relative overflow-hidden rounded-[2rem] border border-slate-200 bg-white p-8 shadow-sm transition-all hover:-translate-y-1 hover:border-blue-200 hover:shadow-2xl hover:shadow-blue-900/10"
+                    >
+                      <div className="absolute right-0 top-0 h-40 w-40 rounded-bl-full bg-slate-50 transition-transform group-hover:scale-110"></div>
+                      <div className="relative z-10">
+                        <div className="mb-8 flex items-start justify-between gap-4">
+                          <div className={`rounded-3xl p-5 shadow-xl ${collection.theme}`}>
+                            <Icon className="h-8 w-8" />
+                          </div>
+                          <span className="rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-black uppercase tracking-widest text-slate-500">
+                            {collection.count} {collection.count === 1 ? 'test' : 'tests'}
+                          </span>
                         </div>
-                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${
-                          test.isFree 
-                            ? 'bg-green-100 text-green-700 border-green-200' 
-                            : 'bg-amber-100 text-amber-700 border-amber-200'
-                        }`}>
-                          {test.isFree ? 'Free Access' : 'Premium'}
-                        </span>
+                        <h2 className="text-3xl font-black tracking-tight text-slate-900">{collection.title}</h2>
+                        <p className="mt-3 min-h-14 text-base font-bold leading-relaxed text-slate-500">
+                          {collection.description}
+                        </p>
+                        <div className="mt-8 inline-flex items-center gap-2 text-sm font-black text-blue-600">
+                          Open collection
+                          <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                        </div>
                       </div>
-                      
-                      <h3 className="text-2xl font-black text-slate-900 mb-3">{test.title}</h3>
-                      <p className="text-slate-500 text-sm mb-8 font-medium leading-relaxed">
-                        {description || 'Standard Digital SAT practice module.'}
-                      </p>
+                    </Link>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                {visibleTests.map((test) => {
+                  const canAccess = test.isFree || isPremium;
+                  const description = getTestDescription(test);
 
-                      {canAccess ? (
-                        <Link 
-                          href={`/exam/${test.id}`}
-                          className="inline-flex items-center justify-center w-full py-4 px-6 rounded-2xl text-sm font-black text-white bg-slate-900 hover:bg-blue-600 transition-all transform active:scale-95 shadow-xl shadow-slate-200"
-                        >
-                          Start Practice Module
-                        </Link>
-                      ) : (
-                        <div className="space-y-4">
-                          <Link 
-                            href="/dashboard/subscription"
-                            className="inline-flex items-center justify-center w-full py-4 px-6 rounded-2xl text-sm font-black text-white bg-blue-600 hover:bg-blue-700 transition-all transform active:scale-95 shadow-xl shadow-blue-100"
-                          >
-                            Unlock with Premium
-                          </Link>
-                          <button disabled className="w-full py-3 text-xs font-bold text-slate-400 uppercase tracking-widest">
-                            Module Locked
-                          </button>
+                  return (
+                    <div
+                      key={test.id}
+                      className="bg-white rounded-3xl p-8 shadow-sm border border-slate-200 hover:shadow-xl hover:shadow-blue-900/5 transition-all group relative overflow-hidden"
+                    >
+                      <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-bl-full -mr-16 -mt-16 transition-transform group-hover:scale-110"></div>
+
+                      <div className="relative z-10">
+                        <div className="flex justify-between items-start mb-6">
+                          <div className={`p-4 rounded-2xl ${canAccess ? 'bg-blue-600' : 'bg-slate-100'} text-white shadow-lg ${canAccess ? 'shadow-blue-200' : ''}`}>
+                            {canAccess ? <LayoutDashboard className="w-6 h-6" /> : <Lock className="w-6 h-6 text-slate-400" />}
+                          </div>
+                          <span className={`inline-flex items-center px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${
+                            test.isFree
+                              ? 'bg-green-100 text-green-700 border-green-200'
+                              : 'bg-amber-100 text-amber-700 border-amber-200'
+                          }`}>
+                            {test.isFree ? 'Free Access' : 'Premium'}
+                          </span>
                         </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
 
-              {tests.length === 0 && (
+                        <h3 className="text-2xl font-black text-slate-900 mb-3">{test.title}</h3>
+                        <p className="text-slate-500 text-sm mb-8 font-medium leading-relaxed">
+                          {description}
+                        </p>
+
+                        {canAccess ? (
+                          <Link
+                            href={`/exam/${test.id}`}
+                            className="inline-flex items-center justify-center w-full py-4 px-6 rounded-2xl text-sm font-black text-white bg-slate-900 hover:bg-blue-600 transition-all transform active:scale-95 shadow-xl shadow-slate-200"
+                          >
+                            Start Practice Module
+                          </Link>
+                        ) : (
+                          <div className="space-y-4">
+                            <Link
+                              href="/dashboard/subscription"
+                              className="inline-flex items-center justify-center w-full py-4 px-6 rounded-2xl text-sm font-black text-white bg-blue-600 hover:bg-blue-700 transition-all transform active:scale-95 shadow-xl shadow-blue-100"
+                            >
+                              Unlock with Premium
+                            </Link>
+                            <button disabled className="w-full py-3 text-xs font-bold text-slate-400 uppercase tracking-widest">
+                              Module Locked
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+
+              {visibleTests.length === 0 && (
                 <div className="col-span-full py-20 bg-slate-50 rounded-3xl border-2 border-dashed border-slate-200 text-center">
                   <p className="text-slate-400 font-bold">No tests available yet. Check back later!</p>
                 </div>
               )}
-            </div>
+              </div>
+            )}
           </div>
 
           {/* Right Sidebar: Recent Activity */}

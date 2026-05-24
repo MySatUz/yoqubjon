@@ -3,11 +3,13 @@
 import React, { useState } from 'react';
 import { deleteTest } from '@/app/admin/actions';
 import { Trash2, Loader2 } from 'lucide-react';
+import { getCategoryLabel, getTestCategory } from '@/lib/testCatalog';
 
 interface TestListProps {
   tests: {
     id: string;
     title: string;
+    description: string | null;
     isFree: boolean;
     createdAt: Date;
     _count: { questions: number };
@@ -43,6 +45,9 @@ export default function TestList({ tests }: TestListProps) {
               <div className="flex flex-col">
                 <div className="flex items-center gap-2">
                   <span className="font-black text-slate-900">{test.title}</span>
+                  <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-[10px] font-black uppercase rounded-full">
+                    {getCategoryLabel(getTestCategory(test))}
+                  </span>
                   {test.isFree && (
                     <span className="px-2 py-0.5 bg-green-100 text-green-700 text-[10px] font-black uppercase rounded-full">Free</span>
                   )}
