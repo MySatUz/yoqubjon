@@ -84,7 +84,9 @@ function tokenizeMathText(text: string) {
 }
 
 function renderPlainText(value: string, keyPrefix: string) {
-  return value.split('\n').map((line, index, lines) => (
+  const readableValue = value.replace(/\\([$%])/g, '$1');
+
+  return readableValue.split('\n').map((line, index, lines) => (
     <React.Fragment key={`${keyPrefix}-${index}`}>
       {line}
       {index < lines.length - 1 && <br />}
