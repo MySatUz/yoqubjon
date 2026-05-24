@@ -44,9 +44,9 @@ export default async function AdminUploadPage() {
       ? prisma.user.findMany({
           orderBy: [
             { role: 'desc' },
-            { createdAt: 'desc' },
+            { email: 'asc' },
           ],
-          take: 100,
+          take: 500,
           select: {
             id: true,
             email: true,
