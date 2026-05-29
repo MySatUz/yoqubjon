@@ -33,8 +33,14 @@ function stripMathWrappers(value: string) {
   return text;
 }
 
+function normalizeMinusSigns(value: string) {
+  return value
+    .replace(/\u2212/g, '-')
+    .replace(/[\u2013\u2014]/g, '-');
+}
+
 function normalizeComparableAnswer(value: string) {
-  return stripMathWrappers(value)
+  return normalizeMinusSigns(stripMathWrappers(value))
     .replace(/\\left|\\right/g, '')
     .replace(/\\([$%])/g, '$1')
     .replace(/\s+/g, ' ')
@@ -96,11 +102,10 @@ function parseDecimalNumber(value: string): Rational | null {
 }
 
 function parseRationalAnswer(value: string): Rational | null {
-  const text = stripMathWrappers(value)
+  const text = normalizeMinusSigns(stripMathWrappers(value))
     .replace(/\\left|\\right/g, '')
     .replace(/\\,/g, '')
     .replace(/[, $]/g, '')
-    .replace(/−/g, '-')
     .replace(/\s+/g, '');
 
   const latexFraction = text.match(/^([+-]?)\\(?:dfrac|tfrac|frac)\{([^{}]+)\}\{([^{}]+)\}$/);
@@ -130,6 +135,18 @@ function parseRationalAnswer(value: string): Rational | null {
   return parseDecimalNumber(text);
 }
 
+function splitAnswerAlternatives(value: string) {
+  const text = value.trim();
+  if (!text) return [''];
+
+  const alternatives = text
+    .split(/\s+or\s+|[;|]/i)
+    .map((option) => stripMathWrappers(option).trim())
+    .filter(Boolean);
+
+  return alternatives.length > 0 ? alternatives : [stripMathWrappers(text)];
+}
+
 export function normalizeStoredAnswer(
   storedAnswer: unknown,
   fallbackCorrectAnswer: string
@@ -142,10 +159,11 @@ export function normalizeStoredAnswer(
     const answer = storedAnswer as Record<string, unknown>;
     const userAnswer = normalizeText(answer.userAnswer);
     const correctAnswer = normalizeText(answer.correctAnswer) || fallbackCorrectAnswer;
+    const freshlyMatched = answersMatch(userAnswer, correctAnswer);
     const isCorrect =
       typeof answer.isCorrect === "boolean"
-        ? answer.isCorrect
-        : answersMatch(userAnswer, correctAnswer);
+        ? answer.isCorrect || freshlyMatched
+        : freshlyMatched;
 
     return {
       userAnswer,
@@ -163,7 +181,7 @@ export function normalizeStoredAnswer(
   };
 }
 
-export function answersMatch(userAnswer: string, correctAnswer: string) {
+function singleAnswerMatches(userAnswer: string, correctAnswer: string) {
   if (normalizeComparableAnswer(userAnswer) === normalizeComparableAnswer(correctAnswer)) {
     return true;
   }
@@ -176,5 +194,16 @@ export function answersMatch(userAnswer: string, correctAnswer: string) {
     correctRational &&
     userRational.numerator === correctRational.numerator &&
     userRational.denominator === correctRational.denominator
+  );
+}
+
+export function answersMatch(userAnswer: string, correctAnswer: string) {
+  const userAlternatives = splitAnswerAlternatives(userAnswer);
+  const correctAlternatives = splitAnswerAlternatives(correctAnswer);
+
+  return userAlternatives.some((userOption) =>
+    correctAlternatives.some((correctOption) =>
+      singleAnswerMatches(userOption, correctOption)
+    )
   );
 }

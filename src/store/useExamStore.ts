@@ -8,6 +8,7 @@ interface ExamState {
   markedForReview: Record<string, boolean>;
   timeLeftSeconds: number;
   initialTimeSeconds: number;
+  endsAtMs: number | null;
   currentQuestionIndex: number;
   isCalculatorOpen: boolean;
   isReferenceOpen: boolean;
@@ -17,7 +18,7 @@ interface ExamState {
   setAnswer: (questionId: string, answer: string) => void;
   toggleMarkForReview: (questionId: string) => void;
   setCurrentQuestionIndex: (index: number) => void;
-  decrementTime: () => void;
+  syncTimeLeft: () => void;
   resetExam: (testId: string, initialTimeSeconds: number) => void;
   setCalculatorOpen: (open: boolean) => void;
   setReferenceOpen: (open: boolean) => void;
@@ -31,12 +32,15 @@ export const useExamStore = create<ExamState>()(
       markedForReview: {},
       timeLeftSeconds: EXAM_DURATION_SECONDS,
       initialTimeSeconds: EXAM_DURATION_SECONDS,
+      endsAtMs: null,
       currentQuestionIndex: 0,
       isCalculatorOpen: false,
       isReferenceOpen: false,
 
       initializeExam: (testId, initialTimeSeconds, questionIds) =>
         set((state) => {
+          const now = Date.now();
+
           if (state.activeTestId !== testId) {
             return {
               activeTestId: testId,
@@ -44,6 +48,7 @@ export const useExamStore = create<ExamState>()(
               markedForReview: {},
               timeLeftSeconds: initialTimeSeconds,
               initialTimeSeconds,
+              endsAtMs: now + initialTimeSeconds * 1000,
               currentQuestionIndex: 0,
               isCalculatorOpen: false,
               isReferenceOpen: false,
@@ -51,9 +56,22 @@ export const useExamStore = create<ExamState>()(
           }
 
           const lastQuestionIndex = Math.max(questionIds.length - 1, 0);
+          const elapsedSeconds = Math.max(
+            0,
+            state.initialTimeSeconds - state.timeLeftSeconds
+          );
+          const durationChanged = state.initialTimeSeconds !== initialTimeSeconds;
+          const syncedTimeLeft = state.endsAtMs
+            ? Math.max(0, Math.ceil((state.endsAtMs - now) / 1000))
+            : Math.min(state.timeLeftSeconds, initialTimeSeconds);
+          const timeLeftSeconds = durationChanged
+            ? Math.max(0, initialTimeSeconds - elapsedSeconds)
+            : syncedTimeLeft;
 
           return {
             initialTimeSeconds,
+            timeLeftSeconds,
+            endsAtMs: timeLeftSeconds > 0 ? now + timeLeftSeconds * 1000 : now,
             currentQuestionIndex: Math.min(state.currentQuestionIndex, lastQuestionIndex),
           };
         }),
@@ -74,9 +92,11 @@ export const useExamStore = create<ExamState>()(
       setCurrentQuestionIndex: (index) =>
         set(() => ({ currentQuestionIndex: Math.max(0, index) })),
         
-      decrementTime: () =>
+      syncTimeLeft: () =>
         set((state) => ({
-          timeLeftSeconds: Math.max(0, state.timeLeftSeconds - 1)
+          timeLeftSeconds: state.endsAtMs
+            ? Math.max(0, Math.ceil((state.endsAtMs - Date.now()) / 1000))
+            : Math.max(0, state.timeLeftSeconds - 1)
         })),
         
       resetExam: (testId, initialTimeSeconds) =>
@@ -86,6 +106,7 @@ export const useExamStore = create<ExamState>()(
           markedForReview: {},
           timeLeftSeconds: initialTimeSeconds,
           initialTimeSeconds,
+          endsAtMs: Date.now() + initialTimeSeconds * 1000,
           currentQuestionIndex: 0,
           isCalculatorOpen: false,
           isReferenceOpen: false
@@ -102,6 +123,7 @@ export const useExamStore = create<ExamState>()(
         markedForReview: state.markedForReview,
         timeLeftSeconds: state.timeLeftSeconds,
         initialTimeSeconds: state.initialTimeSeconds,
+        endsAtMs: state.endsAtMs,
         currentQuestionIndex: state.currentQuestionIndex,
       }),
     }

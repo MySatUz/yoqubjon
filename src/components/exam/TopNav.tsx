@@ -18,7 +18,7 @@ export default function TopNav({ testId, questionIds, initialTimeSeconds }: TopN
     timeLeftSeconds, 
     initializeExam,
     resetExam,
-    decrementTime, 
+    syncTimeLeft,
     isCalculatorOpen, 
     setCalculatorOpen,
     isReferenceOpen,
@@ -34,11 +34,10 @@ export default function TopNav({ testId, questionIds, initialTimeSeconds }: TopN
   }, [initializeExam, initialTimeSeconds, questionIds, testId]);
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      decrementTime();
-    }, 1000);
+    syncTimeLeft();
+    const interval = setInterval(syncTimeLeft, 1000);
     return () => clearInterval(interval);
-  }, [decrementTime]);
+  }, [syncTimeLeft]);
 
   const submitSection = useCallback(async (requireConfirmation: boolean) => {
     if (isSubmitting) return;
@@ -100,10 +99,15 @@ export default function TopNav({ testId, questionIds, initialTimeSeconds }: TopN
     }
   };
 
-  // Format time as MM:SS
   const formatTime = (seconds: number) => {
-    const m = Math.floor(seconds / 60).toString().padStart(2, '0');
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60).toString().padStart(2, '0');
     const s = (seconds % 60).toString().padStart(2, '0');
+
+    if (h > 0) {
+      return `${h.toString().padStart(2, '0')}:${m}:${s}`;
+    }
+
     return `${m}:${s}`;
   };
 
