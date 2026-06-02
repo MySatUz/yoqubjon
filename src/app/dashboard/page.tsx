@@ -2,14 +2,14 @@ import React from 'react';
 import { auth } from "@/auth";
 import Link from 'next/link';
 import { prisma } from '@/lib/prisma';
-import { History, LayoutDashboard, CheckCircle2, Lock, ArrowLeft, ArrowRight, Layers3, Sparkles, FileDown } from 'lucide-react';
+import { History, CheckCircle2 } from 'lucide-react';
 import {
   compareCatalogTests,
-  getCategoryLabel,
   getTestCategory,
-  getTestDescription,
   type TestCategory,
 } from '@/lib/testCatalog';
+import PracticeCatalog from '@/components/dashboard/PracticeCatalog';
+import { isAdminUser } from '@/lib/admin';
 
 export default async function DashboardPage(props: {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
@@ -29,7 +29,7 @@ export default async function DashboardPage(props: {
   }
 
   // Fetch data in parallel
-  const [results, tests, subscription] = await Promise.all([
+  const [results, tests, subscription, canDownloadPdf] = await Promise.all([
     prisma.result.findMany({
       where: { userId: session.user.id },
       select: {
@@ -62,7 +62,8 @@ export default async function DashboardPage(props: {
         isActive: true,
         expiresAt: { gt: new Date() }
       }
-    })
+    }),
+    isAdminUser(session.user.id),
   ]);
 
   const isPremium = !!subscription;
@@ -72,11 +73,6 @@ export default async function DashboardPage(props: {
   const advancedTests = tests
     .filter((test) => getTestCategory(test) === 'ADVANCED')
     .sort(compareCatalogTests);
-  const visibleTests = activeCategory === 'ADVANCED'
-    ? advancedTests
-    : activeCategory === 'STANDARD'
-      ? standardTests
-      : [];
   const seenTestIds = new Set<string>();
   const recentResults = results
     .filter((result) => {
@@ -98,155 +94,19 @@ export default async function DashboardPage(props: {
         </div>
       )}
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          {/* Main Content */}
-          <div className="lg:col-span-3">
-            <header className="mb-10">
-              {activeCategory ? (
-                <Link
-                  href="/dashboard"
-                  className="mb-5 inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-black text-slate-600 transition hover:border-blue-200 hover:text-blue-600"
-                >
-                  <ArrowLeft className="h-4 w-4" />
-                  Back to collections
-                </Link>
-              ) : null}
-              <h1 className="text-4xl font-black text-slate-900 tracking-tight">
-                {activeCategory ? getCategoryLabel(activeCategory) : 'Practice Center'}
-              </h1>
-              <p className="text-slate-500 mt-2 text-lg font-medium">
-                {activeCategory === 'ADVANCED'
-                  ? 'Work through the advanced sets in order, from Advanced set 1 upward.'
-                  : activeCategory === 'STANDARD'
-                    ? 'Start with the standard SAT Math practice modules.'
-                    : 'Choose a collection, then select the module you want to practice.'}
-              </p>
-            </header>
-
-            {!activeCategory ? (
-              <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-                {[
-                  {
-                    href: '/dashboard?set=standard',
-                    title: 'Standard tests',
-                    count: standardTests.length,
-                    description: 'Core Digital SAT Math modules for steady practice and baseline review.',
-                    icon: Layers3,
-                    theme: 'bg-blue-600 text-white shadow-blue-200',
-                  },
-                  {
-                    href: '/dashboard?set=advanced',
-                    title: 'Advanced set',
-                    count: advancedTests.length,
-                    description: 'Harder sets for students targeting top scores and deeper problem solving.',
-                    icon: Sparkles,
-                    theme: 'bg-slate-900 text-white shadow-slate-200',
-                  },
-                ].map((collection) => {
-                  const Icon = collection.icon;
-
-                  return (
-                    <Link
-                      key={collection.href}
-                      href={collection.href}
-                      className="group relative overflow-hidden rounded-[2rem] border border-slate-200 bg-white p-8 shadow-sm transition-all hover:-translate-y-1 hover:border-blue-200 hover:shadow-2xl hover:shadow-blue-900/10"
-                    >
-                      <div className="absolute right-0 top-0 h-40 w-40 rounded-bl-full bg-slate-50 transition-transform group-hover:scale-110"></div>
-                      <div className="relative z-10">
-                        <div className="mb-8 flex items-start justify-between gap-4">
-                          <div className={`rounded-3xl p-5 shadow-xl ${collection.theme}`}>
-                            <Icon className="h-8 w-8" />
-                          </div>
-                          <span className="rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-black uppercase tracking-widest text-slate-500">
-                            {collection.count} {collection.count === 1 ? 'test' : 'tests'}
-                          </span>
-                        </div>
-                        <h2 className="text-3xl font-black tracking-tight text-slate-900">{collection.title}</h2>
-                        <p className="mt-3 min-h-14 text-base font-bold leading-relaxed text-slate-500">
-                          {collection.description}
-                        </p>
-                        <div className="mt-8 inline-flex items-center gap-2 text-sm font-black text-blue-600">
-                          Open collection
-                          <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-                        </div>
-                      </div>
-                    </Link>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-                {visibleTests.map((test) => {
-                  const canAccess = test.isFree || isPremium;
-                  const description = getTestDescription(test);
-
-                  return (
-                    <div
-                      key={test.id}
-                      className="bg-white rounded-3xl p-8 shadow-sm border border-slate-200 hover:shadow-xl hover:shadow-blue-900/5 transition-all group relative overflow-hidden"
-                    >
-                      <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-bl-full -mr-16 -mt-16 transition-transform group-hover:scale-110"></div>
-
-                      <div className="relative z-10">
-                        <div className="flex justify-between items-start mb-6">
-                          <div className={`p-4 rounded-2xl ${canAccess ? 'bg-blue-600' : 'bg-slate-100'} text-white shadow-lg ${canAccess ? 'shadow-blue-200' : ''}`}>
-                            {canAccess ? <LayoutDashboard className="w-6 h-6" /> : <Lock className="w-6 h-6 text-slate-400" />}
-                          </div>
-                          <span className={`inline-flex items-center px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${
-                            test.isFree
-                              ? 'bg-green-100 text-green-700 border-green-200'
-                              : 'bg-amber-100 text-amber-700 border-amber-200'
-                          }`}>
-                            {test.isFree ? 'Free Access' : 'Premium'}
-                          </span>
-                        </div>
-
-                        <h3 className="text-2xl font-black text-slate-900 mb-3">{test.title}</h3>
-                        <p className="text-slate-500 text-sm mb-8 font-medium leading-relaxed">
-                          {description}
-                        </p>
-
-                        {canAccess ? (
-                          <div className="space-y-3">
-                            <Link
-                              href={`/exam/${test.id}`}
-                              className="inline-flex items-center justify-center w-full py-4 px-6 rounded-2xl text-sm font-black text-white bg-slate-900 hover:bg-blue-600 transition-all transform active:scale-95 shadow-xl shadow-slate-200"
-                            >
-                              Start Practice Module
-                            </Link>
-                            <Link
-                              href={`/exam/${test.id}/pdf`}
-                              className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-6 py-3 text-sm font-black text-slate-600 transition hover:border-blue-200 hover:text-blue-600"
-                            >
-                              <FileDown className="h-4 w-4" />
-                              Download questions PDF
-                            </Link>
-                          </div>
-                        ) : (
-                          <div className="space-y-4">
-                            <Link
-                              href="/dashboard/subscription"
-                              className="inline-flex items-center justify-center w-full py-4 px-6 rounded-2xl text-sm font-black text-white bg-blue-600 hover:bg-blue-700 transition-all transform active:scale-95 shadow-xl shadow-blue-100"
-                            >
-                              Unlock with Premium
-                            </Link>
-                            <button disabled className="w-full py-3 text-xs font-bold text-slate-400 uppercase tracking-widest">
-                              Module Locked
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-
-              {visibleTests.length === 0 && (
-                <div className="col-span-full py-20 bg-slate-50 rounded-3xl border-2 border-dashed border-slate-200 text-center">
-                  <p className="text-slate-400 font-bold">No tests available yet. Check back later!</p>
-                </div>
-              )}
-              </div>
-            )}
-          </div>
+          <PracticeCatalog
+            initialCategory={activeCategory}
+            standardTests={standardTests.map((test) => ({
+              ...test,
+              createdAt: test.createdAt.toISOString(),
+            }))}
+            advancedTests={advancedTests.map((test) => ({
+              ...test,
+              createdAt: test.createdAt.toISOString(),
+            }))}
+            isPremium={isPremium}
+            canDownloadPdf={canDownloadPdf}
+          />
 
           {/* Right Sidebar: Recent Activity */}
           <div className="lg:col-span-1">

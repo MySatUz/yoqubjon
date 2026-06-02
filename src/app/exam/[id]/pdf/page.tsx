@@ -1,7 +1,6 @@
 /* eslint-disable @next/next/no-img-element */
-import { auth } from '@/auth';
 import PrintPdfButton from '@/components/exam/PrintPdfButton';
-import { isAdminSessionUser } from '@/lib/admin';
+import { requireAdminPage } from '@/lib/admin';
 import { prisma } from '@/lib/prisma';
 import { renderMathText } from '@/lib/renderMathText';
 import { ArrowLeft, FileText } from 'lucide-react';
@@ -79,7 +78,7 @@ function QuestionPdfCard({ question }: { question: QuestionForPdf }) {
 
 export default async function ExamPdfPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const session = await auth();
+  const session = await requireAdminPage();
 
   if (!session?.user?.id) {
     redirect('/login');
@@ -106,27 +105,6 @@ export default async function ExamPdfPage({ params }: { params: Promise<{ id: st
 
   if (!test) {
     notFound();
-  }
-
-  if (!test.isFree) {
-    const [subscription, adminUser] = await Promise.all([
-      prisma.subscription.findFirst({
-        where: {
-          userId: session.user.id,
-          isActive: true,
-          expiresAt: { gt: new Date() },
-        },
-        select: { id: true },
-      }),
-      prisma.user.findUnique({
-        where: { id: session.user.id },
-        select: { role: true, email: true },
-      }),
-    ]);
-
-    if (!subscription && !isAdminSessionUser(adminUser)) {
-      redirect('/dashboard/subscription');
-    }
   }
 
   return (
