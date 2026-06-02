@@ -11,6 +11,49 @@ const MAX_TEX_FILE_SIZE = 2 * 1024 * 1024;
 const MAX_IMAGE_FILE_SIZE = 5 * 1024 * 1024;
 const ALLOWED_IMAGE_TYPES = new Set(['image/png', 'image/jpeg', 'image/jpg', 'image/webp']);
 
+function normalizeNullableText(value: FormDataEntryValue | null) {
+  if (typeof value !== 'string') return null;
+
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+function normalizeRequiredText(value: FormDataEntryValue | null, fieldName: string) {
+  if (typeof value !== 'string') {
+    throw new Error(`${fieldName} is required`);
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed) {
+    throw new Error(`${fieldName} is required`);
+  }
+
+  return trimmed;
+}
+
+function normalizeQuestionOptions(values: FormDataEntryValue[]) {
+  const options = values
+    .filter((value): value is string => typeof value === 'string')
+    .map((value) => value.trim())
+    .filter(Boolean);
+
+  if (options.length === 1) {
+    throw new Error('Use at least two options or remove all options for a grid-in answer');
+  }
+
+  return options;
+}
+
+function validateQuestionAnswer(options: string[], correctAnswer: string) {
+  const answerLetter = correctAnswer.trim().toUpperCase();
+  if (!/^[A-H]$/.test(answerLetter) || options.length === 0) return;
+
+  const answerIndex = answerLetter.charCodeAt(0) - 65;
+  if (answerIndex >= options.length) {
+    throw new Error(`Correct answer is ${answerLetter}, but only ${options.length} options are present`);
+  }
+}
+
 function sanitizeFileName(fileName: string) {
   const normalized = fileName.trim().replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 120);
   return normalized || `${crypto.randomUUID()}.bin`;
@@ -173,5 +216,53 @@ export async function deleteTest(testId: string) {
   } catch (error: unknown) {
     console.error("Delete Test Error:", error);
     return { success: false, error: error instanceof Error ? error.message : 'Delete failed' };
+  }
+}
+
+export async function updateQuestion(questionId: string, formData: FormData) {
+  try {
+    await requireAdmin();
+
+    if (!/^[0-9a-f-]{36}$/i.test(questionId)) {
+      throw new Error('Invalid question id');
+    }
+
+    const content = normalizeRequiredText(formData.get('content'), 'Question text');
+    const correctAnswer = normalizeRequiredText(formData.get('correctAnswer'), 'Correct answer');
+    const options = normalizeQuestionOptions(formData.getAll('options'));
+    const explanation = normalizeNullableText(formData.get('explanation'));
+    const imageUrl = normalizeNullableText(formData.get('imageUrl'));
+    const videoUrl = normalizeNullableText(formData.get('videoUrl'));
+
+    validateQuestionAnswer(options, correctAnswer);
+
+    const existingQuestion = await prisma.question.findUnique({
+      where: { id: questionId },
+      select: { testId: true },
+    });
+
+    if (!existingQuestion) {
+      throw new Error('Question not found');
+    }
+
+    await prisma.question.update({
+      where: { id: questionId },
+      data: {
+        content,
+        options,
+        correctAnswer,
+        explanation,
+        imageUrl,
+        videoUrl,
+      },
+    });
+
+    revalidatePath('/admin');
+    revalidatePath('/dashboard');
+    revalidatePath(`/exam/${existingQuestion.testId}`);
+    return { success: true };
+  } catch (error: unknown) {
+    console.error('Update Question Error:', error);
+    return { success: false, error: error instanceof Error ? error.message : 'Update failed' };
   }
 }

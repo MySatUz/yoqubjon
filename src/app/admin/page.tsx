@@ -20,6 +20,19 @@ export default async function AdminUploadPage() {
     prisma.test.findMany({
       orderBy: { createdAt: 'desc' },
       include: {
+        questions: {
+          orderBy: { order: 'asc' },
+          select: {
+            id: true,
+            content: true,
+            options: true,
+            correctAnswer: true,
+            explanation: true,
+            imageUrl: true,
+            videoUrl: true,
+            order: true,
+          },
+        },
         _count: {
           select: { questions: true }
         }
