@@ -1,9 +1,10 @@
 'use client';
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { deleteTest, updateQuestion } from '@/app/admin/actions';
-import { ChevronDown, Edit3, ImageIcon, Loader2, Plus, Save, Trash2, Video, X } from 'lucide-react';
+import { ChevronDown, Edit3, FileDown, ImageIcon, Loader2, Plus, Save, Trash2, Video, X } from 'lucide-react';
 import { getCategoryLabel, getTestCategory } from '@/lib/testCatalog';
 
 type AdminQuestion = {
@@ -290,19 +291,29 @@ export default function TestList({ tests }: TestListProps) {
                     </span>
                   </button>
 
-                  <button
-                    type="button"
-                    onClick={() => handleDelete(test.id)}
-                    disabled={deletingId === test.id}
-                    className="inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-black text-slate-400 transition-all hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
-                  >
-                    {deletingId === test.id ? (
-                      <Loader2 className="h-5 w-5 animate-spin" />
-                    ) : (
-                      <Trash2 className="h-5 w-5" />
-                    )}
-                    Delete
-                  </button>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Link
+                      href={`/exam/${test.id}/pdf`}
+                      className="inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-black text-slate-500 transition-all hover:bg-blue-50 hover:text-blue-600"
+                    >
+                      <FileDown className="h-5 w-5" />
+                      PDF
+                    </Link>
+
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(test.id)}
+                      disabled={deletingId === test.id}
+                      className="inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-black text-slate-400 transition-all hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
+                    >
+                      {deletingId === test.id ? (
+                        <Loader2 className="h-5 w-5 animate-spin" />
+                      ) : (
+                        <Trash2 className="h-5 w-5" />
+                      )}
+                      Delete
+                    </button>
+                  </div>
                 </div>
 
                 {isOpen && (

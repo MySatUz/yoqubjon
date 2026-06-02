@@ -2,7 +2,7 @@ import React from 'react';
 import { auth } from "@/auth";
 import Link from 'next/link';
 import { prisma } from '@/lib/prisma';
-import { History, LayoutDashboard, CheckCircle2, Lock, ArrowLeft, ArrowRight, Layers3, Sparkles } from 'lucide-react';
+import { History, LayoutDashboard, CheckCircle2, Lock, ArrowLeft, ArrowRight, Layers3, Sparkles, FileDown } from 'lucide-react';
 import {
   compareCatalogTests,
   getCategoryLabel,
@@ -206,12 +206,21 @@ export default async function DashboardPage(props: {
                         </p>
 
                         {canAccess ? (
-                          <Link
-                            href={`/exam/${test.id}`}
-                            className="inline-flex items-center justify-center w-full py-4 px-6 rounded-2xl text-sm font-black text-white bg-slate-900 hover:bg-blue-600 transition-all transform active:scale-95 shadow-xl shadow-slate-200"
-                          >
-                            Start Practice Module
-                          </Link>
+                          <div className="space-y-3">
+                            <Link
+                              href={`/exam/${test.id}`}
+                              className="inline-flex items-center justify-center w-full py-4 px-6 rounded-2xl text-sm font-black text-white bg-slate-900 hover:bg-blue-600 transition-all transform active:scale-95 shadow-xl shadow-slate-200"
+                            >
+                              Start Practice Module
+                            </Link>
+                            <Link
+                              href={`/exam/${test.id}/pdf`}
+                              className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-6 py-3 text-sm font-black text-slate-600 transition hover:border-blue-200 hover:text-blue-600"
+                            >
+                              <FileDown className="h-4 w-4" />
+                              Download questions PDF
+                            </Link>
+                          </div>
                         ) : (
                           <div className="space-y-4">
                             <Link
