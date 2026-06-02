@@ -32,12 +32,29 @@ export default async function DashboardPage(props: {
   const [results, tests, subscription] = await Promise.all([
     prisma.result.findMany({
       where: { userId: session.user.id },
-      include: { test: true },
+      select: {
+        id: true,
+        testId: true,
+        score: true,
+        createdAt: true,
+        test: {
+          select: {
+            title: true,
+          },
+        },
+      },
       orderBy: { createdAt: 'desc' },
       take: 20
     }),
     prisma.test.findMany({
-      orderBy: { createdAt: 'asc' }
+      orderBy: { createdAt: 'asc' },
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        isFree: true,
+        createdAt: true,
+      },
     }),
     prisma.subscription.findFirst({
       where: { 

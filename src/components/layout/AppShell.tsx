@@ -1,7 +1,8 @@
 import React from 'react';
 import Link from 'next/link';
-import { CreditCard, GraduationCap, LayoutDashboard, LogOut, ShieldCheck, User } from 'lucide-react';
+import { GraduationCap, LogOut } from 'lucide-react';
 import { signOut } from '@/auth';
+import ShellNav from '@/components/layout/ShellNav';
 
 type ShellSession = {
   user?: {
@@ -16,17 +17,8 @@ type AppShellProps = {
   canManageTests: boolean;
 };
 
-const navItems = [
-  { href: '/dashboard', label: 'Practice Center', icon: LayoutDashboard },
-  { href: '/dashboard/profile', label: 'Personal Cabinet', icon: User },
-  { href: '/dashboard/subscription', label: 'Subscription', icon: CreditCard },
-];
-
 export default function AppShell({ children, session, canManageTests }: AppShellProps) {
   const userInitial = session?.user?.name?.[0] || session?.user?.email?.[0] || 'U';
-  const mobileNavItems = canManageTests
-    ? [...navItems, { href: '/admin', label: 'Admin', icon: ShieldCheck }]
-    : navItems;
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row">
@@ -62,32 +54,7 @@ export default function AppShell({ children, session, canManageTests }: AppShell
           </Link>
         </div>
 
-        <nav className="flex-1 px-4 space-y-2">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="flex items-center gap-3 px-4 py-3 text-slate-600 hover:bg-slate-50 hover:text-blue-600 rounded-xl transition-all font-bold"
-              >
-                <Icon className="w-5 h-5" />
-                {item.label}
-              </Link>
-            );
-          })}
-
-          {canManageTests && (
-            <Link
-              href="/admin"
-              className="flex items-center gap-3 px-4 py-3 text-slate-600 hover:bg-slate-50 hover:text-blue-600 rounded-xl transition-all font-bold"
-            >
-              <ShieldCheck className="w-5 h-5" />
-              Admin Panel
-            </Link>
-          )}
-        </nav>
+        <ShellNav canManageTests={canManageTests} variant="desktop" />
 
         <div className="p-4 border-t border-slate-100">
           <div className="bg-slate-50 rounded-2xl p-4 flex items-center gap-3 mb-4">
@@ -118,28 +85,7 @@ export default function AppShell({ children, session, canManageTests }: AppShell
       </main>
 
       <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-slate-200 bg-white/95 px-2 pb-[max(env(safe-area-inset-bottom),0.5rem)] pt-2 shadow-[0_-12px_30px_rgba(15,23,42,0.08)] backdrop-blur md:hidden">
-        <div className={`mx-auto grid max-w-md gap-1 ${mobileNavItems.length === 4 ? 'grid-cols-4' : 'grid-cols-3'}`}>
-          {mobileNavItems.map((item) => {
-            const Icon = item.icon;
-
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="flex min-w-0 flex-col items-center justify-center gap-1 rounded-2xl px-1 py-2 text-[10px] font-black text-slate-500 transition-colors hover:bg-blue-50 hover:text-blue-600"
-              >
-                <Icon className="h-5 w-5" />
-                <span className="max-w-full truncate">
-                  {item.label === 'Practice Center'
-                    ? 'Practice'
-                    : item.label === 'Personal Cabinet'
-                      ? 'Cabinet'
-                      : item.label}
-                </span>
-              </Link>
-            );
-          })}
-        </div>
+        <ShellNav canManageTests={canManageTests} variant="mobile" />
       </nav>
     </div>
   );

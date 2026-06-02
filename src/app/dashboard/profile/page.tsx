@@ -9,11 +9,32 @@ export default async function ProfilePage() {
   
   if (!session?.user?.id) return <div>Unauthorized</div>;
 
-  const userResults = await prisma.result.findMany({
-    where: { userId: session.user.id },
-    include: { test: true },
-    orderBy: { createdAt: 'desc' },
-  });
+  const [userResults, subscription] = await Promise.all([
+    prisma.result.findMany({
+      where: { userId: session.user.id },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        testId: true,
+        score: true,
+        timeSpent: true,
+        createdAt: true,
+        test: {
+          select: {
+            title: true,
+          },
+        },
+      },
+    }),
+    prisma.subscription.findFirst({
+      where: {
+        userId: session.user.id,
+        isActive: true,
+        expiresAt: { gt: new Date() },
+      },
+      orderBy: { expiresAt: 'desc' },
+    }),
+  ]);
 
   const avgScore = userResults.length > 0 
     ? Math.round(userResults.reduce((acc, curr) => acc + curr.score, 0) / userResults.length)
@@ -23,14 +44,6 @@ export default async function ProfilePage() {
 
   const totalPracticedTime = userResults.reduce((acc, curr) => acc + curr.timeSpent, 0);
   const formattedTime = Math.round(totalPracticedTime / 60) + " min";
-  const subscription = await prisma.subscription.findFirst({
-    where: {
-      userId: session.user.id,
-      isActive: true,
-      expiresAt: { gt: new Date() },
-    },
-    orderBy: { expiresAt: 'desc' },
-  });
   const isPremium = subscription?.planId === 'PREMIUM';
   const displayName = session.user.name || 'MYSAT Student';
   const userInitial = displayName[0] || 'U';
