@@ -1,4 +1,4 @@
-export type TestCategory = 'STANDARD' | 'ADVANCED';
+export type TestCategory = 'STANDARD' | 'ADVANCED' | 'PLANCK';
 
 type CatalogTest = {
   title: string;
@@ -9,6 +9,7 @@ type CatalogTest = {
 const CATEGORY_MARKERS: Record<TestCategory, string> = {
   STANDARD: '[STANDARD]',
   ADVANCED: '[ADVANCED]',
+  PLANCK: '[PLANCK]',
 };
 
 export const TEST_CATEGORY_OPTIONS: {
@@ -26,7 +27,16 @@ export const TEST_CATEGORY_OPTIONS: {
     label: 'Advanced set',
     description: 'Harder SAT Math sets for premium-level training.',
   },
+  {
+    value: 'PLANCK',
+    label: 'Planck set',
+    description: 'Precision-focused SAT Math sets for the toughest practice.',
+  },
 ];
+
+export function isTestCategory(value: unknown): value is TestCategory {
+  return typeof value === 'string' && value in CATEGORY_MARKERS;
+}
 
 export function encodeTestDescription(category: TestCategory, description?: string | null) {
   const cleanDescription = description?.trim();
@@ -39,7 +49,7 @@ export function cleanTestDescription(description?: string | null) {
   if (!description) return null;
 
   const withoutMarker = description
-    .replace(/^\[(STANDARD|ADVANCED)\]\s*/i, '')
+    .replace(/^\[(STANDARD|ADVANCED|PLANCK)\]\s*/i, '')
     .trim();
 
   if (!withoutMarker || withoutMarker.startsWith('Imported from ')) {
@@ -54,18 +64,29 @@ export function getTestCategory(test: CatalogTest): TestCategory {
 
   if (/^\[STANDARD\]/i.test(description)) return 'STANDARD';
   if (/^\[ADVANCED\]/i.test(description)) return 'ADVANCED';
+  if (/^\[PLANCK\]/i.test(description)) return 'PLANCK';
 
   if (/^advanced\s+set\s*\d*/i.test(test.title.trim())) {
     return 'ADVANCED';
+  }
+
+  if (/^planck\s+set\s*\d*/i.test(test.title.trim())) {
+    return 'PLANCK';
   }
 
   return 'STANDARD';
 }
 
 export function getDefaultTestDescription(category: TestCategory) {
-  return category === 'ADVANCED'
-    ? 'Advanced SAT Math set with tougher questions and score-raising practice.'
-    : 'Standard Digital SAT practice module.';
+  if (category === 'ADVANCED') {
+    return 'Advanced SAT Math set with tougher questions and score-raising practice.';
+  }
+
+  if (category === 'PLANCK') {
+    return 'Planck SAT Math set for precision work and the hardest practice.';
+  }
+
+  return 'Standard Digital SAT practice module.';
 }
 
 export function getTestDescription(test: CatalogTest) {
@@ -73,11 +94,14 @@ export function getTestDescription(test: CatalogTest) {
 }
 
 export function getCategoryLabel(category: TestCategory) {
-  return category === 'ADVANCED' ? 'Advanced set' : 'Standard tests';
+  if (category === 'ADVANCED') return 'Advanced set';
+  if (category === 'PLANCK') return 'Planck set';
+  return 'Standard tests';
 }
 
-function getAdvancedSetNumber(title: string) {
-  const match = title.match(/^advanced\s+set\s*(\d+)/i);
+function getSetNumber(title: string, category: TestCategory) {
+  const label = getCategoryLabel(category).replace(/\s+/g, '\\s+');
+  const match = title.match(new RegExp(`^${label}\\s*(\\d+)`, 'i'));
   return match ? Number(match[1]) : Number.POSITIVE_INFINITY;
 }
 
@@ -90,9 +114,9 @@ export function compareCatalogTests(a: CatalogTest, b: CatalogTest) {
   const categoryA = getTestCategory(a);
   const categoryB = getTestCategory(b);
 
-  if (categoryA === 'ADVANCED' || categoryB === 'ADVANCED') {
-    const numberA = getAdvancedSetNumber(a.title);
-    const numberB = getAdvancedSetNumber(b.title);
+  if (categoryA === categoryB && (categoryA === 'ADVANCED' || categoryA === 'PLANCK')) {
+    const numberA = getSetNumber(a.title, categoryA);
+    const numberB = getSetNumber(b.title, categoryB);
 
     if (numberA !== numberB) return numberA - numberB;
   }

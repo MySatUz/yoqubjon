@@ -20,9 +20,11 @@ export default async function DashboardPage(props: {
   const requestedSet = searchParams.set;
   const activeCategory: TestCategory | null = requestedSet === 'advanced'
     ? 'ADVANCED'
-    : requestedSet === 'standard'
-      ? 'STANDARD'
-      : null;
+    : requestedSet === 'planck'
+      ? 'PLANCK'
+      : requestedSet === 'standard'
+        ? 'STANDARD'
+        : null;
   
   if (!session?.user?.id) {
     return <div>Unauthorized</div>;
@@ -73,6 +75,9 @@ export default async function DashboardPage(props: {
   const advancedTests = tests
     .filter((test) => getTestCategory(test) === 'ADVANCED')
     .sort(compareCatalogTests);
+  const planckTests = tests
+    .filter((test) => getTestCategory(test) === 'PLANCK')
+    .sort(compareCatalogTests);
   const seenTestIds = new Set<string>();
   const recentResults = results
     .filter((result) => {
@@ -101,6 +106,10 @@ export default async function DashboardPage(props: {
               createdAt: test.createdAt.toISOString(),
             }))}
             advancedTests={advancedTests.map((test) => ({
+              ...test,
+              createdAt: test.createdAt.toISOString(),
+            }))}
+            planckTests={planckTests.map((test) => ({
               ...test,
               createdAt: test.createdAt.toISOString(),
             }))}

@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, ArrowRight, FileDown, Layers3, LayoutDashboard, Lock, Sparkles } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Atom, FileDown, Layers3, LayoutDashboard, Lock, Sparkles } from 'lucide-react';
 import {
   getCategoryLabel,
   getTestDescription,
@@ -22,6 +22,7 @@ type PracticeCatalogProps = {
   initialCategory: TestCategory | null;
   standardTests: CatalogTest[];
   advancedTests: CatalogTest[];
+  planckTests: CatalogTest[];
   isPremium: boolean;
   canDownloadPdf: boolean;
 };
@@ -31,12 +32,14 @@ function readCategoryFromUrl() {
 
   const set = new URLSearchParams(window.location.search).get('set');
   if (set === 'advanced') return 'ADVANCED';
+  if (set === 'planck') return 'PLANCK';
   if (set === 'standard') return 'STANDARD';
   return null;
 }
 
 function categoryToQuery(category: TestCategory | null) {
   if (category === 'ADVANCED') return '?set=advanced';
+  if (category === 'PLANCK') return '?set=planck';
   if (category === 'STANDARD') return '?set=standard';
   return '';
 }
@@ -45,6 +48,7 @@ export default function PracticeCatalog({
   initialCategory,
   standardTests,
   advancedTests,
+  planckTests,
   isPremium,
   canDownloadPdf,
 }: PracticeCatalogProps) {
@@ -58,11 +62,12 @@ export default function PracticeCatalog({
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
-  const visibleTests = activeCategory === 'ADVANCED'
-    ? advancedTests
-    : activeCategory === 'STANDARD'
-      ? standardTests
-      : [];
+  const testsByCategory: Record<TestCategory, CatalogTest[]> = {
+    STANDARD: standardTests,
+    ADVANCED: advancedTests,
+    PLANCK: planckTests,
+  };
+  const visibleTests = activeCategory ? testsByCategory[activeCategory] : [];
 
   const collections = useMemo(() => [
     {
@@ -81,7 +86,15 @@ export default function PracticeCatalog({
       icon: Sparkles,
       theme: 'bg-slate-900 text-white shadow-slate-200',
     },
-  ], [advancedTests.length, standardTests.length]);
+    {
+      category: 'PLANCK' as const,
+      title: 'Planck set',
+      count: planckTests.length,
+      description: 'Precision-focused challenges for students polishing the hardest SAT Math skills.',
+      icon: Atom,
+      theme: 'bg-teal-600 text-white shadow-teal-200',
+    },
+  ], [advancedTests.length, planckTests.length, standardTests.length]);
 
   const switchCategory = (category: TestCategory | null) => {
     startTransition(() => {
@@ -114,14 +127,16 @@ export default function PracticeCatalog({
         <p className="text-slate-500 mt-2 text-lg font-medium">
           {activeCategory === 'ADVANCED'
             ? 'Work through the advanced sets in order, from Advanced set 1 upward.'
-            : activeCategory === 'STANDARD'
-              ? 'Start with the standard SAT Math practice modules.'
-              : 'Choose a collection, then select the module you want to practice.'}
+            : activeCategory === 'PLANCK'
+              ? 'Work through the Planck sets in order, from Planck set 1 upward.'
+              : activeCategory === 'STANDARD'
+                ? 'Start with the standard SAT Math practice modules.'
+                : 'Choose a collection, then select the module you want to practice.'}
         </p>
       </header>
 
       {!activeCategory ? (
-        <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
           {collections.map((collection) => {
             const Icon = collection.icon;
 

@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { uploadTest } from '@/app/admin/actions';
-import { FileText, Image as ImageIcon, Upload, CheckCircle2, AlertCircle, Loader2, Layers3, Sparkles } from 'lucide-react';
+import { FileText, Image as ImageIcon, Upload, CheckCircle2, AlertCircle, Atom, Loader2, Layers3, Sparkles } from 'lucide-react';
 import { TEST_CATEGORY_OPTIONS } from '@/lib/testCatalog';
 
 type PreparedUpload = {
@@ -97,7 +97,7 @@ export default function AdminForm() {
       const serverFormData = new FormData();
       if (typeof title === 'string') serverFormData.set('title', title);
       if (isFree === 'true') serverFormData.set('isFree', 'true');
-      if (testCategory === 'ADVANCED') serverFormData.set('testCategory', 'ADVANCED');
+      if (typeof testCategory === 'string') serverFormData.set('testCategory', testCategory);
       if (texFile instanceof File) serverFormData.set('texFile', texFile);
       if (testId) serverFormData.set('testId', testId);
       serverFormData.set('uploadedImages', JSON.stringify(uploadedImages));
@@ -138,9 +138,13 @@ export default function AdminForm() {
 
         <div>
           <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-3">Test Collection</label>
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {TEST_CATEGORY_OPTIONS.map((option) => {
-              const Icon = option.value === 'ADVANCED' ? Sparkles : Layers3;
+              const Icon = option.value === 'PLANCK'
+                ? Atom
+                : option.value === 'ADVANCED'
+                  ? Sparkles
+                  : Layers3;
 
               return (
                 <label key={option.value} className="group relative cursor-pointer">

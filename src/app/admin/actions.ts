@@ -5,7 +5,7 @@ import { parseTexFile } from '@/lib/texParser';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { revalidatePath } from 'next/cache';
 import { requireAdmin } from '@/lib/admin';
-import { encodeTestDescription, type TestCategory } from '@/lib/testCatalog';
+import { encodeTestDescription, isTestCategory, type TestCategory } from '@/lib/testCatalog';
 
 const MAX_TEX_FILE_SIZE = 2 * 1024 * 1024;
 const MAX_IMAGE_FILE_SIZE = 5 * 1024 * 1024;
@@ -97,8 +97,9 @@ export async function uploadTest(formData: FormData) {
       ? (formData.get('title') as string).trim()
       : '';
     const isFree = formData.get('isFree') === 'true';
-    const testCategory: TestCategory = formData.get('testCategory') === 'ADVANCED'
-      ? 'ADVANCED'
+    const categoryValue = formData.get('testCategory');
+    const testCategory: TestCategory = isTestCategory(categoryValue)
+      ? categoryValue
       : 'STANDARD';
     const texFile = formData.get('texFile') as File;
     const imageFiles = formData.getAll('images') as File[];
