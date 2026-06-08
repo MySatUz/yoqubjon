@@ -6,11 +6,18 @@ type CatalogTest = {
   createdAt?: Date | string;
 };
 
+type CollectionVisibilityRow = {
+  category: string;
+  visible: boolean;
+};
+
 const CATEGORY_MARKERS: Record<TestCategory, string> = {
   STANDARD: '[STANDARD]',
   ADVANCED: '[ADVANCED]',
   PLANCK: '[PLANCK]',
 };
+
+export const TEST_CATEGORIES: TestCategory[] = ['STANDARD', 'ADVANCED', 'PLANCK'];
 
 export const TEST_CATEGORY_OPTIONS: {
   value: TestCategory;
@@ -36,6 +43,25 @@ export const TEST_CATEGORY_OPTIONS: {
 
 export function isTestCategory(value: unknown): value is TestCategory {
   return typeof value === 'string' && value in CATEGORY_MARKERS;
+}
+
+export function getDefaultCollectionVisibility() {
+  return TEST_CATEGORIES.reduce((visibility, category) => {
+    visibility[category] = true;
+    return visibility;
+  }, {} as Record<TestCategory, boolean>);
+}
+
+export function getCollectionVisibility(rows: CollectionVisibilityRow[]) {
+  const visibility = getDefaultCollectionVisibility();
+
+  for (const row of rows) {
+    if (isTestCategory(row.category)) {
+      visibility[row.category] = row.visible;
+    }
+  }
+
+  return visibility;
 }
 
 export function encodeTestDescription(category: TestCategory, description?: string | null) {

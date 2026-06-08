@@ -41,6 +41,13 @@ model Test {
   @@index([createdAt])
 }
 
+model TestCollectionVisibility {
+  category  String   @id
+  visible   Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 model Question {
   id            String   @id @default(uuid())
   testId        String

@@ -5,8 +5,10 @@ import TestList from '@/components/admin/TestList';
 import ManualPaymentRequests from '@/components/admin/ManualPaymentRequests';
 import AdminUsersPanel from '@/components/admin/AdminUsersPanel';
 import AdminSectionHub from '@/components/admin/AdminSectionHub';
+import SectionVisibilityForm from '@/components/admin/SectionVisibilityForm';
 import { isOwnerSessionUser, OWNER_ADMIN_EMAIL, requireAdminPage } from '@/lib/admin';
 import { createManualReceiptSignedUrl } from '@/lib/manual-payments';
+import { getCollectionVisibility } from '@/lib/testCatalog';
 import AppShell from '@/components/layout/AppShell';
 
 export const dynamic = 'force-dynamic';
@@ -16,7 +18,7 @@ export default async function AdminUploadPage() {
   const session = await requireAdminPage();
   const canManageAdmins = isOwnerSessionUser(session?.user);
 
-  const [tests, paymentRequests, users] = await Promise.all([
+  const [tests, paymentRequests, users, visibilityRows] = await Promise.all([
     prisma.test.findMany({
       orderBy: { createdAt: 'desc' },
       include: {
@@ -68,8 +70,15 @@ export default async function AdminUploadPage() {
           },
         })
       : Promise.resolve([]),
+    prisma.testCollectionVisibility.findMany({
+      select: {
+        category: true,
+        visible: true,
+      },
+    }),
   ]);
 
+  const collectionVisibility = getCollectionVisibility(visibilityRows);
   const paymentRequestsWithReceipts = await Promise.all(
     paymentRequests.map(async (request) => ({
       ...request,
@@ -78,6 +87,7 @@ export default async function AdminUploadPage() {
   );
   const adminCount = users.filter((user) => user.role === 'ADMIN' || user.email === OWNER_ADMIN_EMAIL).length;
   const pendingPaymentCount = paymentRequests.filter((request) => request.status === 'PENDING').length;
+  const visibleSectionCount = Object.values(collectionVisibility).filter(Boolean).length;
 
   return (
     <AppShell session={session} canManageTests>
@@ -93,9 +103,11 @@ export default async function AdminUploadPage() {
             adminCount={adminCount}
             paymentCount={paymentRequests.length}
             pendingPaymentCount={pendingPaymentCount}
+            visibleSectionCount={visibleSectionCount}
             testCount={tests.length}
             adminAccess={<AdminUsersPanel users={users} ownerEmail={OWNER_ADMIN_EMAIL} />}
             payments={<ManualPaymentRequests requests={paymentRequestsWithReceipts} />}
+            sections={<SectionVisibilityForm visibility={collectionVisibility} />}
             tests={(
               <div className="space-y-10">
                 <AdminForm />

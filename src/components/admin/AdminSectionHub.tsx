@@ -2,9 +2,9 @@
 
 import type { ReactNode } from 'react';
 import { useState } from 'react';
-import { ArrowLeft, CreditCard, FilePlus2, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, CreditCard, Eye, FilePlus2, ShieldCheck } from 'lucide-react';
 
-type AdminSection = 'home' | 'admins' | 'payments' | 'tests';
+type AdminSection = 'home' | 'admins' | 'payments' | 'sections' | 'tests';
 
 type SectionCard = {
   id: Exclude<AdminSection, 'home'>;
@@ -20,9 +20,11 @@ type AdminSectionHubProps = {
   adminCount: number;
   paymentCount: number;
   pendingPaymentCount: number;
+  visibleSectionCount: number;
   testCount: number;
   adminAccess: ReactNode;
   payments: ReactNode;
+  sections: ReactNode;
   tests: ReactNode;
 };
 
@@ -31,9 +33,11 @@ export default function AdminSectionHub({
   adminCount,
   paymentCount,
   pendingPaymentCount,
+  visibleSectionCount,
   testCount,
   adminAccess,
   payments,
+  sections,
   tests,
 }: AdminSectionHubProps) {
   const [activeSection, setActiveSection] = useState<AdminSection>('home');
@@ -58,6 +62,14 @@ export default function AdminSectionHub({
       accent: 'bg-emerald-600 text-white',
     },
     {
+      id: 'sections',
+      title: 'Sections',
+      body: 'Choose which practice collections students can see.',
+      countLabel: `${visibleSectionCount} visible`,
+      icon: Eye,
+      accent: 'bg-teal-600 text-white',
+    },
+    {
       id: 'tests',
       title: 'Tests',
       body: 'Upload TEX files, images, and manage imported practice tests.',
@@ -73,7 +85,9 @@ export default function AdminSectionHub({
       ? adminAccess
       : activeSection === 'payments'
         ? payments
-        : tests;
+        : activeSection === 'sections'
+          ? sections
+          : tests;
 
     return (
       <div>
@@ -95,7 +109,7 @@ export default function AdminSectionHub({
   }
 
   return (
-    <section className="grid gap-5 md:grid-cols-3">
+    <section className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
       {cards.map((card) => {
         const Icon = card.icon;
 

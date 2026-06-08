@@ -23,6 +23,7 @@ type PracticeCatalogProps = {
   standardTests: CatalogTest[];
   advancedTests: CatalogTest[];
   planckTests: CatalogTest[];
+  collectionVisibility: Record<TestCategory, boolean>;
   isPremium: boolean;
   canDownloadPdf: boolean;
 };
@@ -49,6 +50,7 @@ export default function PracticeCatalog({
   standardTests,
   advancedTests,
   planckTests,
+  collectionVisibility,
   isPremium,
   canDownloadPdf,
 }: PracticeCatalogProps) {
@@ -67,7 +69,10 @@ export default function PracticeCatalog({
     ADVANCED: advancedTests,
     PLANCK: planckTests,
   };
-  const visibleTests = activeCategory ? testsByCategory[activeCategory] : [];
+  const effectiveActiveCategory = activeCategory && collectionVisibility[activeCategory]
+    ? activeCategory
+    : null;
+  const visibleTests = effectiveActiveCategory ? testsByCategory[effectiveActiveCategory] : [];
 
   const collections = useMemo(() => [
     {
@@ -94,7 +99,12 @@ export default function PracticeCatalog({
       icon: Atom,
       theme: 'bg-teal-600 text-white shadow-teal-200',
     },
-  ], [advancedTests.length, planckTests.length, standardTests.length]);
+  ].filter((collection) => collectionVisibility[collection.category]), [
+    advancedTests.length,
+    collectionVisibility,
+    planckTests.length,
+    standardTests.length,
+  ]);
 
   const switchCategory = (category: TestCategory | null) => {
     startTransition(() => {
@@ -111,7 +121,7 @@ export default function PracticeCatalog({
   return (
     <div className="lg:col-span-3">
       <header className="mb-10">
-        {activeCategory ? (
+        {effectiveActiveCategory ? (
           <button
             type="button"
             onClick={() => switchCategory(null)}
@@ -122,20 +132,20 @@ export default function PracticeCatalog({
           </button>
         ) : null}
         <h1 className="text-4xl font-black text-slate-900 tracking-tight">
-          {activeCategory ? getCategoryLabel(activeCategory) : 'Practice Center'}
+          {effectiveActiveCategory ? getCategoryLabel(effectiveActiveCategory) : 'Practice Center'}
         </h1>
         <p className="text-slate-500 mt-2 text-lg font-medium">
-          {activeCategory === 'ADVANCED'
+          {effectiveActiveCategory === 'ADVANCED'
             ? 'Work through the advanced sets in order, from Advanced set 1 upward.'
-            : activeCategory === 'PLANCK'
+            : effectiveActiveCategory === 'PLANCK'
               ? 'Work through the Planck sets in order, from Planck set 1 upward.'
-              : activeCategory === 'STANDARD'
+              : effectiveActiveCategory === 'STANDARD'
                 ? 'Start with the standard SAT Math practice modules.'
                 : 'Choose a collection, then select the module you want to practice.'}
         </p>
       </header>
 
-      {!activeCategory ? (
+      {!effectiveActiveCategory ? (
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
           {collections.map((collection) => {
             const Icon = collection.icon;
@@ -170,6 +180,12 @@ export default function PracticeCatalog({
               </button>
             );
           })}
+
+          {collections.length === 0 && (
+            <div className="col-span-full rounded-3xl border-2 border-dashed border-slate-200 bg-slate-50 px-6 py-20 text-center">
+              <p className="font-bold text-slate-400">No practice collections are available right now.</p>
+            </div>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">

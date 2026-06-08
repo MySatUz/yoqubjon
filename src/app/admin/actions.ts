@@ -5,7 +5,12 @@ import { parseTexFile } from '@/lib/texParser';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { revalidatePath } from 'next/cache';
 import { requireAdmin } from '@/lib/admin';
-import { encodeTestDescription, isTestCategory, type TestCategory } from '@/lib/testCatalog';
+import {
+  encodeTestDescription,
+  isTestCategory,
+  TEST_CATEGORY_OPTIONS,
+  type TestCategory,
+} from '@/lib/testCatalog';
 
 const MAX_TEX_FILE_SIZE = 2 * 1024 * 1024;
 const MAX_IMAGE_FILE_SIZE = 5 * 1024 * 1024;
@@ -217,6 +222,32 @@ export async function deleteTest(testId: string) {
   } catch (error: unknown) {
     console.error("Delete Test Error:", error);
     return { success: false, error: error instanceof Error ? error.message : 'Delete failed' };
+  }
+}
+
+export async function updateCollectionVisibility(formData: FormData) {
+  try {
+    await requireAdmin();
+
+    await prisma.$transaction(
+      TEST_CATEGORY_OPTIONS.map((option) => (
+        prisma.testCollectionVisibility.upsert({
+          where: { category: option.value },
+          update: { visible: formData.get(`visible_${option.value}`) === 'true' },
+          create: {
+            category: option.value,
+            visible: formData.get(`visible_${option.value}`) === 'true',
+          },
+        })
+      ))
+    );
+
+    revalidatePath('/admin');
+    revalidatePath('/dashboard');
+    return { success: true };
+  } catch (error: unknown) {
+    console.error('Update Collection Visibility Error:', error);
+    return { success: false, error: error instanceof Error ? error.message : 'Update failed' };
   }
 }
 

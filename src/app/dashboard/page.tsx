@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma';
 import { History, CheckCircle2 } from 'lucide-react';
 import {
   compareCatalogTests,
+  getCollectionVisibility,
   getTestCategory,
   type TestCategory,
 } from '@/lib/testCatalog';
@@ -31,7 +32,7 @@ export default async function DashboardPage(props: {
   }
 
   // Fetch data in parallel
-  const [results, tests, subscription, canDownloadPdf] = await Promise.all([
+  const [results, tests, subscription, canDownloadPdf, visibilityRows] = await Promise.all([
     prisma.result.findMany({
       where: { userId: session.user.id },
       select: {
@@ -66,9 +67,19 @@ export default async function DashboardPage(props: {
       }
     }),
     isAdminUser(session.user.id),
+    prisma.testCollectionVisibility.findMany({
+      select: {
+        category: true,
+        visible: true,
+      },
+    }),
   ]);
 
   const isPremium = !!subscription;
+  const collectionVisibility = getCollectionVisibility(visibilityRows);
+  const visibleActiveCategory = activeCategory && collectionVisibility[activeCategory]
+    ? activeCategory
+    : null;
   const standardTests = tests
     .filter((test) => getTestCategory(test) === 'STANDARD')
     .sort(compareCatalogTests);
@@ -100,7 +111,7 @@ export default async function DashboardPage(props: {
       )}
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           <PracticeCatalog
-            initialCategory={activeCategory}
+            initialCategory={visibleActiveCategory}
             standardTests={standardTests.map((test) => ({
               ...test,
               createdAt: test.createdAt.toISOString(),
@@ -113,6 +124,7 @@ export default async function DashboardPage(props: {
               ...test,
               createdAt: test.createdAt.toISOString(),
             }))}
+            collectionVisibility={collectionVisibility}
             isPremium={isPremium}
             canDownloadPdf={canDownloadPdf}
           />
