@@ -1,2 +1,4 @@
 export const EXAM_DURATION_SECONDS = 2 * 60 * 60;
 export const EXAM_TIME_GRACE_SECONDS = 60;
+export const MIN_EXAM_DURATION_SECONDS = 60;
+export const MAX_EXAM_DURATION_SECONDS = 6 * 60 * 60;

@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/prisma';
 import { answersMatch } from '@/lib/resultAnswers';
-import { EXAM_DURATION_SECONDS, EXAM_TIME_GRACE_SECONDS } from '@/lib/examConfig';
+import { EXAM_TIME_GRACE_SECONDS, MAX_EXAM_DURATION_SECONDS } from '@/lib/examConfig';
 import { estimateSatMathScore } from '@/lib/satScoring';
 
 export class ExamSubmissionError extends Error {
@@ -46,7 +46,7 @@ export function parseExamSubmissionBody(body: unknown): ExamSubmissionInput {
     typeof timeSpent !== 'number' ||
     !Number.isInteger(timeSpent) ||
     timeSpent < 0 ||
-    timeSpent > EXAM_DURATION_SECONDS + EXAM_TIME_GRACE_SECONDS
+    timeSpent > MAX_EXAM_DURATION_SECONDS + EXAM_TIME_GRACE_SECONDS
   ) {
     throw new ExamSubmissionError('Invalid time spent', 400);
   }
@@ -92,6 +92,10 @@ export async function createExamResult(
 
   if (!test || test.questions.length === 0) {
     throw new ExamSubmissionError('Test not found', 404);
+  }
+
+  if (submission.timeSpent > test.durationSeconds + EXAM_TIME_GRACE_SECONDS) {
+    throw new ExamSubmissionError('Invalid time spent', 400);
   }
 
   if (Object.keys(submission.answers).length > test.questions.length * 2) {

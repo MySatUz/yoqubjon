@@ -3,6 +3,7 @@ import { PrismaAdapter } from "@auth/prisma-adapter";
 import { prisma } from "@/lib/prisma";
 import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
+import { isBlockedPassword } from "@/lib/password-policy";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   adapter: PrismaAdapter(prisma),
@@ -24,6 +25,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             : "";
 
         if (!email || !password) {
+          return null;
+        }
+
+        if (isBlockedPassword(password)) {
           return null;
         }
 

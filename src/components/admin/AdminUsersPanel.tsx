@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { type ReactNode, useState } from 'react';
 import { grantAdminRole, revokeAdminRole } from '@/app/admin/admin-user-actions';
-import { AlertCircle, CheckCircle2, Search, Shield, ShieldMinus, ShieldPlus } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Search, Shield, ShieldMinus, ShieldPlus, Users } from 'lucide-react';
 
 interface AdminUser {
   id: string;
@@ -14,14 +14,17 @@ interface AdminUser {
 interface AdminUsersPanelProps {
   users: AdminUser[];
   ownerEmail: string;
+  userCount: number;
+  userDirectory: ReactNode;
 }
 
 type ActionResult = { success?: boolean; error?: string } | null;
 
-export default function AdminUsersPanel({ users, ownerEmail }: AdminUsersPanelProps) {
+export default function AdminUsersPanel({ users, ownerEmail, userCount, userDirectory }: AdminUsersPanelProps) {
   const [grantResult, setGrantResult] = useState<ActionResult>(null);
   const [busyEmail, setBusyEmail] = useState<string | null>(null);
   const [emailQuery, setEmailQuery] = useState('');
+  const [showUsers, setShowUsers] = useState(false);
   const normalizedQuery = emailQuery.trim().toLowerCase();
   const visibleUsers = users.filter((user) => user.role === 'ADMIN' || user.email.toLowerCase() === ownerEmail);
   const suggestedUsers = normalizedQuery.length >= 2
@@ -59,7 +62,8 @@ export default function AdminUsersPanel({ users, ownerEmail }: AdminUsersPanelPr
   }
 
   return (
-    <section className="mb-10 rounded-3xl border border-blue-100 bg-white p-8 shadow-xl">
+    <div className="space-y-6">
+      <section className="rounded-3xl border border-blue-100 bg-white p-8 shadow-xl">
       <div className="mb-6 flex items-start justify-between gap-4">
         <div>
           <div className="mb-2 flex items-center gap-2 text-xs font-black uppercase tracking-widest text-blue-600">
@@ -68,6 +72,24 @@ export default function AdminUsersPanel({ users, ownerEmail }: AdminUsersPanelPr
           </div>
           <h2 className="text-2xl font-black tracking-tight text-slate-900">Admin access</h2>
         </div>
+
+        <button
+          type="button"
+          onClick={() => setShowUsers((current) => !current)}
+          className={`inline-flex items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-black transition ${
+            showUsers
+              ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100'
+              : 'border border-slate-200 bg-slate-50 text-slate-700 hover:border-indigo-200 hover:text-indigo-700'
+          }`}
+        >
+          <Users className="h-5 w-5" />
+          Users
+          <span className={`rounded-full px-2 py-0.5 text-[10px] font-black ${
+            showUsers ? 'bg-white/20 text-white' : 'bg-white text-slate-500'
+          }`}>
+            {userCount}
+          </span>
+        </button>
       </div>
 
       <form action={handleGrant} className="mb-6 grid gap-3 md:grid-cols-[1fr_auto]">
@@ -172,6 +194,9 @@ export default function AdminUsersPanel({ users, ownerEmail }: AdminUsersPanelPr
           </div>
         )}
       </div>
-    </section>
+      </section>
+
+      {showUsers && userDirectory}
+    </div>
   );
 }

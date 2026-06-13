@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { auth } from '@/auth';
 import { PREMIUM_MONTHLY_AMOUNT_UZS, PREMIUM_PLAN_ID } from '@/lib/plans';
+import { areMockPaymentsEnabled } from '@/lib/mock-payments';
 
 export async function POST(req: NextRequest) {
-  if (process.env.NODE_ENV === 'production') {
+  if (!areMockPaymentsEnabled()) {
     return NextResponse.json({ error: 'Mock payments disabled' }, { status: 404 });
   }
 

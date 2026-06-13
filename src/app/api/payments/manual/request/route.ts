@@ -11,6 +11,9 @@ import {
 
 export const runtime = 'nodejs';
 
+const MANUAL_PAYMENT_DAILY_REQUEST_LIMIT = 5;
+const MANUAL_PAYMENT_RATE_LIMIT_WINDOW_MS = 24 * 60 * 60 * 1000;
+
 export async function POST(req: Request) {
   try {
     const session = await auth();
@@ -32,6 +35,37 @@ export async function POST(req: Request) {
       return NextResponse.json(
         { error: 'Subscription is already active' },
         { status: 400 }
+      );
+    }
+
+    const pendingRequest = await prisma.manualPaymentRequest.findFirst({
+      where: {
+        userId: session.user.id,
+        status: 'PENDING',
+      },
+      select: { id: true },
+    });
+
+    if (pendingRequest) {
+      return NextResponse.json(
+        { error: 'A payment request is already waiting for review' },
+        { status: 409 }
+      );
+    }
+
+    const recentRequestCount = await prisma.manualPaymentRequest.count({
+      where: {
+        userId: session.user.id,
+        createdAt: {
+          gte: new Date(Date.now() - MANUAL_PAYMENT_RATE_LIMIT_WINDOW_MS),
+        },
+      },
+    });
+
+    if (recentRequestCount >= MANUAL_PAYMENT_DAILY_REQUEST_LIMIT) {
+      return NextResponse.json(
+        { error: 'Too many payment requests. Please try again later.' },
+        { status: 429 }
       );
     }
 

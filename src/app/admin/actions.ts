@@ -6,15 +6,23 @@ import { getSupabaseAdmin } from '@/lib/supabase';
 import { revalidatePath } from 'next/cache';
 import { requireAdmin } from '@/lib/admin';
 import {
+  EXAM_DURATION_SECONDS,
+  MAX_EXAM_DURATION_SECONDS,
+  MIN_EXAM_DURATION_SECONDS,
+} from '@/lib/examConfig';
+import {
+  cleanTestDescription,
+  createCategoryIdBase,
   encodeTestDescription,
   isTestCategory,
-  TEST_CATEGORY_OPTIONS,
-  type TestCategory,
+  normalizeCategoryId,
 } from '@/lib/testCatalog';
 
 const MAX_TEX_FILE_SIZE = 2 * 1024 * 1024;
 const MAX_IMAGE_FILE_SIZE = 5 * 1024 * 1024;
 const ALLOWED_IMAGE_TYPES = new Set(['image/png', 'image/jpeg', 'image/jpg', 'image/webp']);
+const MIN_DURATION_MINUTES = Math.ceil(MIN_EXAM_DURATION_SECONDS / 60);
+const MAX_DURATION_MINUTES = Math.floor(MAX_EXAM_DURATION_SECONDS / 60);
 
 function normalizeNullableText(value: FormDataEntryValue | null) {
   if (typeof value !== 'string') return null;
@@ -102,10 +110,8 @@ export async function uploadTest(formData: FormData) {
       ? (formData.get('title') as string).trim()
       : '';
     const isFree = formData.get('isFree') === 'true';
-    const categoryValue = formData.get('testCategory');
-    const testCategory: TestCategory = isTestCategory(categoryValue)
-      ? categoryValue
-      : 'STANDARD';
+    const testCategory = await resolveCollectionCategory(formData.get('testCategory'));
+    const durationSeconds = normalizeDurationSeconds(formData.get('durationMinutes'));
     const texFile = formData.get('texFile') as File;
     const imageFiles = formData.getAll('images') as File[];
     const uploadedImages = readUploadedImages(formData.get('uploadedImages'));
@@ -182,6 +188,8 @@ export async function uploadTest(formData: FormData) {
         title,
         description: encodeTestDescription(testCategory),
         isFree,
+        durationSeconds,
+        collectionCategory: testCategory,
         questions: {
           createMany: {
             data: parsedQuestions.map((q) => ({
@@ -225,19 +233,78 @@ export async function deleteTest(testId: string) {
   }
 }
 
+function normalizeDurationSeconds(value: FormDataEntryValue | null) {
+  if (value === null || value === '') {
+    return EXAM_DURATION_SECONDS;
+  }
+
+  if (typeof value !== 'string') {
+    throw new Error('Test time is invalid');
+  }
+
+  const minutes = Number(value);
+  if (
+    !Number.isFinite(minutes) ||
+    !Number.isInteger(minutes) ||
+    minutes < MIN_DURATION_MINUTES ||
+    minutes > MAX_DURATION_MINUTES
+  ) {
+    throw new Error(`Test time must be between ${MIN_DURATION_MINUTES} and ${MAX_DURATION_MINUTES} minutes`);
+  }
+
+  return minutes * 60;
+}
+
+async function resolveCollectionCategory(value: FormDataEntryValue | null) {
+  const collections = await prisma.testCollectionVisibility.findMany({
+    orderBy: [
+      { position: 'asc' },
+      { category: 'asc' },
+    ],
+    select: { category: true },
+  });
+
+  if (collections.length === 0) {
+    throw new Error('Create at least one section before uploading tests');
+  }
+
+  const collectionSet = new Set(collections.map((collection) => collection.category));
+  if (typeof value === 'string' && value.trim()) {
+    if (!isTestCategory(value)) {
+      throw new Error('Selected section is invalid');
+    }
+
+    const requestedCategory = normalizeCategoryId(value);
+    if (collectionSet.has(requestedCategory)) {
+      return requestedCategory;
+    }
+
+    throw new Error('Selected section no longer exists');
+  }
+
+  return collectionSet.has('STANDARD') ? 'STANDARD' : collections[0].category;
+}
+
 export async function updateCollectionVisibility(formData: FormData) {
   try {
     await requireAdmin();
 
+    const categories = Array.from(new Set(
+      formData
+        .getAll('category')
+        .filter((value): value is string => typeof value === 'string' && isTestCategory(value))
+        .map(normalizeCategoryId)
+    ));
+
+    if (categories.length === 0) {
+      throw new Error('No sections to update');
+    }
+
     await prisma.$transaction(
-      TEST_CATEGORY_OPTIONS.map((option) => (
-        prisma.testCollectionVisibility.upsert({
-          where: { category: option.value },
-          update: { visible: formData.get(`visible_${option.value}`) === 'true' },
-          create: {
-            category: option.value,
-            visible: formData.get(`visible_${option.value}`) === 'true',
-          },
+      categories.map((category) => (
+        prisma.testCollectionVisibility.update({
+          where: { category },
+          data: { visible: formData.get(`visible_${category}`) === 'true' },
         })
       ))
     );
@@ -247,6 +314,118 @@ export async function updateCollectionVisibility(formData: FormData) {
     return { success: true };
   } catch (error: unknown) {
     console.error('Update Collection Visibility Error:', error);
+    return { success: false, error: error instanceof Error ? error.message : 'Update failed' };
+  }
+}
+
+export async function createTestCollection(formData: FormData) {
+  try {
+    await requireAdmin();
+
+    const label = normalizeRequiredText(formData.get('sectionLabel'), 'Section name');
+    const description = normalizeNullableText(formData.get('sectionDescription'))
+      || 'Practice tests in this section.';
+    const existingCollections = await prisma.testCollectionVisibility.findMany({
+      select: { category: true },
+    });
+    const existingCategories = new Set(existingCollections.map((collection) => collection.category));
+    const baseId = createCategoryIdBase(label);
+    let category = normalizeCategoryId(baseId);
+    let suffix = 2;
+
+    while (existingCategories.has(category)) {
+      category = `${baseId}_${suffix}`;
+      suffix += 1;
+    }
+
+    const maxPosition = await prisma.testCollectionVisibility.aggregate({
+      _max: { position: true },
+    });
+
+    await prisma.testCollectionVisibility.create({
+      data: {
+        category,
+        label,
+        description,
+        visible: true,
+        position: (maxPosition._max.position ?? 0) + 10,
+      },
+    });
+
+    revalidatePath('/admin');
+    revalidatePath('/dashboard');
+    return { success: true };
+  } catch (error: unknown) {
+    console.error('Create Collection Error:', error);
+    return { success: false, error: error instanceof Error ? error.message : 'Create failed' };
+  }
+}
+
+export async function deleteTestCollection(categoryValue: string) {
+  try {
+    await requireAdmin();
+
+    if (!isTestCategory(categoryValue)) {
+      throw new Error('Invalid section');
+    }
+
+    const category = normalizeCategoryId(categoryValue);
+    const collectionCount = await prisma.testCollectionVisibility.count();
+    if (collectionCount <= 1) {
+      throw new Error('Keep at least one section');
+    }
+
+    await prisma.testCollectionVisibility.delete({
+      where: { category },
+    });
+
+    revalidatePath('/admin');
+    revalidatePath('/dashboard');
+    return { success: true };
+  } catch (error: unknown) {
+    console.error('Delete Collection Error:', error);
+    return { success: false, error: error instanceof Error ? error.message : 'Delete failed' };
+  }
+}
+
+export async function updateTestDetails(testId: string, formData: FormData) {
+  try {
+    await requireAdmin();
+
+    if (!testId || testId.length > 160) {
+      throw new Error('Invalid test id');
+    }
+
+    const title = normalizeRequiredText(formData.get('title'), 'Test title');
+    const testCategory = await resolveCollectionCategory(formData.get('testCategory'));
+    const durationSeconds = normalizeDurationSeconds(formData.get('durationMinutes'));
+    const isFree = formData.get('isFree') === 'true';
+    const existingTest = await prisma.test.findUnique({
+      where: { id: testId },
+      select: { description: true },
+    });
+
+    if (!existingTest) {
+      throw new Error('Test not found');
+    }
+
+    await prisma.test.update({
+      where: { id: testId },
+      data: {
+        title,
+        isFree,
+        durationSeconds,
+        collectionCategory: testCategory,
+        description: encodeTestDescription(testCategory, cleanTestDescription(existingTest.description)),
+      },
+    });
+
+    revalidatePath('/admin');
+    revalidatePath('/dashboard');
+    revalidatePath(`/exam/${testId}`);
+    return { success: true };
+  } catch (error: unknown) {
+    console.error('Update Test Details Error:', error);
     return { success: false, error: error instanceof Error ? error.message : 'Update failed' };
   }
 }

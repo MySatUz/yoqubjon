@@ -5,6 +5,7 @@ import bcrypt from "bcryptjs";
 import { signIn } from "@/auth";
 import { AuthError } from "next-auth";
 import { Prisma } from "@prisma/client";
+import { getPasswordPolicyError } from "@/lib/password-policy";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -26,8 +27,9 @@ export async function register(formData: FormData) {
     return { error: "Enter a valid email address" };
   }
 
-  if (password.length < 8) {
-    return { error: "Password must be at least 8 characters" };
+  const passwordPolicyError = getPasswordPolicyError(password);
+  if (passwordPolicyError) {
+    return { error: passwordPolicyError };
   }
 
   const existingUser = await prisma.user.findUnique({

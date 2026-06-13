@@ -5,8 +5,8 @@ import { prisma } from '@/lib/prisma';
 import { History, CheckCircle2 } from 'lucide-react';
 import {
   compareCatalogTests,
-  getCollectionVisibility,
-  getTestCategory,
+  findCategoryByQuery,
+  getTestCollections,
   type TestCategory,
 } from '@/lib/testCatalog';
 import PracticeCatalog from '@/components/dashboard/PracticeCatalog';
@@ -19,13 +19,6 @@ export default async function DashboardPage(props: {
   const session = await auth();
   const isSuccess = searchParams.payment === 'success';
   const requestedSet = searchParams.set;
-  const activeCategory: TestCategory | null = requestedSet === 'advanced'
-    ? 'ADVANCED'
-    : requestedSet === 'planck'
-      ? 'PLANCK'
-      : requestedSet === 'standard'
-        ? 'STANDARD'
-        : null;
   
   if (!session?.user?.id) {
     return <div>Unauthorized</div>;
@@ -55,6 +48,8 @@ export default async function DashboardPage(props: {
         id: true,
         title: true,
         description: true,
+        collectionCategory: true,
+        durationSeconds: true,
         isFree: true,
         createdAt: true,
       },
@@ -71,24 +66,22 @@ export default async function DashboardPage(props: {
       select: {
         category: true,
         visible: true,
+        label: true,
+        description: true,
+        position: true,
       },
     }),
   ]);
 
   const isPremium = !!subscription;
-  const collectionVisibility = getCollectionVisibility(visibilityRows);
-  const visibleActiveCategory = activeCategory && collectionVisibility[activeCategory]
+  const collections = getTestCollections(visibilityRows);
+  const activeCategory: TestCategory | null = findCategoryByQuery(collections, requestedSet);
+  const visibleActiveCategory = activeCategory && collections.some((collection) => (
+    collection.value === activeCategory && collection.visible
+  ))
     ? activeCategory
     : null;
-  const standardTests = tests
-    .filter((test) => getTestCategory(test) === 'STANDARD')
-    .sort(compareCatalogTests);
-  const advancedTests = tests
-    .filter((test) => getTestCategory(test) === 'ADVANCED')
-    .sort(compareCatalogTests);
-  const planckTests = tests
-    .filter((test) => getTestCategory(test) === 'PLANCK')
-    .sort(compareCatalogTests);
+  const sortedTests = [...tests].sort(compareCatalogTests);
   const seenTestIds = new Set<string>();
   const recentResults = results
     .filter((result) => {
@@ -112,19 +105,11 @@ export default async function DashboardPage(props: {
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           <PracticeCatalog
             initialCategory={visibleActiveCategory}
-            standardTests={standardTests.map((test) => ({
+            tests={sortedTests.map((test) => ({
               ...test,
               createdAt: test.createdAt.toISOString(),
             }))}
-            advancedTests={advancedTests.map((test) => ({
-              ...test,
-              createdAt: test.createdAt.toISOString(),
-            }))}
-            planckTests={planckTests.map((test) => ({
-              ...test,
-              createdAt: test.createdAt.toISOString(),
-            }))}
-            collectionVisibility={collectionVisibility}
+            collections={collections}
             isPremium={isPremium}
             canDownloadPdf={canDownloadPdf}
           />

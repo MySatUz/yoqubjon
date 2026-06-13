@@ -8,28 +8,69 @@ async function main() {
 
   // Create Admin User
   const adminEmail = 'admin@mysat.uz';
+  const adminPassword = process.env.SEED_ADMIN_PASSWORD?.trim();
+  if (adminPassword && adminPassword.length < 12) {
+    throw new Error('SEED_ADMIN_PASSWORD must be at least 12 characters.');
+  }
+
+  const existingAdmin = await prisma.user.findUnique({
+    where: { email: adminEmail },
+    select: { id: true },
+  });
+
+  if (!existingAdmin && !adminPassword) {
+    throw new Error('Set SEED_ADMIN_PASSWORD to a strong password before seeding the admin user.');
+  }
+
+  const adminPasswordHash = adminPassword
+    ? await bcrypt.hash(adminPassword, 10)
+    : undefined;
+
   await prisma.user.upsert({
     where: { email: adminEmail },
     update: {
       role: 'ADMIN',
+      ...(adminPasswordHash ? { passwordHash: adminPasswordHash } : {}),
     },
     create: {
       email: adminEmail,
       name: 'Test Admin',
-      passwordHash: await bcrypt.hash('password123', 10),
+      passwordHash: adminPasswordHash!,
       role: 'ADMIN',
     },
   });
   console.log('Admin user seeded.');
 
+  await prisma.testCollectionVisibility.upsert({
+    where: { category: 'STANDARD' },
+    update: {
+      label: 'Standard tests',
+      description: 'Core SAT Math modules for regular practice.',
+      position: 10,
+      visible: true,
+    },
+    create: {
+      category: 'STANDARD',
+      label: 'Standard tests',
+      description: 'Core SAT Math modules for regular practice.',
+      position: 10,
+      visible: true,
+    },
+  });
+
   const test1 = await prisma.test.upsert({
     where: { id: 'test-1-sat-math' },
-    update: {},
+    update: {
+      collectionCategory: 'STANDARD',
+      durationSeconds: 2 * 60 * 60,
+    },
     create: {
       id: 'test-1-sat-math',
       title: 'SAT Math Practice 1',
       description: 'Standard SAT Mathematics section with mixed Algebra, Geometry, and Advanced Math.',
       isFree: true,
+      durationSeconds: 2 * 60 * 60,
+      collectionCategory: 'STANDARD',
     },
   });
 

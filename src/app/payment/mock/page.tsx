@@ -1,8 +1,9 @@
 import { notFound } from 'next/navigation';
+import { areMockPaymentsEnabled } from '@/lib/mock-payments';
 import MockPaymentClient from './MockPaymentClient';
 
 export default function MockPaymentPage() {
-  if (process.env.NODE_ENV === 'production') {
+  if (!areMockPaymentsEnabled()) {
     notFound();
   }
 

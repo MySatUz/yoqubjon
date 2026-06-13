@@ -17,6 +17,7 @@ Open http://localhost:3000 after the dev server starts.
 ```bash
 DATABASE_URL="postgresql://..."
 AUTH_SECRET="..."
+NEXTAUTH_URL="http://localhost:3000"
 NEXT_PUBLIC_APP_URL="http://localhost:3000"
 NEXT_PUBLIC_SUPABASE_URL="https://..."
 SUPABASE_SERVICE_ROLE_KEY="..."
@@ -26,9 +27,14 @@ TELEGRAM_PAYMENT_CHAT_ID="..."
 TELEGRAM_ADMIN_URL_SAT="https://mysat-omega.vercel.app"
 TELEGRAM_ADMIN_IDS="123456789,987654321"
 TELEGRAM_WEBHOOK_SECRET="optional-random-secret"
+
+ENABLE_MOCK_PAYMENTS="false"
+SEED_ADMIN_PASSWORD="only-needed-when-running-prisma-seed"
 ```
 
 `TELEGRAM_BOT_TOKEN` and `TELEGRAM_PAYMENT_CHAT_ID` enable Telegram payment notifications with approve/reject buttons. `TELEGRAM_ADMIN_URL_SAT` is preferred for MYSAT notifications; `TELEGRAM_ADMIN_URL` is still accepted as a fallback for older deployments. `TELEGRAM_ADMIN_IDS` is recommended for button security. If `TELEGRAM_WEBHOOK_SECRET` is omitted, the app derives one from the bot token.
+
+`ENABLE_MOCK_PAYMENTS` is ignored in production and must stay `false` in shared environments. `SEED_ADMIN_PASSWORD` must be set to a strong 12+ character password before running `prisma db seed` if the seed admin does not already exist.
 
 ## Manual Payments
 

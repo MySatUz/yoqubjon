@@ -28,24 +28,33 @@ model User {
 }
 
 model Test {
-  id          String      @id @default(uuid())
-  title       String
-  description String?
-  isFree      Boolean     @default(false)
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  id                 String                    @id @default(uuid())
+  title              String
+  description        String?
+  isFree             Boolean                   @default(false)
+  durationSeconds    Int                       @default(7200)
+  collectionCategory String?
+  createdAt          DateTime                  @default(now())
+  updatedAt          DateTime                  @updatedAt
 
+  collection  TestCollectionVisibility? @relation(fields: [collectionCategory], references: [category], onDelete: SetNull)
   questions   Question[]
   results     Result[]
 
   @@index([createdAt])
+  @@index([collectionCategory])
 }
 
 model TestCollectionVisibility {
   category  String   @id
+  label     String?
+  description String?
+  position  Int      @default(0)
   visible   Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  tests     Test[]
 }
 
 model Question {

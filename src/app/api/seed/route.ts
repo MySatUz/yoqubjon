@@ -15,14 +15,36 @@ export async function POST() {
     await requireAdmin();
     console.log('Seeding SAT Math Practice Test 1...');
 
+    await prisma.testCollectionVisibility.upsert({
+      where: { category: 'STANDARD' },
+      update: {
+        label: 'Standard tests',
+        description: 'Core SAT Math modules for regular practice.',
+        position: 10,
+        visible: true,
+      },
+      create: {
+        category: 'STANDARD',
+        label: 'Standard tests',
+        description: 'Core SAT Math modules for regular practice.',
+        position: 10,
+        visible: true,
+      },
+    });
+
     const test1 = await prisma.test.upsert({
       where: { id: 'test-1-sat-math' },
-      update: {},
+      update: {
+        collectionCategory: 'STANDARD',
+        durationSeconds: 2 * 60 * 60,
+      },
       create: {
         id: 'test-1-sat-math',
         title: 'SAT Math Practice 1',
         description: 'Standard SAT Mathematics section with mixed Algebra, Geometry, and Advanced Math.',
         isFree: true,
+        durationSeconds: 2 * 60 * 60,
+        collectionCategory: 'STANDARD',
       },
     });
 

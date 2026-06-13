@@ -2,8 +2,8 @@
 
 import React, { useState } from 'react';
 import { uploadTest } from '@/app/admin/actions';
-import { FileText, Image as ImageIcon, Upload, CheckCircle2, AlertCircle, Atom, Loader2, Layers3, Sparkles } from 'lucide-react';
-import { TEST_CATEGORY_OPTIONS } from '@/lib/testCatalog';
+import { FileText, Image as ImageIcon, Upload, CheckCircle2, AlertCircle, Atom, Clock3, Loader2, Layers3, Sparkles } from 'lucide-react';
+import type { TestCollectionOption } from '@/lib/testCatalog';
 
 type PreparedUpload = {
   name: string;
@@ -13,10 +13,17 @@ type PreparedUpload = {
   publicUrl: string;
 };
 
-export default function AdminForm() {
+type AdminFormProps = {
+  collections: TestCollectionOption[];
+};
+
+export default function AdminForm({ collections }: AdminFormProps) {
   const [loading, setLoading] = useState(false);
   const [statusText, setStatusText] = useState('Processing LaTeX...');
   const [result, setResult] = useState<{ success?: boolean; error?: string; testId?: string } | null>(null);
+  const defaultCategory = collections.some((option) => option.value === 'STANDARD')
+    ? 'STANDARD'
+    : collections[0]?.value;
 
   async function uploadImageToSignedUrl(file: File, upload: PreparedUpload) {
     const body = new FormData();
@@ -46,6 +53,7 @@ export default function AdminForm() {
       const title = formData.get('title');
       const isFree = formData.get('isFree');
       const testCategory = formData.get('testCategory');
+      const durationMinutes = formData.get('durationMinutes');
       const texFile = formData.get('texFile');
       const imageFiles = formData.getAll('images').filter(
         (file): file is File => file instanceof File && file.size > 0
@@ -98,6 +106,7 @@ export default function AdminForm() {
       if (typeof title === 'string') serverFormData.set('title', title);
       if (isFree === 'true') serverFormData.set('isFree', 'true');
       if (typeof testCategory === 'string') serverFormData.set('testCategory', testCategory);
+      if (typeof durationMinutes === 'string') serverFormData.set('durationMinutes', durationMinutes);
       if (texFile instanceof File) serverFormData.set('texFile', texFile);
       if (testId) serverFormData.set('testId', testId);
       serverFormData.set('uploadedImages', JSON.stringify(uploadedImages));
@@ -139,7 +148,7 @@ export default function AdminForm() {
         <div>
           <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-3">Test Collection</label>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {TEST_CATEGORY_OPTIONS.map((option) => {
+            {collections.map((option) => {
               const Icon = option.value === 'PLANCK'
                 ? Atom
                 : option.value === 'ADVANCED'
@@ -152,7 +161,7 @@ export default function AdminForm() {
                     type="radio"
                     name="testCategory"
                     value={option.value}
-                    defaultChecked={option.value === 'STANDARD'}
+                    defaultChecked={option.value === defaultCategory}
                     className="peer sr-only"
                   />
                   <div className="h-full rounded-2xl border border-slate-200 bg-slate-50 p-4 transition-all peer-checked:border-blue-500 peer-checked:bg-blue-50 peer-checked:ring-4 peer-checked:ring-blue-100 group-hover:border-blue-200">
@@ -169,6 +178,26 @@ export default function AdminForm() {
             })}
           </div>
         </div>
+
+        <label className="block">
+          <span className="mb-2 flex items-center gap-2 text-xs font-black uppercase tracking-widest text-slate-400">
+            <Clock3 className="h-4 w-4" />
+            Test time
+          </span>
+          <div className="flex items-center gap-3 rounded-2xl border border-slate-100 bg-slate-50 px-5 py-4">
+            <input
+              name="durationMinutes"
+              type="number"
+              min={1}
+              max={360}
+              step={1}
+              defaultValue={120}
+              required
+              className="w-24 bg-transparent text-lg font-black text-slate-900 outline-none"
+            />
+            <span className="text-sm font-black text-slate-500">minutes</span>
+          </div>
+        </label>
         
         <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-2xl border border-slate-100">
           <input 

@@ -43,19 +43,20 @@ export default async function DynamicExamPage({ params }: { params: Promise<{ id
 
   const questions = test.questions;
   const questionIds = questions.map((question) => question.id);
+  const initialTimeSeconds = test.durationSeconds || EXAM_DURATION_SECONDS;
 
   return (
     <main className="flex flex-col h-screen bg-slate-50 overflow-hidden">
       <TopNav
         testId={id}
         questionIds={questionIds}
-        initialTimeSeconds={EXAM_DURATION_SECONDS}
+        initialTimeSeconds={initialTimeSeconds}
       />
       <SplitScreen questions={questions} />
       <BottomNav
         testId={id}
         questionIds={questionIds}
-        initialTimeSeconds={EXAM_DURATION_SECONDS}
+        initialTimeSeconds={initialTimeSeconds}
       />
     </main>
   );

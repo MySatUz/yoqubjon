@@ -4,11 +4,12 @@ import AdminForm from '@/components/admin/AdminForm';
 import TestList from '@/components/admin/TestList';
 import ManualPaymentRequests from '@/components/admin/ManualPaymentRequests';
 import AdminUsersPanel from '@/components/admin/AdminUsersPanel';
+import UserDirectoryPanel from '@/components/admin/UserDirectoryPanel';
 import AdminSectionHub from '@/components/admin/AdminSectionHub';
 import SectionVisibilityForm from '@/components/admin/SectionVisibilityForm';
 import { isOwnerSessionUser, OWNER_ADMIN_EMAIL, requireAdminPage } from '@/lib/admin';
 import { createManualReceiptSignedUrl } from '@/lib/manual-payments';
-import { getCollectionVisibility } from '@/lib/testCatalog';
+import { getTestCollections } from '@/lib/testCatalog';
 import AppShell from '@/components/layout/AppShell';
 
 export const dynamic = 'force-dynamic';
@@ -18,7 +19,7 @@ export default async function AdminUploadPage() {
   const session = await requireAdminPage();
   const canManageAdmins = isOwnerSessionUser(session?.user);
 
-  const [tests, paymentRequests, users, visibilityRows] = await Promise.all([
+  const [tests, paymentRequests, users, userCount, adminCount, collectionRows] = await Promise.all([
     prisma.test.findMany({
       orderBy: { createdAt: 'desc' },
       include: {
@@ -38,7 +39,7 @@ export default async function AdminUploadPage() {
         _count: {
           select: { questions: true }
         }
-      }
+      },
     }),
     prisma.manualPaymentRequest.findMany({
       orderBy: [
@@ -55,39 +56,57 @@ export default async function AdminUploadPage() {
         },
       },
     }),
-    canManageAdmins
-      ? prisma.user.findMany({
-          orderBy: [
-            { role: 'desc' },
-            { email: 'asc' },
-          ],
-          take: 500,
+    prisma.user.findMany({
+      orderBy: [
+        { role: 'desc' },
+        { createdAt: 'desc' },
+      ],
+      take: 1000,
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        createdAt: true,
+        _count: {
           select: {
-            id: true,
-            email: true,
-            name: true,
-            role: true,
+            results: true,
+            subscriptions: true,
+            payments: true,
+            manualPaymentRequests: true,
           },
-        })
-      : Promise.resolve([]),
+        },
+      },
+    }),
+    prisma.user.count(),
+    prisma.user.count({
+      where: {
+        OR: [
+          { role: 'ADMIN' },
+          { email: OWNER_ADMIN_EMAIL },
+        ],
+      },
+    }),
     prisma.testCollectionVisibility.findMany({
       select: {
         category: true,
         visible: true,
+        label: true,
+        description: true,
+        position: true,
       },
     }),
   ]);
 
-  const collectionVisibility = getCollectionVisibility(visibilityRows);
+  const collections = getTestCollections(collectionRows);
   const paymentRequestsWithReceipts = await Promise.all(
     paymentRequests.map(async (request) => ({
       ...request,
       receiptSignedUrl: await createManualReceiptSignedUrl(request.receiptPath, 60 * 60 * 24),
     }))
   );
-  const adminCount = users.filter((user) => user.role === 'ADMIN' || user.email === OWNER_ADMIN_EMAIL).length;
   const pendingPaymentCount = paymentRequests.filter((request) => request.status === 'PENDING').length;
-  const visibleSectionCount = Object.values(collectionVisibility).filter(Boolean).length;
+  const visibleSectionCount = collections.filter((collection) => collection.visible).length;
 
   return (
     <AppShell session={session} canManageTests>
@@ -105,13 +124,20 @@ export default async function AdminUploadPage() {
             pendingPaymentCount={pendingPaymentCount}
             visibleSectionCount={visibleSectionCount}
             testCount={tests.length}
-            adminAccess={<AdminUsersPanel users={users} ownerEmail={OWNER_ADMIN_EMAIL} />}
+            adminAccess={(
+              <AdminUsersPanel
+                users={canManageAdmins ? users : []}
+                ownerEmail={OWNER_ADMIN_EMAIL}
+                userCount={userCount}
+                userDirectory={<UserDirectoryPanel users={users} totalCount={userCount} />}
+              />
+            )}
             payments={<ManualPaymentRequests requests={paymentRequestsWithReceipts} />}
-            sections={<SectionVisibilityForm visibility={collectionVisibility} />}
+            sections={<SectionVisibilityForm collections={collections} />}
             tests={(
               <div className="space-y-10">
-                <AdminForm />
-                <TestList tests={tests} />
+                <AdminForm collections={collections} />
+                <TestList tests={tests} collections={collections} />
               </div>
             )}
           />

@@ -2,11 +2,14 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, ArrowRight, Atom, FileDown, Layers3, LayoutDashboard, Lock, Sparkles } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Atom, FileDown, FolderKanban, Layers3, LayoutDashboard, Lock, Sparkles } from 'lucide-react';
 import {
-  getCategoryLabel,
+  findCategoryByQuery,
+  getCategoryQueryValue,
+  getTestCategory,
   getTestDescription,
   type TestCategory,
+  type TestCollectionOption,
 } from '@/lib/testCatalog';
 import { useEffect, useMemo, useState, useTransition } from 'react';
 
@@ -14,97 +17,99 @@ type CatalogTest = {
   id: string;
   title: string;
   description: string | null;
+  collectionCategory: string | null;
+  durationSeconds: number;
   isFree: boolean;
   createdAt: string;
 };
 
 type PracticeCatalogProps = {
   initialCategory: TestCategory | null;
-  standardTests: CatalogTest[];
-  advancedTests: CatalogTest[];
-  planckTests: CatalogTest[];
-  collectionVisibility: Record<TestCategory, boolean>;
+  tests: CatalogTest[];
+  collections: TestCollectionOption[];
   isPremium: boolean;
   canDownloadPdf: boolean;
 };
 
-function readCategoryFromUrl() {
+const COLLECTION_THEMES = [
+  'bg-blue-600 text-white shadow-blue-200',
+  'bg-slate-900 text-white shadow-slate-200',
+  'bg-teal-600 text-white shadow-teal-200',
+  'bg-indigo-600 text-white shadow-indigo-200',
+  'bg-emerald-600 text-white shadow-emerald-200',
+];
+
+function readCategoryFromUrl(collections: TestCollectionOption[]) {
   if (typeof window === 'undefined') return null;
 
-  const set = new URLSearchParams(window.location.search).get('set');
-  if (set === 'advanced') return 'ADVANCED';
-  if (set === 'planck') return 'PLANCK';
-  if (set === 'standard') return 'STANDARD';
-  return null;
+  const set = new URLSearchParams(window.location.search).get('set') ?? undefined;
+  return findCategoryByQuery(collections, set);
 }
 
 function categoryToQuery(category: TestCategory | null) {
-  if (category === 'ADVANCED') return '?set=advanced';
-  if (category === 'PLANCK') return '?set=planck';
-  if (category === 'STANDARD') return '?set=standard';
-  return '';
+  return category ? `?set=${encodeURIComponent(getCategoryQueryValue(category))}` : '';
+}
+
+function getCollectionIcon(category: string) {
+  if (category === 'PLANCK') return Atom;
+  if (category === 'ADVANCED') return Sparkles;
+  if (category === 'STANDARD') return Layers3;
+  return FolderKanban;
+}
+
+function formatDuration(seconds: number) {
+  const minutes = Math.max(1, Math.round(seconds / 60));
+  if (minutes >= 60 && minutes % 60 === 0) {
+    const hours = minutes / 60;
+    return `${hours} ${hours === 1 ? 'hour' : 'hours'}`;
+  }
+
+  return `${minutes} min`;
 }
 
 export default function PracticeCatalog({
   initialCategory,
-  standardTests,
-  advancedTests,
-  planckTests,
-  collectionVisibility,
+  tests,
+  collections,
   isPremium,
   canDownloadPdf,
 }: PracticeCatalogProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [activeCategory, setActiveCategory] = useState<TestCategory | null>(initialCategory);
+  const visibleCollections = useMemo(
+    () => collections.filter((collection) => collection.visible),
+    [collections]
+  );
 
   useEffect(() => {
-    const handlePopState = () => setActiveCategory(readCategoryFromUrl());
+    const handlePopState = () => setActiveCategory(readCategoryFromUrl(visibleCollections));
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
-  }, []);
+  }, [visibleCollections]);
 
-  const testsByCategory: Record<TestCategory, CatalogTest[]> = {
-    STANDARD: standardTests,
-    ADVANCED: advancedTests,
-    PLANCK: planckTests,
-  };
-  const effectiveActiveCategory = activeCategory && collectionVisibility[activeCategory]
-    ? activeCategory
+  const testsByCategory = useMemo(() => {
+    const grouped = new Map<TestCategory, CatalogTest[]>();
+
+    for (const collection of visibleCollections) {
+      grouped.set(collection.value, []);
+    }
+
+    for (const test of tests) {
+      const category = getTestCategory(test);
+      if (category && grouped.has(category)) {
+        grouped.get(category)?.push(test);
+      }
+    }
+
+    return grouped;
+  }, [tests, visibleCollections]);
+
+  const activeCollection = activeCategory
+    ? visibleCollections.find((collection) => collection.value === activeCategory) ?? null
     : null;
-  const visibleTests = effectiveActiveCategory ? testsByCategory[effectiveActiveCategory] : [];
-
-  const collections = useMemo(() => [
-    {
-      category: 'STANDARD' as const,
-      title: 'Standard tests',
-      count: standardTests.length,
-      description: 'Core Digital SAT Math modules for steady practice and baseline review.',
-      icon: Layers3,
-      theme: 'bg-blue-600 text-white shadow-blue-200',
-    },
-    {
-      category: 'ADVANCED' as const,
-      title: 'Advanced set',
-      count: advancedTests.length,
-      description: 'Harder sets for students targeting top scores and deeper problem solving.',
-      icon: Sparkles,
-      theme: 'bg-slate-900 text-white shadow-slate-200',
-    },
-    {
-      category: 'PLANCK' as const,
-      title: 'Planck set',
-      count: planckTests.length,
-      description: 'Precision-focused challenges for students polishing the hardest SAT Math skills.',
-      icon: Atom,
-      theme: 'bg-teal-600 text-white shadow-teal-200',
-    },
-  ].filter((collection) => collectionVisibility[collection.category]), [
-    advancedTests.length,
-    collectionVisibility,
-    planckTests.length,
-    standardTests.length,
-  ]);
+  const effectiveActiveCategory = activeCollection?.value ?? null;
+  const visibleTests = effectiveActiveCategory ? testsByCategory.get(effectiveActiveCategory) ?? [] : [];
 
   const switchCategory = (category: TestCategory | null) => {
     startTransition(() => {
@@ -132,43 +137,39 @@ export default function PracticeCatalog({
           </button>
         ) : null}
         <h1 className="text-4xl font-black text-slate-900 tracking-tight">
-          {effectiveActiveCategory ? getCategoryLabel(effectiveActiveCategory) : 'Practice Center'}
+          {activeCollection ? activeCollection.label : 'Practice Center'}
         </h1>
         <p className="text-slate-500 mt-2 text-lg font-medium">
-          {effectiveActiveCategory === 'ADVANCED'
-            ? 'Work through the advanced sets in order, from Advanced set 1 upward.'
-            : effectiveActiveCategory === 'PLANCK'
-              ? 'Work through the Planck sets in order, from Planck set 1 upward.'
-              : effectiveActiveCategory === 'STANDARD'
-                ? 'Start with the standard SAT Math practice modules.'
-                : 'Choose a collection, then select the module you want to practice.'}
+          {activeCollection?.description || 'Choose a collection, then select the module you want to practice.'}
         </p>
       </header>
 
       {!effectiveActiveCategory ? (
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
-          {collections.map((collection) => {
-            const Icon = collection.icon;
+          {visibleCollections.map((collection, index) => {
+            const Icon = getCollectionIcon(collection.value);
+            const count = testsByCategory.get(collection.value)?.length ?? 0;
+            const theme = COLLECTION_THEMES[index % COLLECTION_THEMES.length];
 
             return (
               <button
-                key={collection.category}
+                key={collection.value}
                 type="button"
-                onClick={() => switchCategory(collection.category)}
+                onClick={() => switchCategory(collection.value)}
                 disabled={isPending}
                 className="group relative overflow-hidden rounded-[2rem] border border-slate-200 bg-white p-8 text-left shadow-sm transition-all hover:-translate-y-1 hover:border-blue-200 hover:shadow-2xl hover:shadow-blue-900/10 disabled:cursor-wait disabled:opacity-80"
               >
                 <div className="absolute right-0 top-0 h-40 w-40 rounded-bl-full bg-slate-50 transition-transform group-hover:scale-110"></div>
                 <div className="relative z-10">
                   <div className="mb-8 flex items-start justify-between gap-4">
-                    <div className={`rounded-3xl p-5 shadow-xl ${collection.theme}`}>
+                    <div className={`rounded-3xl p-5 shadow-xl ${theme}`}>
                       <Icon className="h-8 w-8" />
                     </div>
                     <span className="rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-black uppercase tracking-widest text-slate-500">
-                      {collection.count} {collection.count === 1 ? 'test' : 'tests'}
+                      {count} {count === 1 ? 'test' : 'tests'}
                     </span>
                   </div>
-                  <h2 className="text-3xl font-black tracking-tight text-slate-900">{collection.title}</h2>
+                  <h2 className="text-3xl font-black tracking-tight text-slate-900">{collection.label}</h2>
                   <p className="mt-3 min-h-14 text-base font-bold leading-relaxed text-slate-500">
                     {collection.description}
                   </p>
@@ -181,7 +182,7 @@ export default function PracticeCatalog({
             );
           })}
 
-          {collections.length === 0 && (
+          {visibleCollections.length === 0 && (
             <div className="col-span-full rounded-3xl border-2 border-dashed border-slate-200 bg-slate-50 px-6 py-20 text-center">
               <p className="font-bold text-slate-400">No practice collections are available right now.</p>
             </div>
@@ -206,13 +207,18 @@ export default function PracticeCatalog({
                     <div className={`p-4 rounded-2xl ${canAccess ? 'bg-blue-600' : 'bg-slate-100'} text-white shadow-lg ${canAccess ? 'shadow-blue-200' : ''}`}>
                       {canAccess ? <LayoutDashboard className="w-6 h-6" /> : <Lock className="w-6 h-6 text-slate-400" />}
                     </div>
-                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${
-                      test.isFree
-                        ? 'bg-green-100 text-green-700 border-green-200'
-                        : 'bg-amber-100 text-amber-700 border-amber-200'
-                    }`}>
-                      {test.isFree ? 'Free Access' : 'Premium'}
-                    </span>
+                    <div className="flex flex-col items-end gap-2">
+                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${
+                        test.isFree
+                          ? 'bg-green-100 text-green-700 border-green-200'
+                          : 'bg-amber-100 text-amber-700 border-amber-200'
+                      }`}>
+                        {test.isFree ? 'Free Access' : 'Premium'}
+                      </span>
+                      <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[10px] font-black uppercase tracking-widest text-slate-500">
+                        {formatDuration(test.durationSeconds)}
+                      </span>
+                    </div>
                   </div>
 
                   <h3 className="text-2xl font-black text-slate-900 mb-3">{test.title}</h3>

@@ -3,9 +3,9 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { deleteTest, updateQuestion } from '@/app/admin/actions';
-import { ChevronDown, Edit3, FileDown, ImageIcon, Loader2, Plus, Save, Trash2, Video, X } from 'lucide-react';
-import { getCategoryLabel, getTestCategory } from '@/lib/testCatalog';
+import { deleteTest, updateQuestion, updateTestDetails } from '@/app/admin/actions';
+import { ChevronDown, Clock3, Edit3, FileDown, ImageIcon, Loader2, Plus, Save, Settings2, Trash2, Video, X } from 'lucide-react';
+import { getCategoryLabel, getTestCategory, type TestCollectionOption } from '@/lib/testCatalog';
 
 type AdminQuestion = {
   id: string;
@@ -18,22 +18,165 @@ type AdminQuestion = {
   order: number;
 };
 
+type AdminTest = {
+  id: string;
+  title: string;
+  description: string | null;
+  collectionCategory: string | null;
+  durationSeconds: number;
+  isFree: boolean;
+  createdAt: Date;
+  questions: AdminQuestion[];
+  _count: { questions: number };
+};
+
 interface TestListProps {
-  tests: {
-    id: string;
-    title: string;
-    description: string | null;
-    isFree: boolean;
-    createdAt: Date;
-    questions: AdminQuestion[];
-    _count: { questions: number };
-  }[];
+  tests: AdminTest[];
+  collections: TestCollectionOption[];
 }
 
 function readOptions(options: unknown) {
   return Array.isArray(options)
     ? options.filter((option): option is string => typeof option === 'string')
     : [];
+}
+
+function durationToMinutes(seconds: number) {
+  return Math.max(1, Math.round(seconds / 60));
+}
+
+function formatDuration(seconds: number) {
+  const minutes = durationToMinutes(seconds);
+  if (minutes >= 60 && minutes % 60 === 0) {
+    const hours = minutes / 60;
+    return `${hours} ${hours === 1 ? 'hour' : 'hours'}`;
+  }
+
+  return `${minutes} min`;
+}
+
+function TestSettingsEditor({
+  test,
+  collections,
+}: {
+  test: AdminTest;
+  collections: TestCollectionOption[];
+}) {
+  const router = useRouter();
+  const [isSaving, setIsSaving] = useState(false);
+  const [result, setResult] = useState<{ success?: boolean; error?: string } | null>(null);
+  const category = getTestCategory(test);
+  const selectedCategory = category && collections.some((collection) => collection.value === category)
+    ? category
+    : collections[0]?.value ?? '';
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setIsSaving(true);
+    setResult(null);
+
+    const response = await updateTestDetails(test.id, new FormData(event.currentTarget));
+    setResult(response);
+    setIsSaving(false);
+
+    if (response.success) {
+      router.refresh();
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="rounded-2xl border border-slate-200 bg-white p-5">
+      <div className="mb-5 flex items-center gap-2 text-xs font-black uppercase tracking-widest text-blue-600">
+        <Settings2 className="h-4 w-4" />
+        Test settings
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-[1.3fr_0.9fr_0.7fr_auto]">
+        <label className="block">
+          <span className="mb-2 block text-xs font-black uppercase tracking-wide text-slate-500">
+            Test title
+          </span>
+          <input
+            name="title"
+            required
+            defaultValue={test.title}
+            className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-900 outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+          />
+        </label>
+
+        <label className="block">
+          <span className="mb-2 block text-xs font-black uppercase tracking-wide text-slate-500">
+            Section
+          </span>
+          <select
+            name="testCategory"
+            required
+            defaultValue={selectedCategory}
+            className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-900 outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+          >
+            {collections.map((collection) => (
+              <option key={collection.value} value={collection.value}>
+                {collection.label}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="block">
+          <span className="mb-2 flex items-center gap-2 text-xs font-black uppercase tracking-wide text-slate-500">
+            <Clock3 className="h-4 w-4" />
+            Time
+          </span>
+          <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3">
+            <input
+              name="durationMinutes"
+              type="number"
+              min={1}
+              max={360}
+              step={1}
+              required
+              defaultValue={durationToMinutes(test.durationSeconds)}
+              className="w-20 bg-transparent text-sm font-black text-slate-900 outline-none"
+            />
+            <span className="text-xs font-black text-slate-400">min</span>
+          </div>
+        </label>
+
+        <div className="flex flex-col justify-end gap-3">
+          <label className="flex min-h-11 items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+            <input
+              name="isFree"
+              type="checkbox"
+              value="true"
+              defaultChecked={test.isFree}
+              className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+            />
+            <span className="text-xs font-black uppercase tracking-wide text-slate-600">Free</span>
+          </label>
+          <button
+            type="submit"
+            disabled={isSaving || collections.length === 0}
+            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+            Save test
+          </button>
+        </div>
+      </div>
+
+      {result?.success && (
+        <div className="mt-4 rounded-2xl border border-green-100 bg-green-50 p-3 text-sm font-bold text-green-700">
+          Test settings saved.
+        </div>
+      )}
+
+      {result?.error && (
+        <div className="mt-4 rounded-2xl border border-red-100 bg-red-50 p-3 text-sm font-bold text-red-700">
+          Error: {result.error}
+        </div>
+      )}
+    </form>
+  );
 }
 
 function QuestionEditor({ question }: { question: AdminQuestion }) {
@@ -232,7 +375,7 @@ function QuestionEditor({ question }: { question: AdminQuestion }) {
   );
 }
 
-export default function TestList({ tests }: TestListProps) {
+export default function TestList({ tests, collections }: TestListProps) {
   const router = useRouter();
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [openTestId, setOpenTestId] = useState<string | null>(tests[0]?.id ?? null);
@@ -263,6 +406,8 @@ export default function TestList({ tests }: TestListProps) {
         <div className="grid gap-4">
           {tests.map((test) => {
             const isOpen = openTestId === test.id;
+            const category = getTestCategory(test);
+            const categoryLabel = getCategoryLabel(category, collections);
 
             return (
               <div key={test.id} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-all hover:border-blue-200">
@@ -278,12 +423,18 @@ export default function TestList({ tests }: TestListProps) {
                     <span className="min-w-0">
                       <span className="flex flex-wrap items-center gap-2">
                         <span className="font-black text-slate-900">{test.title}</span>
-                        <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-black uppercase text-blue-700">
-                          {getCategoryLabel(getTestCategory(test))}
+                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-black uppercase ${
+                          category ? 'bg-blue-100 text-blue-700' : 'bg-slate-200 text-slate-600'
+                        }`}>
+                          {categoryLabel}
                         </span>
                         {test.isFree && (
                           <span className="rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-black uppercase text-green-700">Free</span>
                         )}
+                        <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-black uppercase text-slate-600">
+                          <Clock3 className="h-3 w-3" />
+                          {formatDuration(test.durationSeconds)}
+                        </span>
                       </span>
                       <span className="mt-1 block text-xs font-bold text-slate-400">
                         {test._count.questions} questions | Uploaded {new Date(test.createdAt).toLocaleDateString()}
@@ -318,6 +469,8 @@ export default function TestList({ tests }: TestListProps) {
 
                 {isOpen && (
                   <div className="space-y-3 border-t border-slate-100 bg-slate-50 p-4 sm:p-5">
+                    <TestSettingsEditor test={test} collections={collections} />
+
                     {test.questions.length > 0 ? (
                       test.questions.map((question) => (
                         <QuestionEditor key={question.id} question={question} />
