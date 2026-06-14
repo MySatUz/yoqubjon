@@ -43,12 +43,22 @@ export async function register(formData: FormData) {
   const passwordHash = await bcrypt.hash(password, 10);
 
   try {
-    await prisma.user.create({
-      data: {
-        email,
-        passwordHash,
-        name,
-      },
+    await prisma.$transaction(async (tx) => {
+      const user = await tx.user.create({
+        data: {
+          email,
+          passwordHash,
+          name,
+        },
+      });
+
+      await tx.sectionAccess.updateMany({
+        where: {
+          email,
+          userId: null,
+        },
+        data: { userId: user.id },
+      });
     });
   } catch (error) {
     if (

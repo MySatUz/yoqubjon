@@ -7,6 +7,7 @@ import AdminUsersPanel from '@/components/admin/AdminUsersPanel';
 import UserDirectoryPanel from '@/components/admin/UserDirectoryPanel';
 import AdminSectionHub from '@/components/admin/AdminSectionHub';
 import SectionVisibilityForm from '@/components/admin/SectionVisibilityForm';
+import SectionAccessManager from '@/components/admin/SectionAccessManager';
 import { isOwnerSessionUser, OWNER_ADMIN_EMAIL, requireAdminPage } from '@/lib/admin';
 import { createManualReceiptSignedUrl } from '@/lib/manual-payments';
 import { getTestCollections } from '@/lib/testCatalog';
@@ -19,7 +20,7 @@ export default async function AdminUploadPage() {
   const session = await requireAdminPage();
   const canManageAdmins = isOwnerSessionUser(session?.user);
 
-  const [tests, paymentRequests, users, userCount, adminCount, collectionRows] = await Promise.all([
+  const [tests, paymentRequests, users, userCount, adminCount, collectionRows, sectionAccesses] = await Promise.all([
     prisma.test.findMany({
       orderBy: { createdAt: 'desc' },
       include: {
@@ -96,6 +97,18 @@ export default async function AdminUploadPage() {
         position: true,
       },
     }),
+    prisma.sectionAccess.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: 500,
+      include: {
+        user: {
+          select: {
+            email: true,
+            name: true,
+          },
+        },
+      },
+    }),
   ]);
 
   const collections = getTestCollections(collectionRows);
@@ -133,7 +146,12 @@ export default async function AdminUploadPage() {
               />
             )}
             payments={<ManualPaymentRequests requests={paymentRequestsWithReceipts} />}
-            sections={<SectionVisibilityForm collections={collections} />}
+            sections={(
+              <div className="space-y-8">
+                <SectionAccessManager collections={collections} grants={sectionAccesses} />
+                <SectionVisibilityForm collections={collections} />
+              </div>
+            )}
             tests={(
               <div className="space-y-10">
                 <AdminForm collections={collections} />

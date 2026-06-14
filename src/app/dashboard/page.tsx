@@ -11,6 +11,7 @@ import {
 } from '@/lib/testCatalog';
 import PracticeCatalog from '@/components/dashboard/PracticeCatalog';
 import { isAdminUser } from '@/lib/admin';
+import { getActiveSectionAccessCategories } from '@/lib/sectionAccess';
 
 export default async function DashboardPage(props: {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
@@ -25,7 +26,7 @@ export default async function DashboardPage(props: {
   }
 
   // Fetch data in parallel
-  const [results, tests, subscription, canDownloadPdf, visibilityRows] = await Promise.all([
+  const [results, tests, subscription, canDownloadPdf, visibilityRows, sectionAccessCategories] = await Promise.all([
     prisma.result.findMany({
       where: { userId: session.user.id },
       select: {
@@ -71,12 +72,19 @@ export default async function DashboardPage(props: {
         position: true,
       },
     }),
+    getActiveSectionAccessCategories(session.user.id, session.user.email),
   ]);
 
   const isPremium = !!subscription;
   const collections = getTestCollections(visibilityRows);
-  const activeCategory: TestCategory | null = findCategoryByQuery(collections, requestedSet);
-  const visibleActiveCategory = activeCategory && collections.some((collection) => (
+  const sectionAccessSet = new Set(sectionAccessCategories);
+  const dashboardCollections = collections.map((collection) => (
+    collection.visible || sectionAccessSet.has(collection.value) || canDownloadPdf
+      ? { ...collection, visible: true }
+      : collection
+  ));
+  const activeCategory: TestCategory | null = findCategoryByQuery(dashboardCollections, requestedSet);
+  const visibleActiveCategory = activeCategory && dashboardCollections.some((collection) => (
     collection.value === activeCategory && collection.visible
   ))
     ? activeCategory
@@ -109,8 +117,9 @@ export default async function DashboardPage(props: {
               ...test,
               createdAt: test.createdAt.toISOString(),
             }))}
-            collections={collections}
+            collections={dashboardCollections}
             isPremium={isPremium}
+            accessibleCategories={sectionAccessCategories}
             canDownloadPdf={canDownloadPdf}
           />
 

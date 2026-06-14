@@ -28,6 +28,7 @@ type PracticeCatalogProps = {
   tests: CatalogTest[];
   collections: TestCollectionOption[];
   isPremium: boolean;
+  accessibleCategories: string[];
   canDownloadPdf: boolean;
 };
 
@@ -72,6 +73,7 @@ export default function PracticeCatalog({
   tests,
   collections,
   isPremium,
+  accessibleCategories,
   canDownloadPdf,
 }: PracticeCatalogProps) {
   const router = useRouter();
@@ -80,6 +82,10 @@ export default function PracticeCatalog({
   const visibleCollections = useMemo(
     () => collections.filter((collection) => collection.visible),
     [collections]
+  );
+  const accessibleCategorySet = useMemo(
+    () => new Set(accessibleCategories),
+    [accessibleCategories]
   );
 
   useEffect(() => {
@@ -191,7 +197,14 @@ export default function PracticeCatalog({
       ) : (
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
           {visibleTests.map((test) => {
-            const canAccess = test.isFree || isPremium;
+            const category = getTestCategory(test);
+            const hasSectionAccess = Boolean(category && accessibleCategorySet.has(category));
+            const canAccess = test.isFree || isPremium || hasSectionAccess;
+            const accessLabel = test.isFree
+              ? 'Free Access'
+              : hasSectionAccess && !isPremium
+                ? 'Course Access'
+                : 'Premium';
             const description = getTestDescription(test);
 
             return (
@@ -213,7 +226,7 @@ export default function PracticeCatalog({
                           ? 'bg-green-100 text-green-700 border-green-200'
                           : 'bg-amber-100 text-amber-700 border-amber-200'
                       }`}>
-                        {test.isFree ? 'Free Access' : 'Premium'}
+                        {accessLabel}
                       </span>
                       <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[10px] font-black uppercase tracking-widest text-slate-500">
                         {formatDuration(test.durationSeconds)}

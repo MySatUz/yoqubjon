@@ -64,7 +64,7 @@ export default function AdminSectionHub({
     {
       id: 'sections',
       title: 'Sections',
-      body: 'Choose which practice collections students can see.',
+      body: 'Grant course access and choose which collections students can see.',
       countLabel: `${visibleSectionCount} visible`,
       icon: Eye,
       accent: 'bg-teal-600 text-white',

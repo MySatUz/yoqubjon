@@ -2,6 +2,8 @@ import { prisma } from '@/lib/prisma';
 import { answersMatch } from '@/lib/resultAnswers';
 import { EXAM_TIME_GRACE_SECONDS, MAX_EXAM_DURATION_SECONDS } from '@/lib/examConfig';
 import { estimateSatMathScore } from '@/lib/satScoring';
+import { isAdminUser } from '@/lib/admin';
+import { userHasActiveSectionAccess } from '@/lib/sectionAccess';
 
 export class ExamSubmissionError extends Error {
   status: number;
@@ -103,15 +105,20 @@ export async function createExamResult(
   }
 
   if (!test.isFree) {
-    const subscription = await prisma.subscription.findFirst({
-      where: {
-        userId,
-        isActive: true,
-        expiresAt: { gt: new Date() },
-      },
-    });
+    const [subscription, hasSectionAccess, isAdmin] = await Promise.all([
+      prisma.subscription.findFirst({
+        where: {
+          userId,
+          isActive: true,
+          expiresAt: { gt: new Date() },
+        },
+        select: { id: true },
+      }),
+      userHasActiveSectionAccess(userId, null, test.collectionCategory),
+      isAdminUser(userId),
+    ]);
 
-    if (!subscription) {
+    if (!subscription && !hasSectionAccess && !isAdmin) {
       throw new ExamSubmissionError('Subscription required', 403);
     }
   }
