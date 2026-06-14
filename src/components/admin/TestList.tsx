@@ -3,8 +3,8 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { deleteTest, updateQuestion, updateTestDetails } from '@/app/admin/actions';
-import { ChevronDown, Clock3, Edit3, FileDown, ImageIcon, Loader2, Plus, Save, Settings2, Trash2, Video, X } from 'lucide-react';
+import { deleteTest, updateQuestion, updateTestDetails, updateTestVisibility } from '@/app/admin/actions';
+import { ChevronDown, Clock3, Edit3, Eye, EyeOff, FileDown, ImageIcon, Loader2, Plus, Save, Settings2, Trash2, Video, X } from 'lucide-react';
 import { getCategoryLabel, getTestCategory, type TestCollectionOption } from '@/lib/testCatalog';
 
 type AdminQuestion = {
@@ -25,6 +25,7 @@ type AdminTest = {
   collectionCategory: string | null;
   durationSeconds: number;
   isFree: boolean;
+  visible: boolean;
   createdAt: Date;
   questions: AdminQuestion[];
   _count: { questions: number };
@@ -152,6 +153,19 @@ function TestSettingsEditor({
               className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
             />
             <span className="text-xs font-black uppercase tracking-wide text-slate-600">Free</span>
+          </label>
+          <label className="flex min-h-11 items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+            <input type="hidden" name="isVisible" value="false" />
+            <input
+              name="isVisible"
+              type="checkbox"
+              value="true"
+              defaultChecked={test.visible}
+              className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+            />
+            <span className="text-xs font-black uppercase tracking-wide text-slate-600">
+              Shown
+            </span>
           </label>
           <button
             type="submit"
@@ -378,7 +392,9 @@ function QuestionEditor({ question }: { question: AdminQuestion }) {
 export default function TestList({ tests, collections }: TestListProps) {
   const router = useRouter();
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [savingVisibilityId, setSavingVisibilityId] = useState<string | null>(null);
   const [openTestId, setOpenTestId] = useState<string | null>(tests[0]?.id ?? null);
+  const visibleTestCount = tests.filter((test) => test.visible).length;
 
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this test? All questions and results will be lost.')) return;
@@ -394,9 +410,26 @@ export default function TestList({ tests, collections }: TestListProps) {
     setDeletingId(null);
   };
 
+  const handleVisibilityToggle = async (test: AdminTest) => {
+    setSavingVisibilityId(test.id);
+    const res = await updateTestVisibility(test.id, !test.visible);
+    if (!res.success) {
+      alert('Failed to update visibility: ' + res.error);
+    } else {
+      router.refresh();
+    }
+    setSavingVisibilityId(null);
+  };
+
   return (
     <div className="mt-12 space-y-6">
-      <h2 className="text-2xl font-black tracking-tight text-slate-900">Existing Tests</h2>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 className="text-2xl font-black tracking-tight text-slate-900">Existing Tests</h2>
+        <span className="inline-flex items-center gap-2 rounded-full bg-blue-50 px-4 py-2 text-xs font-black uppercase tracking-widest text-blue-700">
+          <Eye className="h-4 w-4" />
+          {visibleTestCount} shown / {tests.length} total
+        </span>
+      </div>
 
       {tests.length === 0 ? (
         <div className="rounded-3xl border border-dashed border-slate-200 bg-white p-8 text-center font-bold text-slate-400">
@@ -431,6 +464,14 @@ export default function TestList({ tests, collections }: TestListProps) {
                         {test.isFree && (
                           <span className="rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-black uppercase text-green-700">Free</span>
                         )}
+                        <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-black uppercase ${
+                          test.visible
+                            ? 'bg-blue-100 text-blue-700'
+                            : 'bg-slate-200 text-slate-600'
+                        }`}>
+                          {test.visible ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
+                          {test.visible ? 'Shown' : 'Hidden'}
+                        </span>
                         <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-black uppercase text-slate-600">
                           <Clock3 className="h-3 w-3" />
                           {formatDuration(test.durationSeconds)}
@@ -443,6 +484,26 @@ export default function TestList({ tests, collections }: TestListProps) {
                   </button>
 
                   <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleVisibilityToggle(test)}
+                      disabled={savingVisibilityId === test.id}
+                      className={`inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-black transition-all disabled:opacity-50 ${
+                        test.visible
+                          ? 'text-slate-500 hover:bg-amber-50 hover:text-amber-600'
+                          : 'text-blue-600 hover:bg-blue-50'
+                      }`}
+                    >
+                      {savingVisibilityId === test.id ? (
+                        <Loader2 className="h-5 w-5 animate-spin" />
+                      ) : test.visible ? (
+                        <EyeOff className="h-5 w-5" />
+                      ) : (
+                        <Eye className="h-5 w-5" />
+                      )}
+                      {test.visible ? 'Hide' : 'Show'}
+                    </button>
+
                     <Link
                       href={`/exam/${test.id}/pdf`}
                       className="inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-black text-slate-500 transition-all hover:bg-blue-50 hover:text-blue-600"

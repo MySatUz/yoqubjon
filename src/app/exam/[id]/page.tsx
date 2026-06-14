@@ -16,6 +16,14 @@ export default async function DynamicExamPage({ params }: { params: Promise<{ id
     redirect('/login');
   }
 
+  const userId = session.user.id;
+  const userEmail = session.user.email;
+  let adminCheck: Promise<boolean> | null = null;
+  const getIsAdmin = () => {
+    adminCheck ??= isAdminUser(userId);
+    return adminCheck;
+  };
+
   const test = await prisma.test.findUnique({
     where: { id },
     include: {
@@ -29,18 +37,22 @@ export default async function DynamicExamPage({ params }: { params: Promise<{ id
     notFound();
   }
 
+  if (!test.visible && !(await getIsAdmin())) {
+    notFound();
+  }
+
   if (!test.isFree) {
     const [subscription, hasSectionAccess, isAdmin] = await Promise.all([
       prisma.subscription.findFirst({
         where: {
-          userId: session.user.id,
+          userId,
           isActive: true,
           expiresAt: { gt: new Date() },
         },
         select: { id: true },
       }),
-      userHasActiveSectionAccess(session.user.id, session.user.email, test.collectionCategory),
-      isAdminUser(session.user.id),
+      userHasActiveSectionAccess(userId, userEmail, test.collectionCategory),
+      getIsAdmin(),
     ]);
 
     if (!subscription && !hasSectionAccess && !isAdmin) {

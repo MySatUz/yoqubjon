@@ -63,12 +63,14 @@ async function main() {
     update: {
       collectionCategory: 'STANDARD',
       durationSeconds: 2 * 60 * 60,
+      visible: true,
     },
     create: {
       id: 'test-1-sat-math',
       title: 'SAT Math Practice 1',
       description: 'Standard SAT Mathematics section with mixed Algebra, Geometry, and Advanced Math.',
       isFree: true,
+      visible: true,
       durationSeconds: 2 * 60 * 60,
       collectionCategory: 'STANDARD',
     },

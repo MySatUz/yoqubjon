@@ -33,6 +33,7 @@ model Test {
   title              String
   description        String?
   isFree             Boolean                   @default(false)
+  visible            Boolean                   @default(true)
   durationSeconds    Int                       @default(7200)
   collectionCategory String?
   createdAt          DateTime                  @default(now())
@@ -44,6 +45,7 @@ model Test {
 
   @@index([createdAt])
   @@index([collectionCategory])
+  @@index([visible])
 }
 
 model TestCollectionVisibility {

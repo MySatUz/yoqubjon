@@ -44,6 +44,13 @@ function normalizeRequiredText(value: FormDataEntryValue | null, fieldName: stri
   return trimmed;
 }
 
+function readBooleanField(formData: FormData, fieldName: string, defaultValue = false) {
+  const values = formData.getAll(fieldName);
+  if (values.length === 0) return defaultValue;
+
+  return values.includes('true');
+}
+
 function normalizeQuestionOptions(values: FormDataEntryValue[]) {
   const options = values
     .filter((value): value is string => typeof value === 'string')
@@ -110,6 +117,7 @@ export async function uploadTest(formData: FormData) {
       ? (formData.get('title') as string).trim()
       : '';
     const isFree = formData.get('isFree') === 'true';
+    const visible = readBooleanField(formData, 'isVisible', true);
     const testCategory = await resolveCollectionCategory(formData.get('testCategory'));
     const durationSeconds = normalizeDurationSeconds(formData.get('durationMinutes'));
     const texFile = formData.get('texFile') as File;
@@ -188,6 +196,7 @@ export async function uploadTest(formData: FormData) {
         title,
         description: encodeTestDescription(testCategory),
         isFree,
+        visible,
         durationSeconds,
         collectionCategory: testCategory,
         questions: {
@@ -402,7 +411,10 @@ export async function updateTestDetails(testId: string, formData: FormData) {
     const isFree = formData.get('isFree') === 'true';
     const existingTest = await prisma.test.findUnique({
       where: { id: testId },
-      select: { description: true },
+      select: {
+        description: true,
+        visible: true,
+      },
     });
 
     if (!existingTest) {
@@ -414,6 +426,7 @@ export async function updateTestDetails(testId: string, formData: FormData) {
       data: {
         title,
         isFree,
+        visible: readBooleanField(formData, 'isVisible', existingTest.visible),
         durationSeconds,
         collectionCategory: testCategory,
         description: encodeTestDescription(testCategory, cleanTestDescription(existingTest.description)),
@@ -426,6 +439,30 @@ export async function updateTestDetails(testId: string, formData: FormData) {
     return { success: true };
   } catch (error: unknown) {
     console.error('Update Test Details Error:', error);
+    return { success: false, error: error instanceof Error ? error.message : 'Update failed' };
+  }
+}
+
+export async function updateTestVisibility(testId: string, visible: boolean) {
+  try {
+    await requireAdmin();
+
+    if (!testId || testId.length > 160) {
+      throw new Error('Invalid test id');
+    }
+
+    await prisma.test.update({
+      where: { id: testId },
+      data: { visible },
+      select: { id: true },
+    });
+
+    revalidatePath('/admin');
+    revalidatePath('/dashboard');
+    revalidatePath(`/exam/${testId}`);
+    return { success: true };
+  } catch (error: unknown) {
+    console.error('Update Test Visibility Error:', error);
     return { success: false, error: error instanceof Error ? error.message : 'Update failed' };
   }
 }

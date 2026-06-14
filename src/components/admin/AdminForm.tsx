@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { uploadTest } from '@/app/admin/actions';
-import { FileText, Image as ImageIcon, Upload, CheckCircle2, AlertCircle, Atom, Clock3, Loader2, Layers3, Sparkles } from 'lucide-react';
+import { FileText, Image as ImageIcon, Upload, CheckCircle2, AlertCircle, Atom, Clock3, Eye, Loader2, Layers3, Sparkles } from 'lucide-react';
 import type { TestCollectionOption } from '@/lib/testCatalog';
 
 type PreparedUpload = {
@@ -52,6 +52,7 @@ export default function AdminForm({ collections }: AdminFormProps) {
       const formData = new FormData(form);
       const title = formData.get('title');
       const isFree = formData.get('isFree');
+      const isVisible = formData.getAll('isVisible').includes('true');
       const testCategory = formData.get('testCategory');
       const durationMinutes = formData.get('durationMinutes');
       const texFile = formData.get('texFile');
@@ -105,6 +106,7 @@ export default function AdminForm({ collections }: AdminFormProps) {
       const serverFormData = new FormData();
       if (typeof title === 'string') serverFormData.set('title', title);
       if (isFree === 'true') serverFormData.set('isFree', 'true');
+      serverFormData.set('isVisible', isVisible ? 'true' : 'false');
       if (typeof testCategory === 'string') serverFormData.set('testCategory', testCategory);
       if (typeof durationMinutes === 'string') serverFormData.set('durationMinutes', durationMinutes);
       if (texFile instanceof File) serverFormData.set('texFile', texFile);
@@ -208,6 +210,21 @@ export default function AdminForm({ collections }: AdminFormProps) {
             className="w-5 h-5 rounded-lg border-slate-300 text-blue-600 focus:ring-blue-500" 
           />
           <label htmlFor="isFree" className="text-sm font-black text-slate-700">Set as Free Test</label>
+        </div>
+
+        <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-2xl border border-slate-100">
+          <input
+            id="isVisible"
+            name="isVisible"
+            type="checkbox"
+            value="true"
+            defaultChecked
+            className="w-5 h-5 rounded-lg border-slate-300 text-blue-600 focus:ring-blue-500"
+          />
+          <Eye className="h-5 w-5 text-slate-400" />
+          <label htmlFor="isVisible" className="text-sm font-black text-slate-700">
+            Show in Practice Center
+          </label>
         </div>
       </div>
 

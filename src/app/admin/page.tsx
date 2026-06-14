@@ -120,6 +120,7 @@ export default async function AdminUploadPage() {
   );
   const pendingPaymentCount = paymentRequests.filter((request) => request.status === 'PENDING').length;
   const visibleSectionCount = collections.filter((collection) => collection.visible).length;
+  const visibleTestCount = tests.filter((test) => test.visible).length;
 
   return (
     <AppShell session={session} canManageTests>
@@ -136,6 +137,7 @@ export default async function AdminUploadPage() {
             paymentCount={paymentRequests.length}
             pendingPaymentCount={pendingPaymentCount}
             visibleSectionCount={visibleSectionCount}
+            visibleTestCount={visibleTestCount}
             testCount={tests.length}
             adminAccess={(
               <AdminUsersPanel

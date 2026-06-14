@@ -96,6 +96,16 @@ export async function createExamResult(
     throw new ExamSubmissionError('Test not found', 404);
   }
 
+  let adminCheck: Promise<boolean> | null = null;
+  const getIsAdmin = () => {
+    adminCheck ??= isAdminUser(userId);
+    return adminCheck;
+  };
+
+  if (!test.visible && !(await getIsAdmin())) {
+    throw new ExamSubmissionError('Test not found', 404);
+  }
+
   if (submission.timeSpent > test.durationSeconds + EXAM_TIME_GRACE_SECONDS) {
     throw new ExamSubmissionError('Invalid time spent', 400);
   }
@@ -115,7 +125,7 @@ export async function createExamResult(
         select: { id: true },
       }),
       userHasActiveSectionAccess(userId, null, test.collectionCategory),
-      isAdminUser(userId),
+      getIsAdmin(),
     ]);
 
     if (!subscription && !hasSectionAccess && !isAdmin) {

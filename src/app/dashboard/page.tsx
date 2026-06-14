@@ -52,6 +52,7 @@ export default async function DashboardPage(props: {
         collectionCategory: true,
         durationSeconds: true,
         isFree: true,
+        visible: true,
         createdAt: true,
       },
     }),
@@ -89,7 +90,9 @@ export default async function DashboardPage(props: {
   ))
     ? activeCategory
     : null;
-  const sortedTests = [...tests].sort(compareCatalogTests);
+  const sortedTests = tests
+    .filter((test) => canDownloadPdf || test.visible)
+    .sort(compareCatalogTests);
   const seenTestIds = new Set<string>();
   const recentResults = results
     .filter((result) => {

@@ -21,6 +21,7 @@ type AdminSectionHubProps = {
   paymentCount: number;
   pendingPaymentCount: number;
   visibleSectionCount: number;
+  visibleTestCount: number;
   testCount: number;
   adminAccess: ReactNode;
   payments: ReactNode;
@@ -34,6 +35,7 @@ export default function AdminSectionHub({
   paymentCount,
   pendingPaymentCount,
   visibleSectionCount,
+  visibleTestCount,
   testCount,
   adminAccess,
   payments,
@@ -73,7 +75,7 @@ export default function AdminSectionHub({
       id: 'tests',
       title: 'Tests',
       body: 'Upload TEX files, images, and manage imported practice tests.',
-      countLabel: `${testCount} tests`,
+      countLabel: `${visibleTestCount}/${testCount} visible`,
       icon: FilePlus2,
       accent: 'bg-slate-900 text-white',
     },

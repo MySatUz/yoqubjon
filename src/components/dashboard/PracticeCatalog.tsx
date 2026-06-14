@@ -20,6 +20,7 @@ type CatalogTest = {
   collectionCategory: string | null;
   durationSeconds: number;
   isFree: boolean;
+  visible: boolean;
   createdAt: string;
 };
 
@@ -102,6 +103,8 @@ export default function PracticeCatalog({
     }
 
     for (const test of tests) {
+      if (!test.visible && !canDownloadPdf) continue;
+
       const category = getTestCategory(test);
       if (category && grouped.has(category)) {
         grouped.get(category)?.push(test);
@@ -109,7 +112,7 @@ export default function PracticeCatalog({
     }
 
     return grouped;
-  }, [tests, visibleCollections]);
+  }, [canDownloadPdf, tests, visibleCollections]);
 
   const activeCollection = activeCategory
     ? visibleCollections.find((collection) => collection.value === activeCategory) ?? null
