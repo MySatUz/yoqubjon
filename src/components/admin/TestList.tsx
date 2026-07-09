@@ -27,13 +27,14 @@ type AdminTest = {
   isFree: boolean;
   visible: boolean;
   createdAt: Date;
-  questions: AdminQuestion[];
+  questions?: AdminQuestion[];
   _count: { questions: number };
 };
 
 interface TestListProps {
   tests: AdminTest[];
   collections: TestCollectionOption[];
+  initialOpenTestId?: string | null;
 }
 
 function readOptions(options: unknown) {
@@ -389,11 +390,11 @@ function QuestionEditor({ question }: { question: AdminQuestion }) {
   );
 }
 
-export default function TestList({ tests, collections }: TestListProps) {
+export default function TestList({ tests, collections, initialOpenTestId = null }: TestListProps) {
   const router = useRouter();
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [savingVisibilityId, setSavingVisibilityId] = useState<string | null>(null);
-  const [openTestId, setOpenTestId] = useState<string | null>(tests[0]?.id ?? null);
+  const [openTestId, setOpenTestId] = useState<string | null>(initialOpenTestId);
   const visibleTestCount = tests.filter((test) => test.visible).length;
 
   const handleDelete = async (id: string) => {
@@ -441,6 +442,8 @@ export default function TestList({ tests, collections }: TestListProps) {
             const isOpen = openTestId === test.id;
             const category = getTestCategory(test);
             const categoryLabel = getCategoryLabel(category, collections);
+            const questions = test.questions;
+            const hasLoadedQuestions = Array.isArray(questions);
 
             return (
               <div key={test.id} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-all hover:border-blue-200">
@@ -532,14 +535,25 @@ export default function TestList({ tests, collections }: TestListProps) {
                   <div className="space-y-3 border-t border-slate-100 bg-slate-50 p-4 sm:p-5">
                     <TestSettingsEditor test={test} collections={collections} />
 
-                    {test.questions.length > 0 ? (
-                      test.questions.map((question) => (
-                        <QuestionEditor key={question.id} question={question} />
-                      ))
+                    {hasLoadedQuestions ? (
+                      questions.length > 0 ? (
+                        questions.map((question) => (
+                          <QuestionEditor key={question.id} question={question} />
+                        ))
+                      ) : (
+                        <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-6 text-center text-sm font-bold text-slate-400">
+                          This test has no questions.
+                        </div>
+                      )
                     ) : (
-                      <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-6 text-center text-sm font-bold text-slate-400">
-                        This test has no questions.
-                      </div>
+                      <Link
+                        href={`/admin/tests/${test.id}`}
+                        prefetch={false}
+                        className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-blue-100 bg-white px-5 py-4 text-sm font-black text-blue-600 transition hover:border-blue-200 hover:bg-blue-50"
+                      >
+                        <Edit3 className="h-4 w-4" />
+                        Open question editor
+                      </Link>
                     )}
                   </div>
                 )}

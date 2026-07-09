@@ -1,13 +1,14 @@
 'use client';
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
   createTestCollection,
   deleteTestCollection,
   updateCollectionVisibility,
 } from '@/app/admin/actions';
-import { Atom, CheckCircle2, Eye, EyeOff, Layers3, Loader2, PlusCircle, Sparkles, Trash2 } from 'lucide-react';
+import { ArrowUpRight, Atom, CheckCircle2, Eye, EyeOff, Layers3, Loader2, PlusCircle, Sparkles, Trash2 } from 'lucide-react';
 import type { TestCollectionOption } from '@/lib/testCatalog';
 
 type SectionVisibilityFormProps = {
@@ -133,7 +134,18 @@ export default function SectionVisibilityForm({ collections }: SectionVisibility
                 }`}
               >
                 <input type="hidden" name="category" value={option.value} />
-                <label className="block cursor-pointer">
+                <div className="mb-5 flex items-start justify-between gap-4">
+                  <Link
+                    href={`/admin/sections/${option.value.toLowerCase()}`}
+                    prefetch={false}
+                    className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-white text-blue-600 shadow-sm transition hover:text-blue-700"
+                    aria-label={`Open ${option.label} results`}
+                  >
+                    <Icon className="h-5 w-5" />
+                  </Link>
+                  <label className={`inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-full bg-white shadow-sm transition hover:ring-4 hover:ring-blue-100 ${
+                    isVisible ? 'text-blue-600' : 'text-slate-300'
+                  }`}>
                   <input
                     type="checkbox"
                     name={`visible_${option.value}`}
@@ -146,27 +158,31 @@ export default function SectionVisibilityForm({ collections }: SectionVisibility
                       }));
                     }}
                     className="sr-only"
+                    aria-label={`${isVisible ? 'Hide' : 'Show'} ${option.label}`}
                   />
-                  <div className="mb-5 flex items-start justify-between gap-4">
-                    <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-white text-blue-600 shadow-sm">
-                      <Icon className="h-5 w-5" />
-                    </span>
-                    <span className={`inline-flex h-9 w-9 items-center justify-center rounded-full bg-white shadow-sm ${
-                      isVisible ? 'text-blue-600' : 'text-slate-300'
-                    }`}>
-                      {isVisible ? (
-                        <Eye className="h-4 w-4" />
-                      ) : (
-                        <EyeOff className="h-4 w-4" />
-                      )}
-                    </span>
-                  </div>
+                    {isVisible ? (
+                      <Eye className="h-4 w-4" />
+                    ) : (
+                      <EyeOff className="h-4 w-4" />
+                    )}
+                  </label>
+                </div>
+
+                <Link
+                  href={`/admin/sections/${option.value.toLowerCase()}`}
+                  prefetch={false}
+                  className="group block rounded-xl outline-none focus-visible:ring-4 focus-visible:ring-blue-100"
+                >
                   <h4 className="text-lg font-black text-slate-900">{option.label}</h4>
                   <p className="mt-2 min-h-12 text-xs font-bold leading-relaxed text-slate-500">{option.description}</p>
                   <p className="mt-4 text-xs font-black uppercase tracking-widest text-blue-600">
                     {isVisible ? 'Shown in Practice Center' : 'Hidden from students'}
                   </p>
-                </label>
+                  <span className="mt-4 inline-flex items-center gap-2 text-xs font-black uppercase tracking-widest text-slate-500 transition group-hover:text-blue-600">
+                    Open results
+                    <ArrowUpRight className="h-4 w-4" />
+                  </span>
+                </Link>
 
                 <button
                   type="button"

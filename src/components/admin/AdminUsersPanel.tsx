@@ -16,15 +16,22 @@ interface AdminUsersPanelProps {
   ownerEmail: string;
   userCount: number;
   userDirectory: ReactNode;
+  initialShowUsers?: boolean;
 }
 
 type ActionResult = { success?: boolean; error?: string } | null;
 
-export default function AdminUsersPanel({ users, ownerEmail, userCount, userDirectory }: AdminUsersPanelProps) {
+export default function AdminUsersPanel({
+  users,
+  ownerEmail,
+  userCount,
+  userDirectory,
+  initialShowUsers = false,
+}: AdminUsersPanelProps) {
   const [grantResult, setGrantResult] = useState<ActionResult>(null);
   const [busyEmail, setBusyEmail] = useState<string | null>(null);
   const [emailQuery, setEmailQuery] = useState('');
-  const [showUsers, setShowUsers] = useState(false);
+  const [showUsers, setShowUsers] = useState(initialShowUsers);
   const normalizedQuery = emailQuery.trim().toLowerCase();
   const visibleUsers = users.filter((user) => user.role === 'ADMIN' || user.email.toLowerCase() === ownerEmail);
   const suggestedUsers = normalizedQuery.length >= 2

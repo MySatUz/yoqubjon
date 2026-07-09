@@ -38,7 +38,7 @@ export default function ShellNav({ canManageTests, variant }: ShellNavProps) {
             <Link
               key={item.href}
               href={item.href}
-              prefetch
+              prefetch={false}
               onMouseEnter={() => router.prefetch(item.href)}
               onFocus={() => router.prefetch(item.href)}
               className={`flex min-w-0 flex-col items-center justify-center gap-1 rounded-2xl px-1 py-2 text-[10px] font-black transition-colors ${
@@ -66,7 +66,7 @@ export default function ShellNav({ canManageTests, variant }: ShellNavProps) {
           <Link
             key={item.href}
             href={item.href}
-            prefetch
+            prefetch={false}
             onMouseEnter={() => router.prefetch(item.href)}
             onFocus={() => router.prefetch(item.href)}
             className={`flex items-center gap-3 rounded-xl px-4 py-3 font-bold transition-all ${

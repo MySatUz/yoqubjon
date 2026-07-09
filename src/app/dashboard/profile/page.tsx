@@ -1,18 +1,19 @@
-import React from 'react';
 import { auth } from "@/auth";
-import { prisma } from '@/lib/prisma';
-import Link from 'next/link';
-import { Award, BookOpen, Calendar, Crown, Mail, Target, TrendingUp, User } from 'lucide-react';
+import { prisma } from "@/lib/prisma";
+import { buildSectionResultSummaries, formatResultTime } from "@/lib/resultSections";
+import { getTestCollections } from "@/lib/testCatalog";
+import { Award, BookOpen, Calendar, Crown, Mail, Target, TrendingUp, User } from "lucide-react";
+import Link from "next/link";
 
 export default async function ProfilePage() {
   const session = await auth();
-  
+
   if (!session?.user?.id) return <div>Unauthorized</div>;
 
-  const [userResults, subscription] = await Promise.all([
+  const [userResults, subscription, visibilityRows] = await Promise.all([
     prisma.result.findMany({
       where: { userId: session.user.id },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
       select: {
         id: true,
         testId: true,
@@ -21,7 +22,11 @@ export default async function ProfilePage() {
         createdAt: true,
         test: {
           select: {
+            id: true,
             title: true,
+            description: true,
+            collectionCategory: true,
+            createdAt: true,
           },
         },
       },
@@ -32,21 +37,31 @@ export default async function ProfilePage() {
         isActive: true,
         expiresAt: { gt: new Date() },
       },
-      orderBy: { expiresAt: 'desc' },
+      orderBy: { expiresAt: "desc" },
+    }),
+    prisma.testCollectionVisibility.findMany({
+      select: {
+        category: true,
+        visible: true,
+        label: true,
+        description: true,
+        position: true,
+      },
     }),
   ]);
 
-  const avgScore = userResults.length > 0 
+  const collections = getTestCollections(visibilityRows);
+  const sectionSummaries = buildSectionResultSummaries(userResults, collections);
+  const avgScore = userResults.length > 0
     ? Math.round(userResults.reduce((acc, curr) => acc + curr.score, 0) / userResults.length)
     : 0;
   const bestScore = userResults.reduce((best, result) => Math.max(best, result.score), 0);
   const latestResult = userResults[0] || null;
-
   const totalPracticedTime = userResults.reduce((acc, curr) => acc + curr.timeSpent, 0);
-  const formattedTime = Math.round(totalPracticedTime / 60) + " min";
-  const isPremium = subscription?.planId === 'PREMIUM';
-  const displayName = session.user.name || 'MYSAT Student';
-  const userInitial = displayName[0] || 'U';
+  const formattedTime = formatResultTime(totalPracticedTime);
+  const isPremium = subscription?.planId === "PREMIUM";
+  const displayName = session.user.name || "MYSAT Student";
+  const userInitial = displayName[0] || "U";
 
   return (
     <div className="px-4 py-10 sm:px-6 lg:px-8">
@@ -54,7 +69,7 @@ export default async function ProfilePage() {
         <div>
           <p className="text-[10px] font-black uppercase tracking-[0.28em] text-blue-600">Student workspace</p>
           <h1 className="mt-2 text-4xl font-black tracking-tight text-slate-900">Personal Cabinet</h1>
-          <p className="mt-2 text-slate-500 font-medium">Your account, progress, subscription, and latest practice history.</p>
+          <p className="mt-2 font-medium text-slate-500">Your account, progress, subscription, and latest practice history.</p>
         </div>
         <Link
           href="/dashboard"
@@ -78,15 +93,15 @@ export default async function ProfilePage() {
                   <p className="mt-1 text-sm font-bold text-slate-300">{session.user.email}</p>
                 </div>
               </div>
-              <div className={`rounded-2xl px-5 py-4 ${isPremium ? 'bg-green-500/15 text-green-200' : 'bg-white/10 text-slate-200'}`}>
+              <div className={`rounded-2xl px-5 py-4 ${isPremium ? "bg-green-500/15 text-green-200" : "bg-white/10 text-slate-200"}`}>
                 <div className="flex items-center gap-2 text-sm font-black">
                   <Crown className="h-5 w-5" />
-                  {isPremium ? 'Premium active' : 'Free Starter'}
+                  {isPremium ? "Premium active" : "Free Starter"}
                 </div>
                 <p className="mt-1 text-xs font-bold opacity-80">
                   {isPremium && subscription
                     ? `Until ${subscription.expiresAt.toLocaleDateString()}`
-                    : 'Upgrade when you are ready for full access.'}
+                    : "Upgrade when you are ready for full access."}
                 </p>
               </div>
             </div>
@@ -116,10 +131,10 @@ export default async function ProfilePage() {
 
         <section className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           {[
-            { label: 'Average Score', value: avgScore, icon: Award, className: 'bg-blue-50 text-blue-600' },
-            { label: 'Best Score', value: bestScore, icon: Target, className: 'bg-emerald-50 text-emerald-600' },
-            { label: 'Tests Taken', value: userResults.length, icon: BookOpen, className: 'bg-indigo-50 text-indigo-600' },
-            { label: 'Total Practice', value: formattedTime, icon: TrendingUp, className: 'bg-amber-50 text-amber-600' },
+            { label: "Average Score", value: avgScore, icon: Award, className: "bg-blue-50 text-blue-600" },
+            { label: "Best Score", value: bestScore, icon: Target, className: "bg-emerald-50 text-emerald-600" },
+            { label: "Tests Taken", value: userResults.length, icon: BookOpen, className: "bg-indigo-50 text-indigo-600" },
+            { label: "Total Practice", value: formattedTime, icon: TrendingUp, className: "bg-amber-50 text-amber-600" },
           ].map((stat) => {
             const Icon = stat.icon;
 
@@ -138,8 +153,8 @@ export default async function ProfilePage() {
         <section className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm xl:col-span-2">
           <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
             <div>
-              <p className="text-[10px] font-black uppercase tracking-[0.22em] text-blue-600">Recent attempts</p>
-              <h2 className="mt-2 text-2xl font-black text-slate-900">Practice history</h2>
+              <p className="text-[10px] font-black uppercase tracking-[0.22em] text-blue-600">Section results</p>
+              <h2 className="mt-2 text-2xl font-black text-slate-900">Practice history by section</h2>
             </div>
             {latestResult && (
               <Link href={`/dashboard/results/${latestResult.id}`} className="rounded-2xl bg-blue-600 px-4 py-3 text-sm font-black text-white transition hover:bg-blue-700">
@@ -153,25 +168,46 @@ export default async function ProfilePage() {
               No attempts yet. Start a module and this area will become your progress map.
             </div>
           ) : (
-            <div className="grid gap-3 md:grid-cols-2">
-              {userResults.slice(0, 6).map((result) => (
-                <Link
-                  key={result.id}
-                  href={`/dashboard/results/${result.id}`}
-                  className="rounded-3xl border border-slate-200 bg-slate-50 p-5 transition hover:border-blue-200 hover:bg-white hover:shadow-md"
-                >
-                  <div className="flex items-start justify-between gap-4">
+            <div className="space-y-5">
+              {sectionSummaries.map((section) => (
+                <article key={section.categoryKey} className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
+                  <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                     <div>
-                      <p className="text-base font-black text-slate-900">{result.test.title}</p>
-                      <p className="mt-1 text-xs font-bold text-slate-400">
-                        {result.createdAt.toLocaleDateString()} · {Math.round(result.timeSpent / 60)} min
+                      <h3 className="text-xl font-black text-slate-900">{section.label}</h3>
+                      <p className="mt-1 max-w-2xl text-sm font-bold leading-relaxed text-slate-500">
+                        {section.description}
                       </p>
                     </div>
-                    <span className="rounded-2xl bg-slate-900 px-3 py-2 text-sm font-black text-white">
-                      {result.score}
-                    </span>
+                    <div className="grid gap-2 text-xs font-black text-slate-600 sm:grid-cols-4 lg:min-w-[34rem]">
+                      <span className="rounded-2xl bg-white px-3 py-2">{section.attempts} attempts</span>
+                      <span className="rounded-2xl bg-white px-3 py-2">{section.uniqueTests} tests</span>
+                      <span className="rounded-2xl bg-white px-3 py-2">{section.totalScore} total</span>
+                      <span className="rounded-2xl bg-white px-3 py-2">{section.bestScore} best</span>
+                    </div>
                   </div>
-                </Link>
+
+                  <div className="mt-5 grid gap-3 md:grid-cols-2">
+                    {section.results.map((result) => (
+                      <Link
+                        key={result.id}
+                        href={`/dashboard/results/${result.id}`}
+                        className="rounded-3xl border border-slate-200 bg-white p-5 transition hover:border-blue-200 hover:shadow-md"
+                      >
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="min-w-0">
+                            <p className="truncate text-base font-black text-slate-900">{result.testTitle}</p>
+                            <p className="mt-1 text-xs font-bold text-slate-400">
+                              {new Date(result.createdAt).toLocaleDateString()} - {formatResultTime(result.timeSpent)}
+                            </p>
+                          </div>
+                          <span className="rounded-2xl bg-slate-900 px-3 py-2 text-sm font-black text-white">
+                            {result.score}
+                          </span>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                </article>
               ))}
             </div>
           )}
@@ -187,7 +223,7 @@ export default async function ProfilePage() {
               <p className="mt-2 max-w-2xl text-sm font-bold leading-relaxed text-slate-300">
                 {isPremium
                   ? `Premium access is active until ${subscription?.expiresAt.toLocaleDateString()}.`
-                  : 'You are currently on the Free Starter plan. Upgrade when you want all modules and full review.'}
+                  : "You are currently on the Free Starter plan. Upgrade when you want all modules and full review."}
               </p>
             </div>
             <Link href="/dashboard/subscription" className="rounded-2xl bg-blue-600 px-8 py-4 text-center text-sm font-black text-white transition hover:bg-blue-500">

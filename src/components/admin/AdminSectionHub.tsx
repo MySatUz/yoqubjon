@@ -1,13 +1,8 @@
-'use client';
-
-import type { ReactNode } from 'react';
-import { useState } from 'react';
-import { ArrowLeft, CreditCard, Eye, FilePlus2, ShieldCheck } from 'lucide-react';
-
-type AdminSection = 'home' | 'admins' | 'payments' | 'sections' | 'tests';
+import Link from 'next/link';
+import { CreditCard, Eye, FilePlus2, ShieldCheck, UsersRound } from 'lucide-react';
 
 type SectionCard = {
-  id: Exclude<AdminSection, 'home'>;
+  href: string;
   title: string;
   body: string;
   countLabel: string;
@@ -18,45 +13,37 @@ type SectionCard = {
 type AdminSectionHubProps = {
   canManageAdmins: boolean;
   adminCount: number;
+  userCount: number;
   paymentCount: number;
   pendingPaymentCount: number;
   visibleSectionCount: number;
   visibleTestCount: number;
   testCount: number;
-  adminAccess: ReactNode;
-  payments: ReactNode;
-  sections: ReactNode;
-  tests: ReactNode;
 };
 
 export default function AdminSectionHub({
   canManageAdmins,
   adminCount,
+  userCount,
   paymentCount,
   pendingPaymentCount,
   visibleSectionCount,
   visibleTestCount,
   testCount,
-  adminAccess,
-  payments,
-  sections,
-  tests,
 }: AdminSectionHubProps) {
-  const [activeSection, setActiveSection] = useState<AdminSection>('home');
-
   const cards: SectionCard[] = [
-    ...(canManageAdmins
-      ? [{
-          id: 'admins' as const,
-          title: 'Admin access',
-          body: 'Grant or remove admin access for registered users.',
-          countLabel: `${adminCount} admins`,
-          icon: ShieldCheck,
-          accent: 'bg-blue-600 text-white',
-        }]
-      : []),
     {
-      id: 'payments',
+      href: '/admin/users',
+      title: canManageAdmins ? 'Users & admin access' : 'Users',
+      body: canManageAdmins
+        ? 'Review users, inspect results, and manage admin access.'
+        : 'Review users and inspect their practice results.',
+      countLabel: canManageAdmins ? `${adminCount} admins` : `${userCount} users`,
+      icon: UsersRound,
+      accent: 'bg-blue-600 text-white',
+    },
+    {
+      href: '/admin/payments',
       title: 'Manual payment requests',
       body: 'Review transfers by month, inspect receipts, approve or reject.',
       countLabel: pendingPaymentCount ? `${pendingPaymentCount} pending` : `${paymentCount} requests`,
@@ -64,7 +51,7 @@ export default function AdminSectionHub({
       accent: 'bg-emerald-600 text-white',
     },
     {
-      id: 'sections',
+      href: '/admin/sections',
       title: 'Sections',
       body: 'Grant course access and choose which collections students can see.',
       countLabel: `${visibleSectionCount} visible`,
@@ -72,7 +59,7 @@ export default function AdminSectionHub({
       accent: 'bg-teal-600 text-white',
     },
     {
-      id: 'tests',
+      href: '/admin/tests',
       title: 'Tests',
       body: 'Upload TEX files, images, and manage imported practice tests.',
       countLabel: `${visibleTestCount}/${testCount} visible`,
@@ -81,45 +68,16 @@ export default function AdminSectionHub({
     },
   ];
 
-  if (activeSection !== 'home') {
-    const currentTitle = cards.find((card) => card.id === activeSection)?.title;
-    const sectionContent = activeSection === 'admins'
-      ? adminAccess
-      : activeSection === 'payments'
-        ? payments
-        : activeSection === 'sections'
-          ? sections
-          : tests;
-
-    return (
-      <div>
-        <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
-          <button
-            type="button"
-            onClick={() => setActiveSection('home')}
-            className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-700 shadow-sm transition hover:border-blue-200 hover:text-blue-600"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back
-          </button>
-          <h2 className="text-2xl font-black tracking-tight text-slate-900">{currentTitle}</h2>
-        </div>
-
-        <div key={activeSection}>{sectionContent}</div>
-      </div>
-    );
-  }
-
   return (
     <section className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
       {cards.map((card) => {
         const Icon = card.icon;
 
         return (
-          <button
-            key={card.id}
-            type="button"
-            onClick={() => setActiveSection(card.id)}
+          <Link
+            key={card.href}
+            href={card.href}
+            prefetch={false}
             className="group min-h-[220px] rounded-3xl border border-slate-200 bg-white p-6 text-left shadow-sm transition hover:-translate-y-1 hover:border-blue-200 hover:shadow-xl hover:shadow-slate-200/70"
           >
             <div className="mb-8 flex items-start justify-between gap-4">
@@ -137,7 +95,7 @@ export default function AdminSectionHub({
             <p className="mt-3 text-sm font-bold leading-relaxed text-slate-500">
               {card.body}
             </p>
-          </button>
+          </Link>
         );
       })}
     </section>

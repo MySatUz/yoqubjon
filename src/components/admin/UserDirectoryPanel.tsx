@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
-import { BarChart3, CalendarDays, Mail, Search, ShieldCheck, UserRound } from 'lucide-react';
+import Link from 'next/link';
+import { ArrowUpRight, BarChart3, CalendarDays, Mail, Search, ShieldCheck, UserRound } from 'lucide-react';
 
 type UserDirectoryEntry = {
   id: string;
@@ -85,9 +86,11 @@ export default function UserDirectoryPanel({ users, totalCount }: UserDirectoryP
           const isAdmin = user.role === 'ADMIN';
 
           return (
-            <article
+            <Link
               key={user.id}
-              className="rounded-2xl border border-slate-200 bg-slate-50 p-4 transition hover:border-indigo-200 hover:bg-white"
+              href={`/admin/users/${user.id}`}
+              prefetch={false}
+              className="group block rounded-2xl border border-slate-200 bg-slate-50 p-4 transition hover:border-indigo-200 hover:bg-white"
             >
               <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
                 <div className="min-w-0">
@@ -122,8 +125,12 @@ export default function UserDirectoryPanel({ users, totalCount }: UserDirectoryP
                     {user._count.payments + user._count.manualPaymentRequests} payment records
                   </span>
                 </div>
+
+                <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-slate-400 shadow-sm transition group-hover:text-indigo-600 xl:ml-2">
+                  <ArrowUpRight className="h-4 w-4" />
+                </span>
               </div>
-            </article>
+            </Link>
           );
         })}
 
