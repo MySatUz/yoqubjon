@@ -18,6 +18,7 @@ import {
   BarChart3,
   BookOpen,
   Clock,
+  Download,
   Medal,
   Trophy,
   UserRound,
@@ -149,9 +150,18 @@ export default async function AdminSectionResultsPage({
                   {sectionDescription}
                 </p>
               </div>
-              <div className="rounded-2xl bg-white/10 px-5 py-4">
-                <p className="text-xs font-black uppercase tracking-widest text-slate-400">Participants</p>
-                <p className="mt-1 text-3xl font-black">{leaderboard.length}</p>
+              <div className="flex flex-col gap-3">
+                <div className="rounded-2xl bg-white/10 px-5 py-4">
+                  <p className="text-xs font-black uppercase tracking-widest text-slate-400">Participants</p>
+                  <p className="mt-1 text-3xl font-black">{leaderboard.length}</p>
+                </div>
+                <a
+                  href={`/api/admin/results/sections/export?category=${encodeURIComponent(normalizedCategory.toLowerCase())}`}
+                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-5 py-3 text-sm font-black text-slate-900 transition hover:bg-blue-50 hover:text-blue-700"
+                >
+                  <Download className="h-4 w-4" />
+                  Download CSV
+                </a>
               </div>
             </div>
           </header>
