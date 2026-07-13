@@ -4,8 +4,9 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { deleteTest, updateQuestion, updateTestDetails, updateTestVisibility } from '@/app/admin/actions';
-import { ChevronDown, Clock3, Edit3, Eye, EyeOff, FileDown, ImageIcon, Loader2, Plus, Save, Settings2, Trash2, Video, X } from 'lucide-react';
+import { ChevronDown, Clock3, Edit3, Eye, EyeOff, FileDown, ImageIcon, Loader2, Plus, Repeat2, Save, Settings2, Trash2, Video, X } from 'lucide-react';
 import { getCategoryLabel, getTestCategory, type TestCollectionOption } from '@/lib/testCatalog';
+import { MAX_TEST_MAX_ATTEMPTS, MIN_TEST_MAX_ATTEMPTS } from '@/lib/testAttempts';
 
 type AdminQuestion = {
   id: string;
@@ -24,6 +25,7 @@ type AdminTest = {
   description: string | null;
   collectionCategory: string | null;
   durationSeconds: number;
+  maxAttempts: number;
   isFree: boolean;
   visible: boolean;
   createdAt: Date;
@@ -93,7 +95,7 @@ function TestSettingsEditor({
         Test settings
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[1.3fr_0.9fr_0.7fr_auto]">
+      <div className="grid gap-4 lg:grid-cols-[1.3fr_0.9fr_0.7fr_0.7fr_auto]">
         <label className="block">
           <span className="mb-2 block text-xs font-black uppercase tracking-wide text-slate-500">
             Test title
@@ -104,6 +106,26 @@ function TestSettingsEditor({
             defaultValue={test.title}
             className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-900 outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
           />
+        </label>
+
+        <label className="block">
+          <span className="mb-2 flex items-center gap-2 text-xs font-black uppercase tracking-wide text-slate-500">
+            <Repeat2 className="h-4 w-4" />
+            Attempts
+          </span>
+          <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3">
+            <input
+              name="maxAttempts"
+              type="number"
+              min={MIN_TEST_MAX_ATTEMPTS}
+              max={MAX_TEST_MAX_ATTEMPTS}
+              step={1}
+              required
+              defaultValue={test.maxAttempts}
+              className="w-20 bg-transparent text-sm font-black text-slate-900 outline-none"
+            />
+            <span className="text-xs font-black text-slate-400">max</span>
+          </div>
         </label>
 
         <label className="block">
@@ -478,6 +500,10 @@ export default function TestList({ tests, collections, initialOpenTestId = null 
                         <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-black uppercase text-slate-600">
                           <Clock3 className="h-3 w-3" />
                           {formatDuration(test.durationSeconds)}
+                        </span>
+                        <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-black uppercase text-slate-600">
+                          <Repeat2 className="h-3 w-3" />
+                          {test.maxAttempts} attempts
                         </span>
                       </span>
                       <span className="mt-1 block text-xs font-bold text-slate-400">

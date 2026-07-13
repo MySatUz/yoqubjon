@@ -2,8 +2,13 @@
 
 import React, { useState } from 'react';
 import { uploadTest } from '@/app/admin/actions';
-import { FileText, Image as ImageIcon, Upload, CheckCircle2, AlertCircle, Atom, Clock3, Eye, Loader2, Layers3, Sparkles } from 'lucide-react';
+import { FileText, Image as ImageIcon, Upload, CheckCircle2, AlertCircle, Atom, Clock3, Eye, Loader2, Layers3, Repeat2, Sparkles } from 'lucide-react';
 import type { TestCollectionOption } from '@/lib/testCatalog';
+import {
+  DEFAULT_TEST_MAX_ATTEMPTS,
+  MAX_TEST_MAX_ATTEMPTS,
+  MIN_TEST_MAX_ATTEMPTS,
+} from '@/lib/testAttempts';
 
 type PreparedUpload = {
   name: string;
@@ -55,6 +60,7 @@ export default function AdminForm({ collections }: AdminFormProps) {
       const isVisible = formData.getAll('isVisible').includes('true');
       const testCategory = formData.get('testCategory');
       const durationMinutes = formData.get('durationMinutes');
+      const maxAttempts = formData.get('maxAttempts');
       const texFile = formData.get('texFile');
       const imageFiles = formData.getAll('images').filter(
         (file): file is File => file instanceof File && file.size > 0
@@ -109,6 +115,7 @@ export default function AdminForm({ collections }: AdminFormProps) {
       serverFormData.set('isVisible', isVisible ? 'true' : 'false');
       if (typeof testCategory === 'string') serverFormData.set('testCategory', testCategory);
       if (typeof durationMinutes === 'string') serverFormData.set('durationMinutes', durationMinutes);
+      if (typeof maxAttempts === 'string') serverFormData.set('maxAttempts', maxAttempts);
       if (texFile instanceof File) serverFormData.set('texFile', texFile);
       if (testId) serverFormData.set('testId', testId);
       serverFormData.set('uploadedImages', JSON.stringify(uploadedImages));
@@ -181,25 +188,47 @@ export default function AdminForm({ collections }: AdminFormProps) {
           </div>
         </div>
 
-        <label className="block">
-          <span className="mb-2 flex items-center gap-2 text-xs font-black uppercase tracking-widest text-slate-400">
-            <Clock3 className="h-4 w-4" />
-            Test time
-          </span>
-          <div className="flex items-center gap-3 rounded-2xl border border-slate-100 bg-slate-50 px-5 py-4">
-            <input
-              name="durationMinutes"
-              type="number"
-              min={1}
-              max={360}
-              step={1}
-              defaultValue={120}
-              required
-              className="w-24 bg-transparent text-lg font-black text-slate-900 outline-none"
-            />
-            <span className="text-sm font-black text-slate-500">minutes</span>
-          </div>
-        </label>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <label className="block">
+            <span className="mb-2 flex items-center gap-2 text-xs font-black uppercase tracking-widest text-slate-400">
+              <Clock3 className="h-4 w-4" />
+              Test time
+            </span>
+            <div className="flex items-center gap-3 rounded-2xl border border-slate-100 bg-slate-50 px-5 py-4">
+              <input
+                name="durationMinutes"
+                type="number"
+                min={1}
+                max={360}
+                step={1}
+                defaultValue={120}
+                required
+                className="w-24 bg-transparent text-lg font-black text-slate-900 outline-none"
+              />
+              <span className="text-sm font-black text-slate-500">minutes</span>
+            </div>
+          </label>
+
+          <label className="block">
+            <span className="mb-2 flex items-center gap-2 text-xs font-black uppercase tracking-widest text-slate-400">
+              <Repeat2 className="h-4 w-4" />
+              Attempts per user
+            </span>
+            <div className="flex items-center gap-3 rounded-2xl border border-slate-100 bg-slate-50 px-5 py-4">
+              <input
+                name="maxAttempts"
+                type="number"
+                min={MIN_TEST_MAX_ATTEMPTS}
+                max={MAX_TEST_MAX_ATTEMPTS}
+                step={1}
+                defaultValue={DEFAULT_TEST_MAX_ATTEMPTS}
+                required
+                className="w-24 bg-transparent text-lg font-black text-slate-900 outline-none"
+              />
+              <span className="text-sm font-black text-slate-500">attempts</span>
+            </div>
+          </label>
+        </div>
         
         <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-2xl border border-slate-100">
           <input 

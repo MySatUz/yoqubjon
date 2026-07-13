@@ -17,6 +17,7 @@ import {
   isTestCategory,
   normalizeCategoryId,
 } from '@/lib/testCatalog';
+import { normalizeTestMaxAttempts } from '@/lib/testAttempts';
 
 const MAX_TEX_FILE_SIZE = 2 * 1024 * 1024;
 const MAX_IMAGE_FILE_SIZE = 5 * 1024 * 1024;
@@ -120,6 +121,7 @@ export async function uploadTest(formData: FormData) {
     const visible = readBooleanField(formData, 'isVisible', true);
     const testCategory = await resolveCollectionCategory(formData.get('testCategory'));
     const durationSeconds = normalizeDurationSeconds(formData.get('durationMinutes'));
+    const maxAttempts = normalizeTestMaxAttempts(formData.get('maxAttempts'));
     const texFile = formData.get('texFile') as File;
     const imageFiles = formData.getAll('images') as File[];
     const uploadedImages = readUploadedImages(formData.get('uploadedImages'));
@@ -198,6 +200,7 @@ export async function uploadTest(formData: FormData) {
         isFree,
         visible,
         durationSeconds,
+        maxAttempts,
         collectionCategory: testCategory,
         questions: {
           createMany: {
@@ -408,6 +411,7 @@ export async function updateTestDetails(testId: string, formData: FormData) {
     const title = normalizeRequiredText(formData.get('title'), 'Test title');
     const testCategory = await resolveCollectionCategory(formData.get('testCategory'));
     const durationSeconds = normalizeDurationSeconds(formData.get('durationMinutes'));
+    const maxAttempts = normalizeTestMaxAttempts(formData.get('maxAttempts'));
     const isFree = formData.get('isFree') === 'true';
     const existingTest = await prisma.test.findUnique({
       where: { id: testId },
@@ -428,6 +432,7 @@ export async function updateTestDetails(testId: string, formData: FormData) {
         isFree,
         visible: readBooleanField(formData, 'isVisible', existingTest.visible),
         durationSeconds,
+        maxAttempts,
         collectionCategory: testCategory,
         description: encodeTestDescription(testCategory, cleanTestDescription(existingTest.description)),
       },

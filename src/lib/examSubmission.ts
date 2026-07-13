@@ -114,8 +114,10 @@ export async function createExamResult(
     throw new ExamSubmissionError('Too many answers', 400);
   }
 
+  const isAdmin = await getIsAdmin();
+
   if (!test.isFree) {
-    const [subscription, hasSectionAccess, isAdmin] = await Promise.all([
+    const [subscription, hasSectionAccess] = await Promise.all([
       prisma.subscription.findFirst({
         where: {
           userId,
@@ -125,7 +127,6 @@ export async function createExamResult(
         select: { id: true },
       }),
       userHasActiveSectionAccess(userId, null, test.collectionCategory),
-      getIsAdmin(),
     ]);
 
     if (!subscription && !hasSectionAccess && !isAdmin) {
@@ -160,15 +161,45 @@ export async function createExamResult(
 
   const score = estimateSatMathScore(correctCount, test.questions.length);
 
-  const result = await prisma.result.create({
-    data: {
-      userId,
-      testId: test.id,
-      score,
-      timeSpent: submission.timeSpent,
-      answers: processedAnswers,
-    },
-  });
+  const resultData = {
+    userId,
+    testId: test.id,
+    score,
+    timeSpent: submission.timeSpent,
+    answers: processedAnswers,
+  };
+
+  const result = isAdmin
+    ? await prisma.result.create({ data: resultData })
+    : await prisma.$transaction(async (tx) => {
+      await tx.$queryRaw<Array<{ locked: boolean }>>`
+        SELECT pg_advisory_xact_lock(hashtext(${userId}), hashtext(${test.id})) IS NULL AS locked
+      `;
+
+      const currentTest = await tx.test.findUnique({
+        where: { id: test.id },
+        select: { maxAttempts: true },
+      });
+
+      if (!currentTest) {
+        throw new ExamSubmissionError('Test not found', 404);
+      }
+
+      const attemptsUsed = await tx.result.count({
+        where: {
+          userId,
+          testId: test.id,
+        },
+      });
+
+      if (attemptsUsed >= currentTest.maxAttempts) {
+        throw new ExamSubmissionError('Attempt limit reached', 409);
+      }
+
+      return tx.result.create({
+        data: resultData,
+      });
+    });
 
   return {
     success: true,

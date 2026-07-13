@@ -19,6 +19,7 @@ export default async function DashboardPage(props: {
   const searchParams = await props.searchParams;
   const session = await auth();
   const isSuccess = searchParams.payment === 'success';
+  const attemptLimitReached = searchParams.attemptLimit === 'reached';
   const requestedSet = searchParams.set;
   
   if (!session?.user?.id) {
@@ -26,7 +27,7 @@ export default async function DashboardPage(props: {
   }
 
   // Fetch data in parallel
-  const [results, tests, subscription, canDownloadPdf, visibilityRows, sectionAccessCategories] = await Promise.all([
+  const [results, attemptCounts, tests, subscription, canDownloadPdf, visibilityRows, sectionAccessCategories] = await Promise.all([
     prisma.result.findMany({
       where: { userId: session.user.id },
       select: {
@@ -43,6 +44,11 @@ export default async function DashboardPage(props: {
       orderBy: { createdAt: 'desc' },
       take: 20
     }),
+    prisma.result.groupBy({
+      by: ['testId'],
+      where: { userId: session.user.id },
+      _count: { _all: true },
+    }),
     prisma.test.findMany({
       orderBy: { createdAt: 'asc' },
       select: {
@@ -51,6 +57,7 @@ export default async function DashboardPage(props: {
         description: true,
         collectionCategory: true,
         durationSeconds: true,
+        maxAttempts: true,
         isFree: true,
         visible: true,
         createdAt: true,
@@ -77,6 +84,9 @@ export default async function DashboardPage(props: {
   ]);
 
   const isPremium = !!subscription;
+  const attemptsUsedByTest = new Map(
+    attemptCounts.map((attempt) => [attempt.testId, attempt._count._all])
+  );
   const collections = getTestCollections(visibilityRows);
   const sectionAccessSet = new Set(sectionAccessCategories);
   const dashboardCollections = collections.map((collection) => (
@@ -113,15 +123,22 @@ export default async function DashboardPage(props: {
           <Link href="/dashboard" className="text-xs bg-white/20 hover:bg-white/30 px-3 py-1 rounded-lg transition-colors">Dismiss</Link>
         </div>
       )}
+      {attemptLimitReached && (
+        <div className="mb-8 rounded-2xl border border-amber-200 bg-amber-50 p-4 font-black text-amber-800">
+          The attempt limit for this test has been reached.
+        </div>
+      )}
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           <PracticeCatalog
             initialCategory={visibleActiveCategory}
             tests={sortedTests.map((test) => ({
               ...test,
+              attemptsUsed: attemptsUsedByTest.get(test.id) ?? 0,
               createdAt: test.createdAt.toISOString(),
             }))}
             collections={dashboardCollections}
             isPremium={isPremium}
+            isAdmin={canDownloadPdf}
             accessibleCategories={sectionAccessCategories}
             canDownloadPdf={canDownloadPdf}
           />

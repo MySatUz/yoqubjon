@@ -1,0 +1,6 @@
+ALTER TABLE "Test"
+ADD COLUMN "maxAttempts" INTEGER NOT NULL DEFAULT 10;
+
+ALTER TABLE "Test"
+ADD CONSTRAINT "Test_maxAttempts_check"
+CHECK ("maxAttempts" BETWEEN 1 AND 10000);

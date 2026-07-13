@@ -37,12 +37,27 @@ export default async function DynamicExamPage({ params }: { params: Promise<{ id
     notFound();
   }
 
-  if (!test.visible && !(await getIsAdmin())) {
+  const isAdmin = await getIsAdmin();
+
+  if (!test.visible && !isAdmin) {
     notFound();
   }
 
+  if (!isAdmin) {
+    const attemptsUsed = await prisma.result.count({
+      where: {
+        userId,
+        testId: test.id,
+      },
+    });
+
+    if (attemptsUsed >= test.maxAttempts) {
+      redirect('/dashboard?attemptLimit=reached');
+    }
+  }
+
   if (!test.isFree) {
-    const [subscription, hasSectionAccess, isAdmin] = await Promise.all([
+    const [subscription, hasSectionAccess] = await Promise.all([
       prisma.subscription.findFirst({
         where: {
           userId,
@@ -52,7 +67,6 @@ export default async function DynamicExamPage({ params }: { params: Promise<{ id
         select: { id: true },
       }),
       userHasActiveSectionAccess(userId, userEmail, test.collectionCategory),
-      getIsAdmin(),
     ]);
 
     if (!subscription && !hasSectionAccess && !isAdmin) {
