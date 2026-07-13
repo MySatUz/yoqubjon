@@ -119,7 +119,7 @@ export default function UserDirectoryPanel({ users, totalCount }: UserDirectoryP
                     {user._count.results} results
                   </span>
                   <span className="rounded-xl bg-white px-3 py-2">
-                    {user._count.subscriptions} subscriptions
+                    {user._count.subscriptions} active subscription{user._count.subscriptions === 1 ? '' : 's'}
                   </span>
                   <span className="rounded-xl bg-white px-3 py-2">
                     {user._count.payments + user._count.manualPaymentRequests} payment records

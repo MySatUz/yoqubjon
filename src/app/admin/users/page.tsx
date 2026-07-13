@@ -12,6 +12,7 @@ export const maxDuration = 60;
 export default async function AdminUsersPage() {
   const session = await requireAdminPage();
   const canManageAdmins = isOwnerSessionUser(session?.user);
+  const now = new Date();
 
   const [users, userCount] = await Promise.all([
     prisma.user.findMany({
@@ -29,7 +30,12 @@ export default async function AdminUsersPage() {
         _count: {
           select: {
             results: true,
-            subscriptions: true,
+            subscriptions: {
+              where: {
+                isActive: true,
+                expiresAt: { gt: now },
+              },
+            },
             payments: true,
             manualPaymentRequests: true,
           },
