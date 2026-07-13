@@ -13,7 +13,7 @@ export const maxDuration = 60;
 export default async function AdminSectionsPage() {
   const session = await requireAdminPage();
 
-  const [collectionRows, sectionAccesses] = await Promise.all([
+  const [collectionRows, sectionAccesses, users] = await Promise.all([
     prisma.testCollectionVisibility.findMany({
       select: {
         category: true,
@@ -33,6 +33,15 @@ export default async function AdminSectionsPage() {
             name: true,
           },
         },
+      },
+    }),
+    prisma.user.findMany({
+      orderBy: { email: 'asc' },
+      take: 1000,
+      select: {
+        id: true,
+        email: true,
+        name: true,
       },
     }),
   ]);
@@ -61,7 +70,7 @@ export default async function AdminSectionsPage() {
           </div>
 
           <div className="space-y-8">
-            <SectionAccessManager collections={collections} grants={sectionAccesses} />
+            <SectionAccessManager collections={collections} grants={sectionAccesses} users={users} />
             <SectionVisibilityForm collections={collections} />
           </div>
         </div>

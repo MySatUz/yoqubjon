@@ -40,6 +40,13 @@ type SectionAccessGrant = {
 type SectionAccessManagerProps = {
   collections: TestCollectionOption[];
   grants: SectionAccessGrant[];
+  users: GrantUser[];
+};
+
+type GrantUser = {
+  id: string;
+  email: string;
+  name: string | null;
 };
 
 type ActionResult = { success?: boolean; error?: string; message?: string } | null;
@@ -58,9 +65,12 @@ function todayInputValue() {
   return date.toISOString().slice(0, 10);
 }
 
-export default function SectionAccessManager({ collections, grants }: SectionAccessManagerProps) {
+export default function SectionAccessManager({ collections, grants, users }: SectionAccessManagerProps) {
   const router = useRouter();
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [emailQuery, setEmailQuery] = useState('');
+  const [isEmailSearchOpen, setIsEmailSearchOpen] = useState(false);
+  const [highlightedUserIndex, setHighlightedUserIndex] = useState(0);
   const [query, setQuery] = useState('');
   const [showHistory, setShowHistory] = useState(false);
   const [result, setResult] = useState<ActionResult>(null);
@@ -85,6 +95,29 @@ export default function SectionAccessManager({ collections, grants }: SectionAcc
     Boolean(grant.expiresAt && new Date(grant.expiresAt) <= new Date())
   )), [selectedGrants]);
   const normalizedQuery = query.trim().toLowerCase();
+  const normalizedEmailQuery = emailQuery.trim().toLowerCase();
+  const suggestedUsers = useMemo(() => {
+    if (normalizedEmailQuery.length < 2) return [];
+
+    return users
+      .filter((user) => {
+        const name = user.name?.toLowerCase() || '';
+        return user.email.toLowerCase().includes(normalizedEmailQuery) ||
+          name.includes(normalizedEmailQuery);
+      })
+      .sort((left, right) => {
+        const leftEmail = left.email.toLowerCase();
+        const rightEmail = right.email.toLowerCase();
+        const leftName = left.name?.toLowerCase() || '';
+        const rightName = right.name?.toLowerCase() || '';
+        const leftStarts = leftEmail.startsWith(normalizedEmailQuery) || leftName.startsWith(normalizedEmailQuery);
+        const rightStarts = rightEmail.startsWith(normalizedEmailQuery) || rightName.startsWith(normalizedEmailQuery);
+
+        if (leftStarts !== rightStarts) return leftStarts ? -1 : 1;
+        return leftEmail.localeCompare(rightEmail);
+      })
+      .slice(0, 8);
+  }, [normalizedEmailQuery, users]);
   const filteredGrants = useMemo(() => {
     const visibleGrants = showHistory ? expiredSelectedGrants : activeSelectedGrants;
     if (!normalizedQuery) return visibleGrants;
@@ -98,9 +131,46 @@ export default function SectionAccessManager({ collections, grants }: SectionAcc
 
   function selectCategory(category: string) {
     setSelectedCategory(category);
+    setEmailQuery('');
+    setIsEmailSearchOpen(false);
+    setHighlightedUserIndex(0);
     setQuery('');
     setShowHistory(false);
     setResult(null);
+  }
+
+  function selectUser(user: GrantUser) {
+    setEmailQuery(user.email);
+    setIsEmailSearchOpen(false);
+    setHighlightedUserIndex(0);
+  }
+
+  function handleEmailKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
+    if (!isEmailSearchOpen || suggestedUsers.length === 0) return;
+
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      setHighlightedUserIndex((current) => (current + 1) % suggestedUsers.length);
+      return;
+    }
+
+    if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      setHighlightedUserIndex((current) => (
+        current === 0 ? suggestedUsers.length - 1 : current - 1
+      ));
+      return;
+    }
+
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      selectUser(suggestedUsers[highlightedUserIndex] || suggestedUsers[0]);
+      return;
+    }
+
+    if (event.key === 'Escape') {
+      setIsEmailSearchOpen(false);
+    }
   }
 
   async function handleGrant(event: React.FormEvent<HTMLFormElement>) {
@@ -115,6 +185,8 @@ export default function SectionAccessManager({ collections, grants }: SectionAcc
 
     if (response.success) {
       form.reset();
+      setEmailQuery('');
+      setIsEmailSearchOpen(false);
       router.refresh();
     }
   }
@@ -225,13 +297,100 @@ export default function SectionAccessManager({ collections, grants }: SectionAcc
           </div>
 
           <div className="grid gap-3 xl:grid-cols-[1fr_0.65fr_1fr_auto]">
-            <input
-              name="email"
-              type="email"
-              required
-              placeholder="student@email.com"
-              className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-900 outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100"
-            />
+            <div className="relative z-30">
+              <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <input
+                id="section-access-email"
+                name="email"
+                type="email"
+                required
+                value={emailQuery}
+                onChange={(event) => {
+                  setEmailQuery(event.target.value);
+                  setIsEmailSearchOpen(true);
+                  setHighlightedUserIndex(0);
+                }}
+                onFocus={() => {
+                  if (normalizedEmailQuery.length >= 2) setIsEmailSearchOpen(true);
+                }}
+                onBlur={() => setIsEmailSearchOpen(false)}
+                onKeyDown={handleEmailKeyDown}
+                placeholder="Search by name or email"
+                autoComplete="off"
+                role="combobox"
+                aria-autocomplete="list"
+                aria-expanded={isEmailSearchOpen && normalizedEmailQuery.length >= 2}
+                aria-controls="section-access-user-results"
+                aria-activedescendant={
+                  isEmailSearchOpen && suggestedUsers[highlightedUserIndex]
+                    ? `section-access-user-${suggestedUsers[highlightedUserIndex].id}`
+                    : undefined
+                }
+                className="w-full rounded-2xl border border-slate-200 bg-white py-3 pl-11 pr-4 text-sm font-black text-slate-900 outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100"
+              />
+
+              {isEmailSearchOpen && normalizedEmailQuery.length >= 2 && (
+                <div
+                  id="section-access-user-results"
+                  role="listbox"
+                  className="absolute left-0 right-0 top-[calc(100%+0.5rem)] max-h-80 overflow-y-auto rounded-2xl border border-slate-200 bg-white p-2 shadow-2xl shadow-slate-300/70"
+                >
+                  {suggestedUsers.map((user, index) => {
+                    const alreadyHasAccess = activeSelectedGrants.some(
+                      (grant) => grant.email.toLowerCase() === user.email.toLowerCase()
+                    );
+                    const isHighlighted = index === highlightedUserIndex;
+
+                    return (
+                      <button
+                        key={user.id}
+                        id={`section-access-user-${user.id}`}
+                        type="button"
+                        role="option"
+                        aria-selected={isHighlighted}
+                        onMouseDown={(event) => {
+                          event.preventDefault();
+                          selectUser(user);
+                        }}
+                        onMouseEnter={() => setHighlightedUserIndex(index)}
+                        className={`flex w-full items-center justify-between gap-3 rounded-xl px-3 py-3 text-left transition ${
+                          isHighlighted ? 'bg-emerald-50' : 'hover:bg-slate-50'
+                        }`}
+                      >
+                        <span className="flex min-w-0 items-center gap-3">
+                          <span className={`inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${
+                            isHighlighted ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-500'
+                          }`}>
+                            <UserRound className="h-4 w-4" />
+                          </span>
+                          <span className="min-w-0">
+                            <span className="block truncate text-sm font-black text-slate-900">
+                              {user.name || user.email}
+                            </span>
+                            <span className="block truncate text-xs font-bold text-slate-500">{user.email}</span>
+                          </span>
+                        </span>
+                        {alreadyHasAccess && (
+                          <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-1 text-[10px] font-black uppercase text-emerald-700">
+                            <CheckCircle2 className="h-3 w-3" />
+                            Has access
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+
+                  {suggestedUsers.length === 0 && (
+                    <div className="px-4 py-5 text-center">
+                      <p className="text-sm font-black text-slate-600">No registered user found</p>
+                      <p className="mt-1 text-xs font-bold text-slate-400">
+                        You can still grant access to the email you entered.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
             <input
               name="expiresAt"
               type="date"
