@@ -137,6 +137,16 @@ model Subscription {
   @@index([userId, isActive, expiresAt])
 }
 
+model SubscriptionSetting {
+  id         String   @id @default("global")
+  isEnabled  Boolean  @default(true)
+  cardHolder String   @default("Abdunazarov Mardon")
+  cardNumber String   @default("9860 1201 0243 8112")
+  cardType   String   @default("HUMO")
+  amount     Int      @default(119000)
+  updatedAt  DateTime @updatedAt
+}
+
 model Payment {
   id            String   @id @default(uuid())
   userId        String

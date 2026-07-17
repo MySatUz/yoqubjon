@@ -3,11 +3,11 @@ import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import {
   createManualReceiptSignedUrl,
-  MANUAL_TRANSFER_DETAILS,
   notifyManualPaymentTelegram,
   readManualPaymentFields,
   uploadManualReceipt,
 } from '@/lib/manual-payments';
+import { getSubscriptionSettings } from '@/lib/subscription-settings';
 
 export const runtime = 'nodejs';
 
@@ -20,6 +20,15 @@ export async function POST(req: Request) {
 
     if (!session?.user?.id || !session.user.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const subscriptionSettings = await getSubscriptionSettings();
+
+    if (!subscriptionSettings.isEnabled) {
+      return NextResponse.json(
+        { error: 'Subscription purchases are temporarily unavailable' },
+        { status: 503 }
+      );
     }
 
     const activeSubscription = await prisma.subscription.findFirst({
@@ -91,8 +100,8 @@ export async function POST(req: Request) {
       data: {
         id: requestId,
         userId: session.user.id,
-        amount: MANUAL_TRANSFER_DETAILS.amount,
-        currency: MANUAL_TRANSFER_DETAILS.currency,
+        amount: subscriptionSettings.amount,
+        currency: 'UZS',
         payerName: fields.payerName,
         contact: fields.contact,
         paymentReference: fields.paymentReference,
@@ -113,6 +122,11 @@ export async function POST(req: Request) {
       contact: manualRequest.contact,
       paymentReference: manualRequest.paymentReference,
       message: manualRequest.message,
+      transfer: {
+        cardHolder: subscriptionSettings.cardHolder,
+        cardNumber: subscriptionSettings.cardNumber,
+        cardType: subscriptionSettings.cardType,
+      },
     });
 
     if (!notification.ok && !notification.skipped) {

@@ -13,15 +13,7 @@ export const MANUAL_RECEIPT_TYPES = new Set([
   'application/pdf',
 ]);
 
-export const MANUAL_TRANSFER_DETAILS = {
-  cardHolder: 'Abdunazarov Mardon',
-  cardNumber: '9860 1201 0243 8112',
-  cardType: 'HUMO',
-  amount: PREMIUM_MONTHLY_AMOUNT_UZS,
-  currency: 'UZS',
-};
-
-export function formatManualPaymentAmount(amount = MANUAL_TRANSFER_DETAILS.amount) {
+export function formatManualPaymentAmount(amount = PREMIUM_MONTHLY_AMOUNT_UZS) {
   return `${amount.toLocaleString('en-US').replace(/,/g, ' ')} UZS`;
 }
 
@@ -137,6 +129,11 @@ export async function notifyManualPaymentTelegram(input: {
   contact?: string | null;
   paymentReference?: string | null;
   message?: string | null;
+  transfer: {
+    cardHolder: string;
+    cardNumber: string;
+    cardType: string;
+  };
 }) {
   const token = process.env.TELEGRAM_BOT_TOKEN;
   const chatId = process.env.TELEGRAM_PAYMENT_CHAT_ID;
@@ -150,8 +147,8 @@ export async function notifyManualPaymentTelegram(input: {
   const lines = [
     '<b>MYSAT: new manual payment request</b>',
     '',
-    `<b>Receiver:</b> ${escapeTelegramHtml(MANUAL_TRANSFER_DETAILS.cardHolder)}`,
-    `<b>Card:</b> ${escapeTelegramHtml(MANUAL_TRANSFER_DETAILS.cardType)} ${escapeTelegramHtml(MANUAL_TRANSFER_DETAILS.cardNumber)}`,
+    `<b>Receiver:</b> ${escapeTelegramHtml(input.transfer.cardHolder)}`,
+    `<b>Card:</b> ${escapeTelegramHtml(input.transfer.cardType)} ${escapeTelegramHtml(input.transfer.cardNumber)}`,
     `<b>Amount:</b> ${escapeTelegramHtml(formatManualPaymentAmount(input.amount))}`,
     `<b>Access:</b> ${MANUAL_PAYMENT_DAYS} days`,
     '',

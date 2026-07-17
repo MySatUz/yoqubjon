@@ -1,7 +1,9 @@
 import AdminSectionHub from '@/components/admin/AdminSectionHub';
+import SubscriptionAvailabilityControl from '@/components/admin/SubscriptionAvailabilityControl';
 import AppShell from '@/components/layout/AppShell';
 import { isOwnerSessionUser, OWNER_ADMIN_EMAIL, requireAdminPage } from '@/lib/admin';
 import { prisma } from '@/lib/prisma';
+import { getSubscriptionSettings } from '@/lib/subscription-settings';
 import { getTestCollections } from '@/lib/testCatalog';
 
 export const dynamic = 'force-dynamic';
@@ -19,6 +21,7 @@ export default async function AdminPage() {
     visibleTestCount,
     testCount,
     collectionRows,
+    subscriptionSettings,
   ] = await Promise.all([
     prisma.user.count(),
     prisma.user.count({
@@ -42,6 +45,7 @@ export default async function AdminPage() {
         position: true,
       },
     }),
+    getSubscriptionSettings(),
   ]);
 
   const collections = getTestCollections(collectionRows);
@@ -57,6 +61,19 @@ export default async function AdminPage() {
               Choose a section. Heavy lists load only after you open the section.
             </p>
           </div>
+
+          <SubscriptionAvailabilityControl
+            initialEnabled={subscriptionSettings.isEnabled}
+            canEditPaymentSettings={canManageAdmins}
+            initialPaymentSettings={canManageAdmins
+              ? {
+                  cardHolder: subscriptionSettings.cardHolder,
+                  cardNumber: subscriptionSettings.cardNumber,
+                  cardType: subscriptionSettings.cardType,
+                  amount: subscriptionSettings.amount,
+                }
+              : null}
+          />
 
           <AdminSectionHub
             canManageAdmins={canManageAdmins}
