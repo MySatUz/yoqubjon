@@ -38,6 +38,7 @@ export default async function AdminTestsPage() {
         label: true,
         description: true,
         position: true,
+        maxAttempts: true,
       },
     }),
   ]);

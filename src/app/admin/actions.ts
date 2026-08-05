@@ -1,5 +1,6 @@
 'use server';
 
+import type { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { parseTexFile } from '@/lib/texParser';
 import { getSupabaseAdmin } from '@/lib/supabase';
@@ -17,7 +18,7 @@ import {
   isTestCategory,
   normalizeCategoryId,
 } from '@/lib/testCatalog';
-import { normalizeTestMaxAttempts } from '@/lib/testAttempts';
+import { DEFAULT_TEST_MAX_ATTEMPTS, normalizeTestMaxAttempts } from '@/lib/testAttempts';
 
 const MAX_TEX_FILE_SIZE = 2 * 1024 * 1024;
 const MAX_IMAGE_FILE_SIZE = 5 * 1024 * 1024;
@@ -121,7 +122,10 @@ export async function uploadTest(formData: FormData) {
     const visible = readBooleanField(formData, 'isVisible', true);
     const testCategory = await resolveCollectionCategory(formData.get('testCategory'));
     const durationSeconds = normalizeDurationSeconds(formData.get('durationMinutes'));
-    const maxAttempts = normalizeTestMaxAttempts(formData.get('maxAttempts'));
+    const maxAttempts = normalizeTestMaxAttempts(
+      formData.get('maxAttempts'),
+      await getCollectionMaxAttempts(testCategory)
+    );
     const texFile = formData.get('texFile') as File;
     const imageFiles = formData.getAll('images') as File[];
     const uploadedImages = readUploadedImages(formData.get('uploadedImages'));
@@ -297,7 +301,16 @@ async function resolveCollectionCategory(value: FormDataEntryValue | null) {
   return collectionSet.has('STANDARD') ? 'STANDARD' : collections[0].category;
 }
 
-export async function updateCollectionVisibility(formData: FormData) {
+async function getCollectionMaxAttempts(category: string) {
+  const collection = await prisma.testCollectionVisibility.findUnique({
+    where: { category },
+    select: { maxAttempts: true },
+  });
+
+  return collection?.maxAttempts ?? DEFAULT_TEST_MAX_ATTEMPTS;
+}
+
+export async function updateSectionSettings(formData: FormData) {
   try {
     await requireAdmin();
 
@@ -312,20 +325,53 @@ export async function updateCollectionVisibility(formData: FormData) {
       throw new Error('No sections to update');
     }
 
-    await prisma.$transaction(
-      categories.map((category) => (
+    const existingCollections = await prisma.testCollectionVisibility.findMany({
+      where: { category: { in: categories } },
+      select: { category: true, maxAttempts: true },
+    });
+
+    if (existingCollections.length === 0) {
+      throw new Error('No sections to update');
+    }
+
+    const updates = existingCollections.flatMap((collection) => {
+      const { category } = collection;
+      const maxAttempts = normalizeTestMaxAttempts(
+        formData.get(`attempts_${category}`),
+        collection.maxAttempts
+      );
+
+      const operations: Prisma.PrismaPromise<unknown>[] = [
         prisma.testCollectionVisibility.update({
           where: { category },
-          data: { visible: formData.get(`visible_${category}`) === 'true' },
-        })
-      ))
-    );
+          data: {
+            visible: formData.get(`visible_${category}`) === 'true',
+            maxAttempts,
+          },
+        }),
+      ];
+
+      // Only cascade when the section limit actually changed, so saving
+      // visibility never silently resets per-test overrides.
+      if (maxAttempts !== collection.maxAttempts) {
+        operations.push(
+          prisma.test.updateMany({
+            where: { collectionCategory: category },
+            data: { maxAttempts },
+          })
+        );
+      }
+
+      return operations;
+    });
+
+    await prisma.$transaction(updates);
 
     revalidatePath('/admin');
     revalidatePath('/dashboard');
     return { success: true };
   } catch (error: unknown) {
-    console.error('Update Collection Visibility Error:', error);
+    console.error('Update Section Settings Error:', error);
     return { success: false, error: error instanceof Error ? error.message : 'Update failed' };
   }
 }
@@ -337,6 +383,7 @@ export async function createTestCollection(formData: FormData) {
     const label = normalizeRequiredText(formData.get('sectionLabel'), 'Section name');
     const description = normalizeNullableText(formData.get('sectionDescription'))
       || 'Practice tests in this section.';
+    const maxAttempts = normalizeTestMaxAttempts(formData.get('sectionMaxAttempts'));
     const existingCollections = await prisma.testCollectionVisibility.findMany({
       select: { category: true },
     });
@@ -360,6 +407,7 @@ export async function createTestCollection(formData: FormData) {
         label,
         description,
         visible: true,
+        maxAttempts,
         position: (maxPosition._max.position ?? 0) + 10,
       },
     });
@@ -411,7 +459,10 @@ export async function updateTestDetails(testId: string, formData: FormData) {
     const title = normalizeRequiredText(formData.get('title'), 'Test title');
     const testCategory = await resolveCollectionCategory(formData.get('testCategory'));
     const durationSeconds = normalizeDurationSeconds(formData.get('durationMinutes'));
-    const maxAttempts = normalizeTestMaxAttempts(formData.get('maxAttempts'));
+    const maxAttempts = normalizeTestMaxAttempts(
+      formData.get('maxAttempts'),
+      await getCollectionMaxAttempts(testCategory)
+    );
     const isFree = formData.get('isFree') === 'true';
     const existingTest = await prisma.test.findUnique({
       where: { id: testId },

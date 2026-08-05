@@ -1,3 +1,5 @@
+import { DEFAULT_TEST_MAX_ATTEMPTS } from './testAttempts';
+
 export type TestCategory = string;
 
 export type TestCollectionOption = {
@@ -6,6 +8,7 @@ export type TestCollectionOption = {
   description: string;
   visible: boolean;
   position: number;
+  maxAttempts: number;
   isDefault?: boolean;
 };
 
@@ -22,6 +25,7 @@ type CollectionVisibilityRow = {
   label?: string | null;
   description?: string | null;
   position?: number | null;
+  maxAttempts?: number | null;
 };
 
 const CATEGORY_ID_PATTERN = /^[A-Z0-9_-]{2,64}$/;
@@ -34,6 +38,7 @@ export const DEFAULT_TEST_COLLECTION_OPTIONS: TestCollectionOption[] = [
     description: 'Core SAT Math modules for regular practice.',
     visible: true,
     position: 10,
+    maxAttempts: DEFAULT_TEST_MAX_ATTEMPTS,
     isDefault: true,
   },
   {
@@ -42,6 +47,7 @@ export const DEFAULT_TEST_COLLECTION_OPTIONS: TestCollectionOption[] = [
     description: 'Harder SAT Math sets for premium-level training.',
     visible: true,
     position: 20,
+    maxAttempts: DEFAULT_TEST_MAX_ATTEMPTS,
     isDefault: true,
   },
   {
@@ -50,6 +56,7 @@ export const DEFAULT_TEST_COLLECTION_OPTIONS: TestCollectionOption[] = [
     description: 'Precision-focused SAT Math sets for the toughest practice.',
     visible: true,
     position: 30,
+    maxAttempts: DEFAULT_TEST_MAX_ATTEMPTS,
     isDefault: true,
   },
 ];
@@ -113,6 +120,7 @@ export function getTestCollections(rows: CollectionVisibilityRow[]) {
         description: row.description?.trim() || defaults?.description || 'Practice tests in this section.',
         visible: row.visible,
         position: row.position ?? defaults?.position ?? 1000,
+        maxAttempts: row.maxAttempts ?? defaults?.maxAttempts ?? DEFAULT_TEST_MAX_ATTEMPTS,
         isDefault: defaults?.isDefault,
       } satisfies TestCollectionOption;
     })

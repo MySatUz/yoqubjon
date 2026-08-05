@@ -2,9 +2,12 @@ export const DEFAULT_TEST_MAX_ATTEMPTS = 10;
 export const MIN_TEST_MAX_ATTEMPTS = 1;
 export const MAX_TEST_MAX_ATTEMPTS = 10_000;
 
-export function normalizeTestMaxAttempts(value: unknown) {
+export function normalizeTestMaxAttempts(
+  value: unknown,
+  fallback: number = DEFAULT_TEST_MAX_ATTEMPTS
+) {
   if (value === null || value === undefined || value === '') {
-    return DEFAULT_TEST_MAX_ATTEMPTS;
+    return fallback;
   }
 
   const attempts = typeof value === 'number' ? value : Number(value);

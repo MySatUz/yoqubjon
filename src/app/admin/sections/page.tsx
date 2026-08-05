@@ -21,6 +21,7 @@ export default async function AdminSectionsPage() {
         label: true,
         description: true,
         position: true,
+        maxAttempts: true,
       },
     }),
     prisma.sectionAccess.findMany({

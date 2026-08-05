@@ -29,6 +29,10 @@ export default function AdminForm({ collections }: AdminFormProps) {
   const defaultCategory = collections.some((option) => option.value === 'STANDARD')
     ? 'STANDARD'
     : collections[0]?.value;
+  const sectionAttempts = (category: string | undefined) =>
+    collections.find((option) => option.value === category)?.maxAttempts ?? DEFAULT_TEST_MAX_ATTEMPTS;
+  const [selectedCategory, setSelectedCategory] = useState(defaultCategory);
+  const [maxAttempts, setMaxAttempts] = useState(() => String(sectionAttempts(defaultCategory)));
 
   async function uploadImageToSignedUrl(file: File, upload: PreparedUpload) {
     const body = new FormData();
@@ -125,6 +129,8 @@ export default function AdminForm({ collections }: AdminFormProps) {
       setResult(response);
       if (response.success) {
         form.reset();
+        setSelectedCategory(defaultCategory);
+        setMaxAttempts(String(sectionAttempts(defaultCategory)));
       }
     } catch (error) {
       setResult({
@@ -170,7 +176,11 @@ export default function AdminForm({ collections }: AdminFormProps) {
                     type="radio"
                     name="testCategory"
                     value={option.value}
-                    defaultChecked={option.value === defaultCategory}
+                    checked={option.value === selectedCategory}
+                    onChange={() => {
+                      setSelectedCategory(option.value);
+                      setMaxAttempts(String(option.maxAttempts));
+                    }}
                     className="peer sr-only"
                   />
                   <div className="h-full rounded-2xl border border-slate-200 bg-slate-50 p-4 transition-all peer-checked:border-blue-500 peer-checked:bg-blue-50 peer-checked:ring-4 peer-checked:ring-blue-100 group-hover:border-blue-200">
@@ -221,12 +231,16 @@ export default function AdminForm({ collections }: AdminFormProps) {
                 min={MIN_TEST_MAX_ATTEMPTS}
                 max={MAX_TEST_MAX_ATTEMPTS}
                 step={1}
-                defaultValue={DEFAULT_TEST_MAX_ATTEMPTS}
+                value={maxAttempts}
+                onChange={(event) => setMaxAttempts(event.target.value)}
                 required
                 className="w-24 bg-transparent text-lg font-black text-slate-900 outline-none"
               />
               <span className="text-sm font-black text-slate-500">attempts</span>
             </div>
+            <span className="mt-2 block text-xs font-bold text-slate-400">
+              Section rule: {sectionAttempts(selectedCategory)}. Change it here to override this test only.
+            </span>
           </label>
         </div>
         

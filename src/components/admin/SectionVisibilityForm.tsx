@@ -6,10 +6,15 @@ import { useRouter } from 'next/navigation';
 import {
   createTestCollection,
   deleteTestCollection,
-  updateCollectionVisibility,
+  updateSectionSettings,
 } from '@/app/admin/actions';
-import { ArrowUpRight, Atom, CheckCircle2, Eye, EyeOff, Layers3, Loader2, PlusCircle, Sparkles, Trash2 } from 'lucide-react';
+import { ArrowUpRight, Atom, CheckCircle2, Eye, EyeOff, Layers3, Loader2, PlusCircle, Repeat2, Sparkles, Trash2 } from 'lucide-react';
 import type { TestCollectionOption } from '@/lib/testCatalog';
+import {
+  DEFAULT_TEST_MAX_ATTEMPTS,
+  MAX_TEST_MAX_ATTEMPTS,
+  MIN_TEST_MAX_ATTEMPTS,
+} from '@/lib/testAttempts';
 
 type SectionVisibilityFormProps = {
   collections: TestCollectionOption[];
@@ -53,7 +58,7 @@ export default function SectionVisibilityForm({ collections }: SectionVisibility
     setIsSaving(true);
     setResult(null);
 
-    const response = await updateCollectionVisibility(new FormData(event.currentTarget));
+    const response = await updateSectionSettings(new FormData(event.currentTarget));
     setResult(response.success ? { ...response, message: 'Sections updated.' } : response);
     setIsSaving(false);
 
@@ -84,7 +89,9 @@ export default function SectionVisibilityForm({ collections }: SectionVisibility
         <div>
           <h3 className="text-2xl font-black tracking-tight text-slate-900">Practice sections</h3>
           <p className="mt-2 max-w-2xl text-sm font-bold leading-relaxed text-slate-500">
-            Create, delete, and choose which sections appear in Practice Center.
+            Create, delete, and choose which sections appear in Practice Center. The attempt limit
+            is the rule for the whole section: changing it applies to every test inside and to new
+            uploads.
           </p>
         </div>
         <span className="inline-flex w-fit items-center gap-2 rounded-full bg-blue-50 px-4 py-2 text-xs font-black uppercase tracking-widest text-blue-700">
@@ -93,7 +100,7 @@ export default function SectionVisibilityForm({ collections }: SectionVisibility
         </span>
       </div>
 
-      <form onSubmit={handleCreate} className="mb-8 grid gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 lg:grid-cols-[0.8fr_1fr_auto]">
+      <form onSubmit={handleCreate} className="mb-8 grid gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 lg:grid-cols-[0.8fr_1fr_auto_auto]">
         <input
           name="sectionLabel"
           required
@@ -107,6 +114,21 @@ export default function SectionVisibilityForm({ collections }: SectionVisibility
           placeholder="Short description"
           className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-900 outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
         />
+        <label className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3">
+          <Repeat2 className="h-4 w-4 text-slate-400" />
+          <input
+            name="sectionMaxAttempts"
+            type="number"
+            min={MIN_TEST_MAX_ATTEMPTS}
+            max={MAX_TEST_MAX_ATTEMPTS}
+            step={1}
+            required
+            defaultValue={DEFAULT_TEST_MAX_ATTEMPTS}
+            aria-label="Attempts per user in the new section"
+            className="w-16 bg-transparent text-sm font-black text-slate-900 outline-none"
+          />
+          <span className="text-xs font-black uppercase tracking-widest text-slate-400">tries</span>
+        </label>
         <button
           type="submit"
           disabled={isCreating}
@@ -183,6 +205,27 @@ export default function SectionVisibilityForm({ collections }: SectionVisibility
                     <ArrowUpRight className="h-4 w-4" />
                   </span>
                 </Link>
+
+                <label className="mt-5 flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3">
+                  <span className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-slate-500">
+                    <Repeat2 className="h-4 w-4" />
+                    Attempts
+                  </span>
+                  <span className="flex items-center gap-2">
+                    <input
+                      name={`attempts_${option.value}`}
+                      type="number"
+                      min={MIN_TEST_MAX_ATTEMPTS}
+                      max={MAX_TEST_MAX_ATTEMPTS}
+                      step={1}
+                      required
+                      defaultValue={option.maxAttempts}
+                      aria-label={`Attempts per user in ${option.label}`}
+                      className="w-16 bg-transparent text-right text-sm font-black text-slate-900 outline-none"
+                    />
+                    <span className="text-xs font-black uppercase tracking-widest text-slate-400">per user</span>
+                  </span>
+                </label>
 
                 <button
                   type="button"
