@@ -4,6 +4,7 @@ import VideoClient from '@/components/exam/VideoClient';
 import { auth } from '@/auth';
 import { notFound, redirect } from 'next/navigation';
 import { normalizeStoredAnswer } from '@/lib/resultAnswers';
+import { buildExamModules } from '@/lib/examModules';
 
 export default async function ReviewPage({ params }: { params: Promise<{ resultId: string }> }) {
   const { resultId } = await params;
@@ -32,6 +33,8 @@ export default async function ReviewPage({ params }: { params: Promise<{ resultI
   }
 
   const storedAnswers = result.answers as Record<string, unknown>;
+  const modules = buildExamModules(result.test, result.test.questions);
+  const isModular = modules.length > 1;
 
   return (
     <div className="min-h-screen bg-slate-50 py-12 px-4 sm:px-6 lg:px-8">
@@ -52,13 +55,19 @@ export default async function ReviewPage({ params }: { params: Promise<{ resultI
         <div className="space-y-4">
           <h2 className="text-xl font-bold text-slate-900">Question Breakdown</h2>
           
-          <div className="grid gap-4">
-            {result.test.questions.map((q, i) => {
+          {modules.map((module) => (
+          <div key={module.index} className="grid gap-4">
+            {isModular && (
+              <h3 className="mt-2 text-sm font-black uppercase tracking-widest text-slate-500">
+                Module {module.index}
+              </h3>
+            )}
+            {module.questions.map((q, i) => {
               const { userAnswer, correctAnswer, isCorrect } = normalizeStoredAnswer(
-                storedAnswers[q.id] ?? storedAnswers[i.toString()],
+                storedAnswers[q.id] ?? storedAnswers[(q.order - 1).toString()],
                 q.correctAnswer
               );
-              
+
               return (
                 <div key={q.id} className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                   <div className={`p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 ${q.videoUrl ? 'border-b border-slate-100' : ''}`}>
@@ -87,6 +96,7 @@ export default async function ReviewPage({ params }: { params: Promise<{ resultI
               );
             })}
           </div>
+          ))}
         </div>
 
       </div>

@@ -19,8 +19,15 @@ import {
   normalizeCategoryId,
 } from '@/lib/testCatalog';
 import { DEFAULT_TEST_MAX_ATTEMPTS, normalizeTestMaxAttempts } from '@/lib/testAttempts';
+import {
+  MAX_MODULE_COUNT,
+  MIN_MODULE_COUNT,
+  resolveExamModules,
+  type ExamFormatInput,
+} from '@/lib/examModules';
 
 const MAX_TEX_FILE_SIZE = 2 * 1024 * 1024;
+const MAX_MODULE_QUESTION_COUNT = 200;
 const MAX_IMAGE_FILE_SIZE = 5 * 1024 * 1024;
 const ALLOWED_IMAGE_TYPES = new Set(['image/png', 'image/jpeg', 'image/jpg', 'image/webp']);
 const MIN_DURATION_MINUTES = Math.ceil(MIN_EXAM_DURATION_SECONDS / 60);
@@ -121,7 +128,7 @@ export async function uploadTest(formData: FormData) {
     const isFree = formData.get('isFree') === 'true';
     const visible = readBooleanField(formData, 'isVisible', true);
     const testCategory = await resolveCollectionCategory(formData.get('testCategory'));
-    const durationSeconds = normalizeDurationSeconds(formData.get('durationMinutes'));
+    const examFormat = normalizeExamFormat(formData);
     const maxAttempts = normalizeTestMaxAttempts(
       formData.get('maxAttempts'),
       await getCollectionMaxAttempts(testCategory)
@@ -140,7 +147,7 @@ export async function uploadTest(formData: FormData) {
     }
 
     const texContent = await texFile.text();
-    const parsedQuestions = parseTexFile(texContent);
+    const { questions: parsedQuestions, moduleIndexes } = parseTexFile(texContent);
 
     if (parsedQuestions.length === 0) {
       throw new Error('No questions found in the .tex file');
@@ -153,6 +160,12 @@ export async function uploadTest(formData: FormData) {
     if (invalidQuestion) {
       throw new Error(`Question ${invalidQuestion.order} is missing content or answer`);
     }
+
+    const examModules = resolveExamModules({
+      questionCount: parsedQuestions.length,
+      markerModules: moduleIndexes,
+      format: examFormat,
+    });
 
     const testId = typeof requestedTestId === 'string' && /^[0-9a-f-]{36}$/i.test(requestedTestId)
       ? requestedTestId
@@ -203,16 +216,18 @@ export async function uploadTest(formData: FormData) {
         description: encodeTestDescription(testCategory),
         isFree,
         visible,
-        durationSeconds,
+        durationSeconds: examModules.durationSeconds,
+        moduleDurations: examModules.moduleDurations,
         maxAttempts,
         collectionCategory: testCategory,
         questions: {
           createMany: {
-            data: parsedQuestions.map((q) => ({
+            data: parsedQuestions.map((q, index) => ({
               content: q.content,
               options: q.options,
               correctAnswer: q.correctAnswer,
               order: q.order,
+              moduleIndex: examModules.moduleIndexes[index],
               imageUrl: q.image ? imageMap[q.image] || null : null
             })),
           },
@@ -247,6 +262,53 @@ export async function deleteTest(testId: string) {
     console.error("Delete Test Error:", error);
     return { success: false, error: error instanceof Error ? error.message : 'Delete failed' };
   }
+}
+
+function normalizeModuleQuestionCount(value: FormDataEntryValue) {
+  const count = Number(value);
+
+  if (
+    !Number.isFinite(count) ||
+    !Number.isInteger(count) ||
+    count < 1 ||
+    count > MAX_MODULE_QUESTION_COUNT
+  ) {
+    throw new Error(`Questions per module must be between 1 and ${MAX_MODULE_QUESTION_COUNT}`);
+  }
+
+  return count;
+}
+
+function normalizeModuleDurations(formData: FormData) {
+  const moduleMinutes = formData.getAll('moduleMinutes');
+
+  if (moduleMinutes.length < MIN_MODULE_COUNT || moduleMinutes.length > MAX_MODULE_COUNT) {
+    throw new Error(`A test can have between ${MIN_MODULE_COUNT} and ${MAX_MODULE_COUNT} modules`);
+  }
+
+  return moduleMinutes.map((value) => normalizeDurationSeconds(value));
+}
+
+/**
+ * Reads the exam format from the admin form: either one classic timer for the
+ * whole test, or one timer per SAT-style module.
+ */
+function normalizeExamFormat(formData: FormData): ExamFormatInput {
+  if (formData.get('examFormat') !== 'modular') {
+    return {
+      durationSeconds: normalizeDurationSeconds(formData.get('durationMinutes')),
+      moduleDurations: [],
+      moduleQuestionCounts: [],
+    };
+  }
+
+  const moduleDurations = normalizeModuleDurations(formData);
+
+  return {
+    durationSeconds: moduleDurations.reduce((total, duration) => total + duration, 0),
+    moduleDurations,
+    moduleQuestionCounts: formData.getAll('moduleQuestions').map(normalizeModuleQuestionCount),
+  };
 }
 
 function normalizeDurationSeconds(value: FormDataEntryValue | null) {
@@ -458,7 +520,6 @@ export async function updateTestDetails(testId: string, formData: FormData) {
 
     const title = normalizeRequiredText(formData.get('title'), 'Test title');
     const testCategory = await resolveCollectionCategory(formData.get('testCategory'));
-    const durationSeconds = normalizeDurationSeconds(formData.get('durationMinutes'));
     const maxAttempts = normalizeTestMaxAttempts(
       formData.get('maxAttempts'),
       await getCollectionMaxAttempts(testCategory)
@@ -469,11 +530,35 @@ export async function updateTestDetails(testId: string, formData: FormData) {
       select: {
         description: true,
         visible: true,
+        moduleDurations: true,
       },
     });
 
     if (!existingTest) {
       throw new Error('Test not found');
+    }
+
+    // Module questions are fixed at upload time, so editing only changes how
+    // long each existing module runs.
+    const moduleDurations = existingTest.moduleDurations.length > 1
+      ? normalizeModuleDurations(formData)
+      : [];
+
+    if (
+      moduleDurations.length > 0 &&
+      moduleDurations.length !== existingTest.moduleDurations.length
+    ) {
+      throw new Error(
+        `This test has ${existingTest.moduleDurations.length} modules. Set a time for each module.`
+      );
+    }
+
+    const durationSeconds = moduleDurations.length > 0
+      ? moduleDurations.reduce((total, duration) => total + duration, 0)
+      : normalizeDurationSeconds(formData.get('durationMinutes'));
+
+    if (durationSeconds > MAX_EXAM_DURATION_SECONDS) {
+      throw new Error(`Total test time must not exceed ${MAX_DURATION_MINUTES} minutes`);
     }
 
     await prisma.test.update({
@@ -483,6 +568,7 @@ export async function updateTestDetails(testId: string, formData: FormData) {
         isFree,
         visible: readBooleanField(formData, 'isVisible', existingTest.visible),
         durationSeconds,
+        moduleDurations,
         maxAttempts,
         collectionCategory: testCategory,
         description: encodeTestDescription(testCategory, cleanTestDescription(existingTest.description)),

@@ -35,6 +35,9 @@ model Test {
   isFree             Boolean                   @default(false)
   visible            Boolean                   @default(true)
   durationSeconds    Int                       @default(7200)
+  // One entry per SAT-style module, in order. Empty means a single-module test
+  // that runs on durationSeconds alone.
+  moduleDurations    Int[]                     @default([])
   maxAttempts        Int                       @default(10)
   collectionCategory String?
   createdAt          DateTime                  @default(now())
@@ -93,12 +96,14 @@ model Question {
   videoUrl      String?  // YouTube/Vimeo iframe URL
   imageUrl      String?  // Local path to image
   order         Int      // Question order in the test
+  moduleIndex   Int      @default(1) // 1-based module this question belongs to
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
   test          Test     @relation(fields: [testId], references: [id])
 
   @@index([testId, order])
+  @@index([testId, moduleIndex, order])
 }
 
 model Result {

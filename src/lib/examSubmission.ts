@@ -87,7 +87,7 @@ export async function createExamResult(
     include: {
       questions: {
         orderBy: { order: 'asc' },
-        select: { id: true, correctAnswer: true },
+        select: { id: true, correctAnswer: true, moduleIndex: true },
       },
     },
   });
@@ -139,6 +139,7 @@ export async function createExamResult(
     userAnswer: string;
     correctAnswer: string;
     isCorrect: boolean;
+    moduleIndex: number;
   }> = {};
 
   test.questions.forEach((question, index) => {
@@ -156,6 +157,7 @@ export async function createExamResult(
       userAnswer,
       correctAnswer: question.correctAnswer,
       isCorrect,
+      moduleIndex: question.moduleIndex,
     };
   });
 

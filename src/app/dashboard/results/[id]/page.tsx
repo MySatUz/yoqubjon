@@ -7,6 +7,7 @@ import { auth } from '@/auth';
 import { normalizeStoredAnswer } from '@/lib/resultAnswers';
 import Image from 'next/image';
 import { renderMathText } from '@/lib/renderMathText';
+import { buildExamModules } from '@/lib/examModules';
 
 export default async function ResultPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -31,19 +32,25 @@ export default async function ResultPage({ params }: { params: Promise<{ id: str
   if (!result) notFound();
 
   const userAnswers = result.answers as Record<string, unknown>;
-  const questions = result.test.questions;
-  
-  const detailedAnswers = questions.map(q => {
-    const answer = normalizeStoredAnswer(userAnswers[q.id], q.correctAnswer);
+  const modules = buildExamModules(result.test, result.test.questions);
+  const isModular = modules.length > 1;
 
-    return {
-      id: q.id,
-      content: q.content,
-      imageUrl: q.imageUrl,
-      ...answer,
-    };
-  });
+  const moduleReviews = modules.map((module) => ({
+    index: module.index,
+    durationSeconds: module.durationSeconds,
+    answers: module.questions.map(q => {
+      const answer = normalizeStoredAnswer(userAnswers[q.id], q.correctAnswer);
 
+      return {
+        id: q.id,
+        content: q.content,
+        imageUrl: q.imageUrl,
+        ...answer,
+      };
+    }),
+  }));
+
+  const detailedAnswers = moduleReviews.flatMap((module) => module.answers);
   const correctCount = detailedAnswers.filter(a => a.isCorrect).length;
   const totalCount = detailedAnswers.length;
   const accuracy = totalCount > 0 ? Math.round((correctCount / totalCount) * 100) : 0;
@@ -126,14 +133,27 @@ export default async function ResultPage({ params }: { params: Promise<{ id: str
         </div>
 
         {/* Detailed Review */}
-        <div className="mt-12">
+        <div className="mt-12 space-y-8">
           <h2 className="text-2xl font-bold text-slate-900 mb-6 flex items-center gap-2">
             <Award className="w-6 h-6 text-blue-600" />
             Detailed Review
           </h2>
           
-          <div className="space-y-4">
-            {detailedAnswers.map((data, index) => (
+          {moduleReviews.map((module) => (
+          <div key={module.index} className="space-y-4">
+            {isModular && (
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-5 py-4 shadow-sm">
+                <span className="text-sm font-black uppercase tracking-widest text-slate-900">
+                  Module {module.index}
+                </span>
+                <span className="text-xs font-bold uppercase tracking-widest text-slate-400">
+                  {module.answers.filter((answer) => answer.isCorrect).length} / {module.answers.length} correct
+                  {' | '}
+                  {Math.round(module.durationSeconds / 60)} min
+                </span>
+              </div>
+            )}
+            {module.answers.map((data, index) => (
               <div key={data.id} className={`p-6 rounded-xl border bg-white shadow-sm transition-all hover:shadow-md ${
                 data.isCorrect ? 'border-l-4 border-l-green-500' : 'border-l-4 border-l-red-500'
               }`}>
@@ -186,6 +206,7 @@ export default async function ResultPage({ params }: { params: Promise<{ id: str
               </div>
             ))}
           </div>
+          ))}
         </div>
       </div>
     </div>

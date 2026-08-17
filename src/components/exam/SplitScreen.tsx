@@ -10,10 +10,7 @@ interface Question {
   id: string;
   content: string;
   options: unknown;
-  correctAnswer: string;
-  type?: string;
   imageUrl?: string | null;
-  videoUrl?: string | null;
 }
 
 export default function SplitScreen({ questions }: { questions: Question[] }) {

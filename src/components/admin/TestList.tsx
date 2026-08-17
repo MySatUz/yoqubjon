@@ -4,9 +4,10 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { deleteTest, updateQuestion, updateTestDetails, updateTestVisibility } from '@/app/admin/actions';
-import { ChevronDown, Clock3, Edit3, Eye, EyeOff, FileDown, ImageIcon, Loader2, Plus, Repeat2, Save, Settings2, Trash2, Video, X } from 'lucide-react';
+import { ChevronDown, Clock3, Edit3, Eye, EyeOff, FileDown, ImageIcon, Layers, Loader2, Plus, Repeat2, Save, Settings2, Trash2, Video, X } from 'lucide-react';
 import { getCategoryLabel, getTestCategory, type TestCollectionOption } from '@/lib/testCatalog';
 import { MAX_TEST_MAX_ATTEMPTS, MIN_TEST_MAX_ATTEMPTS } from '@/lib/testAttempts';
+import { formatModuleBadge, readModuleDurations, secondsToMinutes } from '@/lib/examModules';
 
 type AdminQuestion = {
   id: string;
@@ -25,6 +26,7 @@ type AdminTest = {
   description: string | null;
   collectionCategory: string | null;
   durationSeconds: number;
+  moduleDurations: number[];
   maxAttempts: number;
   isFree: boolean;
   visible: boolean;
@@ -73,6 +75,8 @@ function TestSettingsEditor({
   const selectedCategory = category && collections.some((collection) => collection.value === category)
     ? category
     : collections[0]?.value ?? '';
+  // Module questions are fixed at upload time, so only their timers are editable.
+  const moduleDurations = readModuleDurations(test);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -149,21 +153,47 @@ function TestSettingsEditor({
         <label className="block">
           <span className="mb-2 flex items-center gap-2 text-xs font-black uppercase tracking-wide text-slate-500">
             <Clock3 className="h-4 w-4" />
-            Time
+            {moduleDurations.length > 1 ? 'Module time' : 'Time'}
           </span>
-          <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3">
-            <input
-              name="durationMinutes"
-              type="number"
-              min={1}
-              max={360}
-              step={1}
-              required
-              defaultValue={durationToMinutes(test.durationSeconds)}
-              className="w-20 bg-transparent text-sm font-black text-slate-900 outline-none"
-            />
-            <span className="text-xs font-black text-slate-400">min</span>
-          </div>
+          {moduleDurations.length > 1 ? (
+            <div className="space-y-2">
+              {moduleDurations.map((duration, index) => (
+                <div
+                  key={index}
+                  className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3"
+                >
+                  <span className="text-[10px] font-black uppercase tracking-wide text-slate-400">
+                    M{index + 1}
+                  </span>
+                  <input
+                    name="moduleMinutes"
+                    type="number"
+                    min={1}
+                    max={360}
+                    step={1}
+                    required
+                    defaultValue={secondsToMinutes(duration)}
+                    className="w-16 bg-transparent text-sm font-black text-slate-900 outline-none"
+                  />
+                  <span className="text-xs font-black text-slate-400">min</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3">
+              <input
+                name="durationMinutes"
+                type="number"
+                min={1}
+                max={360}
+                step={1}
+                required
+                defaultValue={durationToMinutes(test.durationSeconds)}
+                className="w-20 bg-transparent text-sm font-black text-slate-900 outline-none"
+              />
+              <span className="text-xs font-black text-slate-400">min</span>
+            </div>
+          )}
         </label>
 
         <div className="flex flex-col justify-end gap-3">
@@ -501,6 +531,12 @@ export default function TestList({ tests, collections, initialOpenTestId = null 
                           <Clock3 className="h-3 w-3" />
                           {formatDuration(test.durationSeconds)}
                         </span>
+                        {formatModuleBadge(test) && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-black uppercase text-blue-700">
+                            <Layers className="h-3 w-3" />
+                            {formatModuleBadge(test)}
+                          </span>
+                        )}
                         <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-black uppercase text-slate-600">
                           <Repeat2 className="h-3 w-3" />
                           {test.maxAttempts} attempts

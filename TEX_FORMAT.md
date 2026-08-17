@@ -104,6 +104,40 @@ The parser also accepts `A)`, `A.`, and `\item[A]` labels:
 
 Do not place two options on one line.
 
+## Modules (SAT format)
+
+A test can be split into SAT-style modules. Every module has its own timer, and
+time left over in one module is never added to the next one.
+
+Mark the split with `\module{N}` before the questions of that module:
+
+```tex
+\module{1}
+\begin{question} ... \end{question}
+% 22 questions of module 1
+
+\module{2}
+\begin{question} ... \end{question}
+% 22 questions of module 2
+```
+
+Equivalent forms:
+
+- `\newmodule` between two question blocks starts the next module.
+- `\begin{module} ... \end{module}` wraps the questions of one module. The first
+  wrapper is module 1, each following wrapper is the next module.
+
+Rules:
+
+- Modules must be numbered from 1 upwards without gaps, and every module needs
+  at least one question.
+- A test can have up to 6 modules.
+- Question numbering restarts at 1 inside each module in the test interface.
+- When the file has module markers, the test must be uploaded with the
+  "SAT modules" format selected; the per-module time comes from the upload form.
+- Without markers, the file stays a single-module test, or the upload form
+  splits the questions by the counts entered per module (default 22 + 22).
+
 ## Grid-in questions
 
 For open numeric answers, omit `\options{...}`:

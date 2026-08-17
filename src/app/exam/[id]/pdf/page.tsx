@@ -3,6 +3,7 @@ import PrintPdfButton from '@/components/exam/PrintPdfButton';
 import { requireAdminPage } from '@/lib/admin';
 import { prisma } from '@/lib/prisma';
 import { renderMathText } from '@/lib/renderMathText';
+import { buildExamModules } from '@/lib/examModules';
 import { ArrowLeft, FileText } from 'lucide-react';
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
@@ -13,6 +14,7 @@ type QuestionForPdf = {
   options: unknown;
   imageUrl: string | null;
   order: number;
+  moduleIndex: number;
 };
 
 function readOptions(options: unknown) {
@@ -21,17 +23,17 @@ function readOptions(options: unknown) {
     : [];
 }
 
-function QuestionPdfCard({ question }: { question: QuestionForPdf }) {
+function QuestionPdfCard({ question, number }: { question: QuestionForPdf; number: number }) {
   const options = readOptions(question.options);
 
   return (
     <section className="break-inside-avoid rounded-[1.5rem] border border-slate-200 bg-white p-6 shadow-sm print:rounded-none print:border-slate-300 print:p-4 print:shadow-none">
       <div className="mb-5 flex items-center gap-3">
         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-slate-900 text-sm font-black text-white print:h-8 print:w-8 print:rounded-lg">
-          {question.order}
+          {number}
         </span>
         <p className="text-[10px] font-black uppercase tracking-[0.24em] text-blue-600">
-          Question {question.order}
+          Question {number}
         </p>
       </div>
 
@@ -90,6 +92,8 @@ export default async function ExamPdfPage({ params }: { params: Promise<{ id: st
       id: true,
       title: true,
       isFree: true,
+      durationSeconds: true,
+      moduleDurations: true,
       questions: {
         orderBy: { order: 'asc' },
         select: {
@@ -98,6 +102,7 @@ export default async function ExamPdfPage({ params }: { params: Promise<{ id: st
           options: true,
           imageUrl: true,
           order: true,
+          moduleIndex: true,
         },
       },
     },
@@ -106,6 +111,9 @@ export default async function ExamPdfPage({ params }: { params: Promise<{ id: st
   if (!test) {
     notFound();
   }
+
+  const modules = buildExamModules(test, test.questions);
+  const isModular = modules.length > 1;
 
   return (
     <main className="min-h-screen bg-slate-100 px-4 py-8 text-slate-900 print:bg-white print:px-0 print:py-0">
@@ -151,8 +159,22 @@ export default async function ExamPdfPage({ params }: { params: Promise<{ id: st
           </header>
 
           <div className="space-y-5 p-6 print:space-y-4 print:p-0 print:pt-6">
-            {test.questions.map((question) => (
-              <QuestionPdfCard key={question.id} question={question} />
+            {modules.map((module) => (
+              <div key={module.index} className="space-y-5 print:space-y-4">
+                {isModular && (
+                  <div className="break-inside-avoid rounded-2xl border border-slate-900 bg-slate-900 px-5 py-4 text-white print:rounded-none print:border-slate-300 print:bg-white print:text-slate-900">
+                    <p className="text-sm font-black uppercase tracking-[0.22em]">
+                      Module {module.index}
+                    </p>
+                    <p className="mt-1 text-xs font-bold text-slate-300 print:text-slate-500">
+                      {module.questions.length} questions | {Math.round(module.durationSeconds / 60)} minutes
+                    </p>
+                  </div>
+                )}
+                {module.questions.map((question, index) => (
+                  <QuestionPdfCard key={question.id} question={question} number={index + 1} />
+                ))}
+              </div>
             ))}
           </div>
         </article>

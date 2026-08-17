@@ -22,6 +22,7 @@ export default async function AdminTestsPage() {
         description: true,
         collectionCategory: true,
         durationSeconds: true,
+        moduleDurations: true,
         maxAttempts: true,
         isFree: true,
         visible: true,

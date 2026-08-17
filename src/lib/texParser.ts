@@ -1,4 +1,5 @@
 import katex from 'katex';
+import { MAX_MODULE_COUNT } from '@/lib/examModules';
 
 export interface ParsedQuestion {
   order: number;
@@ -6,6 +7,15 @@ export interface ParsedQuestion {
   options: string[];
   correctAnswer: string;
   image?: string;
+}
+
+export interface ParsedTex {
+  questions: ParsedQuestion[];
+  /**
+   * Module index per question, aligned with `questions`. Null when the file
+   * declares no modules, which keeps the classic single-timer format working.
+   */
+  moduleIndexes: number[] | null;
 }
 
 export class TexParseError extends Error {
@@ -205,27 +215,80 @@ function validateQuestion(question: ParsedQuestion) {
   validateMath(question.correctAnswer, question.order, 'answer');
 }
 
-export function parseTexFile(texContent: string): ParsedQuestion[] {
-  const questions: ParsedQuestion[] = [];
-  const cleanedTexContent = stripLatexComments(texContent);
-  
-  const questionBlockRegex = /\\begin\{question\}([\s\S]*?)\\end\{question\}/g;
-  let blockMatch;
-  let order = 1;
+function validateModuleIndexes(moduleIndexes: number[]) {
+  const moduleCount = Math.max(...moduleIndexes);
 
-  while ((blockMatch = questionBlockRegex.exec(cleanedTexContent)) !== null) {
-    const block = blockMatch[1];
+  for (let moduleNumber = 1; moduleNumber <= moduleCount; moduleNumber++) {
+    if (!moduleIndexes.includes(moduleNumber)) {
+      throw new TexParseError(
+        `Module ${moduleNumber} has no questions. Number the modules from 1 to ${moduleCount} without gaps.`
+      );
+    }
+  }
+}
+
+/**
+ * Matches one question block, or a module marker between blocks. Module markers
+ * inside a question body are part of that block's match and stay untouched.
+ */
+const TEX_TOKEN_REGEX = new RegExp(
+  [
+    /\\begin\{question\}([\s\S]*?)\\end\{question\}/.source,
+    /\\module\s*\{\s*(\d+)\s*\}/.source,
+    /\\begin\{module\}(?:\s*\[\s*(\d+)\s*\])?/.source,
+    /\\newmodule\b/.source,
+  ].join('|'),
+  'g'
+);
+
+export function parseTexFile(texContent: string): ParsedTex {
+  const questions: ParsedQuestion[] = [];
+  const moduleIndexes: number[] = [];
+  const cleanedTexContent = stripLatexComments(texContent);
+
+  let hasModuleMarkers = false;
+  let currentModule = 1;
+  let order = 1;
+  let tokenMatch;
+
+  TEX_TOKEN_REGEX.lastIndex = 0;
+
+  while ((tokenMatch = TEX_TOKEN_REGEX.exec(cleanedTexContent)) !== null) {
+    const [token, questionBlock, explicitModule, startedModule] = tokenMatch;
+
+    if (questionBlock === undefined) {
+      const requestedModule = explicitModule ?? startedModule;
+
+      if (requestedModule) {
+        currentModule = Number(requestedModule);
+      } else if (token.startsWith('\\newmodule')) {
+        currentModule += 1;
+      } else {
+        // \begin{module} without a number: the first one opens module 1, every
+        // following one opens the next module.
+        currentModule = hasModuleMarkers ? currentModule + 1 : 1;
+      }
+
+      if (!Number.isInteger(currentModule) || currentModule < 1 || currentModule > MAX_MODULE_COUNT) {
+        throw new TexParseError(
+          `Module number must be between 1 and ${MAX_MODULE_COUNT}`
+        );
+      }
+
+      hasModuleMarkers = true;
+      continue;
+    }
 
     const content = normalizeLatexText(
-      extractTagContent(block, 'content') || ''
+      extractTagContent(questionBlock, 'content') || ''
     );
 
-    const image = extractTagContent(block, 'image')?.trim();
+    const image = extractTagContent(questionBlock, 'image')?.trim();
 
-    const optionsRaw = extractTagContent(block, 'options');
+    const optionsRaw = extractTagContent(questionBlock, 'options');
     const options = optionsRaw ? parseOptionsBlock(optionsRaw) : [];
 
-    const correctAnswer = normalizeLatexText(extractTagContent(block, 'answer') || "");
+    const correctAnswer = normalizeLatexText(extractTagContent(questionBlock, 'answer') || "");
 
     const question = {
       order: order++,
@@ -237,7 +300,14 @@ export function parseTexFile(texContent: string): ParsedQuestion[] {
 
     validateQuestion(question);
     questions.push(question);
+    moduleIndexes.push(currentModule);
   }
 
-  return questions;
+  if (!hasModuleMarkers || questions.length === 0) {
+    return { questions, moduleIndexes: null };
+  }
+
+  validateModuleIndexes(moduleIndexes);
+
+  return { questions, moduleIndexes };
 }

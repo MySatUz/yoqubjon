@@ -12,6 +12,7 @@ import {
   type TestCollectionOption,
 } from '@/lib/testCatalog';
 import { useEffect, useMemo, useState, useTransition } from 'react';
+import { formatModuleBadge } from '@/lib/examModules';
 
 type CatalogTest = {
   id: string;
@@ -19,6 +20,7 @@ type CatalogTest = {
   description: string | null;
   collectionCategory: string | null;
   durationSeconds: number;
+  moduleDurations: number[];
   maxAttempts: number;
   attemptsUsed: number;
   isFree: boolean;
@@ -240,6 +242,11 @@ export default function PracticeCatalog({
                       <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[10px] font-black uppercase tracking-widest text-slate-500">
                         {formatDuration(test.durationSeconds)}
                       </span>
+                      {formatModuleBadge(test) && (
+                        <span className="rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-blue-700">
+                          {formatModuleBadge(test)}
+                        </span>
+                      )}
                       <span className={`inline-flex items-center gap-1 rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-widest ${
                         attemptLimitReached
                           ? 'border-amber-200 bg-amber-100 text-amber-700'

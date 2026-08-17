@@ -1,10 +1,8 @@
 import { prisma } from '@/lib/prisma';
-import TopNav from '@/components/exam/TopNav';
-import SplitScreen from '@/components/exam/SplitScreen';
-import BottomNav from '@/components/exam/BottomNav';
+import ExamRunner from '@/components/exam/ExamRunner';
 import { notFound, redirect } from 'next/navigation';
 import { auth } from '@/auth';
-import { EXAM_DURATION_SECONDS } from '@/lib/examConfig';
+import { buildExamModules } from '@/lib/examModules';
 import { isAdminUser } from '@/lib/admin';
 import { userHasActiveSectionAccess } from '@/lib/sectionAccess';
 
@@ -26,9 +24,24 @@ export default async function DynamicExamPage({ params }: { params: Promise<{ id
 
   const test = await prisma.test.findUnique({
     where: { id },
-    include: {
+    select: {
+      id: true,
+      isFree: true,
+      visible: true,
+      maxAttempts: true,
+      collectionCategory: true,
+      durationSeconds: true,
+      moduleDurations: true,
       questions: {
         orderBy: { order: 'asc' },
+        // Correct answers stay on the server so they never reach the exam page.
+        select: {
+          id: true,
+          content: true,
+          options: true,
+          imageUrl: true,
+          moduleIndex: true,
+        },
       },
     },
   });
@@ -74,23 +87,11 @@ export default async function DynamicExamPage({ params }: { params: Promise<{ id
     }
   }
 
-  const questions = test.questions;
-  const questionIds = questions.map((question) => question.id);
-  const initialTimeSeconds = test.durationSeconds || EXAM_DURATION_SECONDS;
+  const modules = buildExamModules(test, test.questions);
 
-  return (
-    <main className="flex flex-col h-screen bg-slate-50 overflow-hidden">
-      <TopNav
-        testId={id}
-        questionIds={questionIds}
-        initialTimeSeconds={initialTimeSeconds}
-      />
-      <SplitScreen questions={questions} />
-      <BottomNav
-        testId={id}
-        questionIds={questionIds}
-        initialTimeSeconds={initialTimeSeconds}
-      />
-    </main>
-  );
+  if (modules.length === 0) {
+    notFound();
+  }
+
+  return <ExamRunner testId={id} modules={modules} />;
 }

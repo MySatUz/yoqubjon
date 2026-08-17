@@ -57,6 +57,7 @@ export default async function DashboardPage(props: {
         description: true,
         collectionCategory: true,
         durationSeconds: true,
+        moduleDurations: true,
         maxAttempts: true,
         isFree: true,
         visible: true,

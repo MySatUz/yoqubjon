@@ -2,13 +2,19 @@
 
 import React, { useState } from 'react';
 import { uploadTest } from '@/app/admin/actions';
-import { FileText, Image as ImageIcon, Upload, CheckCircle2, AlertCircle, Atom, Clock3, Eye, Loader2, Layers3, Repeat2, Sparkles } from 'lucide-react';
+import { FileText, Image as ImageIcon, Upload, CheckCircle2, AlertCircle, Atom, Clock3, Eye, Loader2, Layers3, Plus, Repeat2, Sparkles, Timer, X } from 'lucide-react';
 import type { TestCollectionOption } from '@/lib/testCatalog';
 import {
   DEFAULT_TEST_MAX_ATTEMPTS,
   MAX_TEST_MAX_ATTEMPTS,
   MIN_TEST_MAX_ATTEMPTS,
 } from '@/lib/testAttempts';
+import {
+  DEFAULT_MODULE_COUNT,
+  DEFAULT_MODULE_DURATION_SECONDS,
+  DEFAULT_MODULE_QUESTION_COUNT,
+  MAX_MODULE_COUNT,
+} from '@/lib/examModules';
 
 type PreparedUpload = {
   name: string;
@@ -22,6 +28,22 @@ type AdminFormProps = {
   collections: TestCollectionOption[];
 };
 
+type ExamFormat = 'modular' | 'single';
+
+type ModuleDraft = {
+  questions: number;
+  minutes: number;
+};
+
+const MIN_MODULAR_MODULE_COUNT = 2;
+
+function createModuleDrafts(count: number): ModuleDraft[] {
+  return Array.from({ length: count }, () => ({
+    questions: DEFAULT_MODULE_QUESTION_COUNT,
+    minutes: Math.round(DEFAULT_MODULE_DURATION_SECONDS / 60),
+  }));
+}
+
 export default function AdminForm({ collections }: AdminFormProps) {
   const [loading, setLoading] = useState(false);
   const [statusText, setStatusText] = useState('Processing LaTeX...');
@@ -33,6 +55,14 @@ export default function AdminForm({ collections }: AdminFormProps) {
     collections.find((option) => option.value === category)?.maxAttempts ?? DEFAULT_TEST_MAX_ATTEMPTS;
   const [selectedCategory, setSelectedCategory] = useState(defaultCategory);
   const [maxAttempts, setMaxAttempts] = useState(() => String(sectionAttempts(defaultCategory)));
+  const [examFormat, setExamFormat] = useState<ExamFormat>('modular');
+  const [modules, setModules] = useState<ModuleDraft[]>(() => createModuleDrafts(DEFAULT_MODULE_COUNT));
+
+  const updateModule = (index: number, patch: Partial<ModuleDraft>) => {
+    setModules((current) => current.map((module, moduleIndex) => (
+      moduleIndex === index ? { ...module, ...patch } : module
+    )));
+  };
 
   async function uploadImageToSignedUrl(file: File, upload: PreparedUpload) {
     const body = new FormData();
@@ -118,7 +148,15 @@ export default function AdminForm({ collections }: AdminFormProps) {
       if (isFree === 'true') serverFormData.set('isFree', 'true');
       serverFormData.set('isVisible', isVisible ? 'true' : 'false');
       if (typeof testCategory === 'string') serverFormData.set('testCategory', testCategory);
-      if (typeof durationMinutes === 'string') serverFormData.set('durationMinutes', durationMinutes);
+      serverFormData.set('examFormat', examFormat);
+      if (examFormat === 'modular') {
+        for (const draft of modules) {
+          serverFormData.append('moduleMinutes', String(draft.minutes));
+          serverFormData.append('moduleQuestions', String(draft.questions));
+        }
+      } else if (typeof durationMinutes === 'string') {
+        serverFormData.set('durationMinutes', durationMinutes);
+      }
       if (typeof maxAttempts === 'string') serverFormData.set('maxAttempts', maxAttempts);
       if (texFile instanceof File) serverFormData.set('texFile', texFile);
       if (testId) serverFormData.set('testId', testId);
@@ -131,6 +169,8 @@ export default function AdminForm({ collections }: AdminFormProps) {
         form.reset();
         setSelectedCategory(defaultCategory);
         setMaxAttempts(String(sectionAttempts(defaultCategory)));
+        setExamFormat('modular');
+        setModules(createModuleDrafts(DEFAULT_MODULE_COUNT));
       }
     } catch (error) {
       setResult({
@@ -198,27 +238,134 @@ export default function AdminForm({ collections }: AdminFormProps) {
           </div>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2">
-          <label className="block">
-            <span className="mb-2 flex items-center gap-2 text-xs font-black uppercase tracking-widest text-slate-400">
-              <Clock3 className="h-4 w-4" />
-              Test time
-            </span>
-            <div className="flex items-center gap-3 rounded-2xl border border-slate-100 bg-slate-50 px-5 py-4">
-              <input
-                name="durationMinutes"
-                type="number"
-                min={1}
-                max={360}
-                step={1}
-                defaultValue={120}
-                required
-                className="w-24 bg-transparent text-lg font-black text-slate-900 outline-none"
-              />
-              <span className="text-sm font-black text-slate-500">minutes</span>
-            </div>
-          </label>
+        <div className="rounded-3xl border border-slate-100 bg-slate-50 p-5">
+          <span className="mb-3 flex items-center gap-2 text-xs font-black uppercase tracking-widest text-slate-400">
+            <Timer className="h-4 w-4" />
+            Exam format
+          </span>
 
+          <div className="grid gap-3 sm:grid-cols-2">
+            {([
+              {
+                value: 'modular' as const,
+                title: 'SAT modules',
+                description: 'Each module runs on its own timer. Time left over in one module is not carried into the next.',
+              },
+              {
+                value: 'single' as const,
+                title: 'Single timer',
+                description: 'One timer for the whole test, e.g. a 30-question set with a single time limit.',
+              },
+            ]).map((option) => (
+              <label key={option.value} className="group relative cursor-pointer">
+                <input
+                  type="radio"
+                  name="examFormat"
+                  value={option.value}
+                  checked={examFormat === option.value}
+                  onChange={() => setExamFormat(option.value)}
+                  className="peer sr-only"
+                />
+                <div className="h-full rounded-2xl border border-slate-200 bg-white p-4 transition-all peer-checked:border-blue-500 peer-checked:bg-blue-50 peer-checked:ring-4 peer-checked:ring-blue-100 group-hover:border-blue-200">
+                  <span className="mb-2 block text-sm font-black text-slate-900">{option.title}</span>
+                  <p className="text-xs font-bold leading-relaxed text-slate-500">{option.description}</p>
+                </div>
+              </label>
+            ))}
+          </div>
+
+          {examFormat === 'modular' ? (
+            <div className="mt-4 space-y-3">
+              {modules.map((module, index) => (
+                <div
+                  key={index}
+                  className="flex flex-wrap items-center gap-3 rounded-2xl border border-slate-100 bg-white px-4 py-3"
+                >
+                  <span className="rounded-full bg-slate-100 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-slate-600">
+                    Module {index + 1}
+                  </span>
+
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      min={1}
+                      max={200}
+                      step={1}
+                      required
+                      value={module.questions}
+                      onChange={(event) => updateModule(index, { questions: Number(event.target.value) })}
+                      className="w-20 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-black text-slate-900 outline-none focus:border-blue-400"
+                    />
+                    <span className="text-xs font-black uppercase tracking-wide text-slate-400">questions</span>
+                  </label>
+
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      min={1}
+                      max={360}
+                      step={1}
+                      required
+                      value={module.minutes}
+                      onChange={(event) => updateModule(index, { minutes: Number(event.target.value) })}
+                      className="w-20 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-black text-slate-900 outline-none focus:border-blue-400"
+                    />
+                    <span className="text-xs font-black uppercase tracking-wide text-slate-400">minutes</span>
+                  </label>
+
+                  {modules.length > MIN_MODULAR_MODULE_COUNT && (
+                    <button
+                      type="button"
+                      onClick={() => setModules((current) => current.filter((_, i) => i !== index))}
+                      className="ml-auto inline-flex h-8 w-8 items-center justify-center rounded-xl text-slate-400 transition hover:bg-red-50 hover:text-red-600"
+                      aria-label={`Remove module ${index + 1}`}
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+              ))}
+
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <p className="text-xs font-bold text-slate-400">
+                  Questions per module are used when the .tex file has no <code>\module</code> markers.
+                  With markers, the split from the file wins.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setModules((current) => [...current, ...createModuleDrafts(1)])}
+                  disabled={modules.length >= MAX_MODULE_COUNT}
+                  className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-3 py-2 text-xs font-black text-white transition hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <Plus className="h-4 w-4" />
+                  Add module
+                </button>
+              </div>
+            </div>
+          ) : (
+            <label className="mt-4 block">
+              <span className="mb-2 flex items-center gap-2 text-xs font-black uppercase tracking-widest text-slate-400">
+                <Clock3 className="h-4 w-4" />
+                Test time
+              </span>
+              <div className="flex items-center gap-3 rounded-2xl border border-slate-100 bg-white px-5 py-4">
+                <input
+                  name="durationMinutes"
+                  type="number"
+                  min={1}
+                  max={360}
+                  step={1}
+                  defaultValue={120}
+                  required
+                  className="w-24 bg-transparent text-lg font-black text-slate-900 outline-none"
+                />
+                <span className="text-sm font-black text-slate-500">minutes</span>
+              </div>
+            </label>
+          )}
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
           <label className="block">
             <span className="mb-2 flex items-center gap-2 text-xs font-black uppercase tracking-widest text-slate-400">
               <Repeat2 className="h-4 w-4" />
