@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { createJSONStorage, persist } from 'zustand/middleware';
 import { EXAM_DURATION_SECONDS } from '@/lib/examConfig';
 import type { ExamModuleSpec } from '@/lib/examModules';
 
@@ -71,6 +71,31 @@ function startFirstModule(testId: string, modules: ExamModuleSpec[]) {
   };
 }
 
+/**
+ * `persist` writes on every `set()`, including the timer tick and the actions
+ * that return `{}`. Most of those serialize to the exact same string, so the
+ * write is skipped instead of blocking the main thread on localStorage.
+ */
+const dedupedStorage = createJSONStorage(() => {
+  // Same as the default storage: this throws on the server, and persistence is
+  // then skipped entirely.
+  const storage = window.localStorage;
+  let lastWrittenValue: string | null = null;
+
+  return {
+    getItem: (name: string) => storage.getItem(name),
+    setItem: (name: string, value: string) => {
+      if (value === lastWrittenValue) return;
+      lastWrittenValue = value;
+      storage.setItem(name, value);
+    },
+    removeItem: (name: string) => {
+      lastWrittenValue = null;
+      storage.removeItem(name);
+    },
+  };
+});
+
 export const selectModuleCount = (state: ExamState) => state.moduleDurations.length;
 
 export const selectIsLastModule = (state: ExamState) =>
@@ -130,14 +155,19 @@ export const useExamStore = create<ExamState>()(
             };
           }
 
+          // `endsAtMs` is the stored source of truth for the running clock;
+          // `timeLeftSeconds` is only a live value and is not persisted.
+          const remainingSeconds = state.endsAtMs
+            ? Math.max(0, Math.ceil((state.endsAtMs - now) / 1000))
+            : state.timeLeftSeconds;
           const elapsedSeconds = Math.max(
             0,
-            state.moduleDurationSeconds - state.timeLeftSeconds
+            state.moduleDurationSeconds - remainingSeconds
           );
           const durationChanged = state.moduleDurationSeconds !== activeModule.durationSeconds;
           const syncedTimeLeft = state.endsAtMs
-            ? Math.max(0, Math.ceil((state.endsAtMs - now) / 1000))
-            : Math.min(state.timeLeftSeconds, activeModule.durationSeconds);
+            ? remainingSeconds
+            : Math.min(remainingSeconds, activeModule.durationSeconds);
           const timeLeftSeconds = durationChanged
             ? Math.max(0, activeModule.durationSeconds - elapsedSeconds)
             : syncedTimeLeft;
@@ -228,6 +258,7 @@ export const useExamStore = create<ExamState>()(
     {
       name: 'mysat-exam-storage',
       version: 2,
+      storage: dedupedStorage,
       // Attempts saved by the pre-module timer cannot be resumed safely.
       migrate: () => createInitialState() as ExamState,
       partialize: (state) => ({
@@ -239,7 +270,9 @@ export const useExamStore = create<ExamState>()(
         currentModuleIndex: state.currentModuleIndex,
         modulePhase: state.modulePhase,
         moduleDurationSeconds: state.moduleDurationSeconds,
-        timeLeftSeconds: state.timeLeftSeconds,
+        // `timeLeftSeconds` is derived from `endsAtMs` on the next visit, and
+        // keeping it out is what makes a timer tick serialize to the same
+        // string as the tick before it.
         endsAtMs: state.endsAtMs,
         currentQuestionIndex: state.currentQuestionIndex,
         isSubmitted: state.isSubmitted,

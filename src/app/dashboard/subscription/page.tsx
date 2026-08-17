@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { cache, Suspense } from 'react';
 import { auth } from "@/auth";
 import { prisma } from '@/lib/prisma';
 import { redirect } from 'next/navigation';
@@ -9,6 +9,29 @@ import {
 import { getSubscriptionSettings } from '@/lib/subscription-settings';
 import { SubscriptionCheckout } from './SubscriptionCheckout';
 
+/**
+ * The active-subscription row is read by the header badge and by the checkout
+ * block, which now sit in different `<Suspense>` boundaries. React `cache()`
+ * keeps that a single Prisma call per request.
+ */
+const getActiveSubscription = cache((userId: string) =>
+  prisma.subscription.findFirst({
+    where: {
+      userId,
+      isActive: true,
+      expiresAt: { gt: new Date() }
+    },
+    orderBy: { expiresAt: 'desc' },
+  })
+);
+
+/**
+ * `redirect('/login')` and the "sales paused" branch stay above every boundary:
+ * once a fallback is flushed the response headers are already out and the status
+ * code can no longer change (`loading.md`, "Status Codes"). `getSubscriptionSettings()`
+ * is the cached global row, so awaiting it here costs a cache hit, not a DB
+ * round trip — and the three per-user queries below no longer wait for it.
+ */
 export default async function SubscriptionPage() {
   const session = await auth();
 
@@ -16,6 +39,7 @@ export default async function SubscriptionPage() {
     redirect('/login');
   }
 
+  const userId = session.user.id;
   const subscriptionSettings = await getSubscriptionSettings();
 
   if (!subscriptionSettings.isEnabled) {
@@ -41,18 +65,74 @@ export default async function SubscriptionPage() {
       </div>
     );
   }
-  
+
+  return (
+    <div className="px-4 py-10 sm:px-6 lg:px-8">
+      <header className="mx-auto mb-10 max-w-6xl overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-sm">
+        <div className="grid gap-0 lg:grid-cols-[0.95fr_1.05fr]">
+          <div className="bg-slate-900 p-8 text-white sm:p-10">
+            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-blue-300">
+              MYSATuz Premium
+            </p>
+            <h1 className="mt-3 text-4xl font-black tracking-tight">Subscription</h1>
+            <p className="mt-4 max-w-xl text-base font-bold leading-relaxed text-slate-300">
+              Send one transfer receipt, get admin-reviewed premium access, and track every subscription detail here.
+            </p>
+          </div>
+          <div className="grid gap-4 p-8 sm:grid-cols-3 sm:p-10">
+            <div className="rounded-3xl bg-blue-50 p-5">
+              <p className="text-[10px] font-black uppercase tracking-widest text-blue-600">Access</p>
+              <p className="mt-2 text-2xl font-black text-slate-900">30 days</p>
+            </div>
+            <div className="rounded-3xl bg-emerald-50 p-5">
+              <p className="text-[10px] font-black uppercase tracking-widest text-emerald-600">Status</p>
+              <p className="mt-2 text-2xl font-black text-slate-900">
+                <Suspense fallback={<span className="inline-block h-6 w-16 animate-pulse rounded-lg bg-emerald-100 align-middle" />}>
+                  <PlanStatusLabel userId={userId} />
+                </Suspense>
+              </p>
+            </div>
+            <div className="rounded-3xl bg-amber-50 p-5">
+              <p className="text-[10px] font-black uppercase tracking-widest text-amber-600">Review</p>
+              <p className="mt-2 text-2xl font-black text-slate-900">Manual</p>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <Suspense fallback={<CheckoutFallback />}>
+        <CheckoutSection
+          userId={userId}
+          userName={session.user.name || ''}
+          userEmail={session.user.email || ''}
+          settings={subscriptionSettings}
+        />
+      </Suspense>
+    </div>
+  );
+}
+
+async function PlanStatusLabel({ userId }: { userId: string }) {
+  const subscription = await getActiveSubscription(userId);
+
+  return <>{subscription?.planId === 'PREMIUM' ? 'Active' : 'Free'}</>;
+}
+
+async function CheckoutSection({
+  userId,
+  userName,
+  userEmail,
+  settings,
+}: {
+  userId: string;
+  userName: string;
+  userEmail: string;
+  settings: Awaited<ReturnType<typeof getSubscriptionSettings>>;
+}) {
   const [subscription, manualRequests, payments] = await Promise.all([
-    prisma.subscription.findFirst({
-      where: {
-        userId: session.user.id,
-        isActive: true,
-        expiresAt: { gt: new Date() }
-      },
-      orderBy: { expiresAt: 'desc' },
-    }),
+    getActiveSubscription(userId),
     prisma.manualPaymentRequest.findMany({
-      where: { userId: session.user.id },
+      where: { userId },
       orderBy: { createdAt: 'desc' },
       take: 8,
       select: {
@@ -67,7 +147,7 @@ export default async function SubscriptionPage() {
       },
     }),
     prisma.payment.findMany({
-      where: { userId: session.user.id },
+      where: { userId },
       orderBy: { createdAt: 'desc' },
       take: 8,
       select: {
@@ -104,51 +184,34 @@ export default async function SubscriptionPage() {
     : null;
 
   return (
-    <div className="px-4 py-10 sm:px-6 lg:px-8">
-      <header className="mx-auto mb-10 max-w-6xl overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-sm">
-        <div className="grid gap-0 lg:grid-cols-[0.95fr_1.05fr]">
-          <div className="bg-slate-900 p-8 text-white sm:p-10">
-            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-blue-300">
-              MYSATuz Premium
-            </p>
-            <h1 className="mt-3 text-4xl font-black tracking-tight">Subscription</h1>
-            <p className="mt-4 max-w-xl text-base font-bold leading-relaxed text-slate-300">
-              Send one transfer receipt, get admin-reviewed premium access, and track every subscription detail here.
-            </p>
-          </div>
-          <div className="grid gap-4 p-8 sm:grid-cols-3 sm:p-10">
-            <div className="rounded-3xl bg-blue-50 p-5">
-              <p className="text-[10px] font-black uppercase tracking-widest text-blue-600">Access</p>
-              <p className="mt-2 text-2xl font-black text-slate-900">30 days</p>
-            </div>
-            <div className="rounded-3xl bg-emerald-50 p-5">
-              <p className="text-[10px] font-black uppercase tracking-widest text-emerald-600">Status</p>
-              <p className="mt-2 text-2xl font-black text-slate-900">{isPremium ? 'Active' : 'Free'}</p>
-            </div>
-            <div className="rounded-3xl bg-amber-50 p-5">
-              <p className="text-[10px] font-black uppercase tracking-widest text-amber-600">Review</p>
-              <p className="mt-2 text-2xl font-black text-slate-900">Manual</p>
-            </div>
-          </div>
-        </div>
-      </header>
+    <SubscriptionCheckout
+      userName={userName}
+      userEmail={userEmail}
+      isPremium={isPremium}
+      requests={serializedRequests}
+      payments={serializedPayments}
+      subscription={serializedSubscription}
+      transfer={{
+        cardHolder: settings.cardHolder,
+        cardNumber: settings.cardNumber,
+        cardType: settings.cardType,
+        amount: settings.amount,
+        currency: 'UZS',
+      }}
+      amountLabel={formatManualPaymentAmount(settings.amount)}
+    />
+  );
+}
 
-      <SubscriptionCheckout
-        userName={session?.user?.name || ''}
-        userEmail={session?.user?.email || ''}
-        isPremium={isPremium}
-        requests={serializedRequests}
-        payments={serializedPayments}
-        subscription={serializedSubscription}
-        transfer={{
-          cardHolder: subscriptionSettings.cardHolder,
-          cardNumber: subscriptionSettings.cardNumber,
-          cardType: subscriptionSettings.cardType,
-          amount: subscriptionSettings.amount,
-          currency: 'UZS',
-        }}
-        amountLabel={formatManualPaymentAmount(subscriptionSettings.amount)}
-      />
+/** Same geometry as the checkout half of `PageLoadingSkeleton variant="subscription"`. */
+function CheckoutFallback() {
+  return (
+    <div className="mx-auto max-w-6xl space-y-6">
+      <div className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
+        <div className="h-80 animate-pulse rounded-[2rem] border border-slate-200 bg-white" />
+        <div className="h-80 animate-pulse rounded-[2rem] border border-slate-200 bg-white" />
+      </div>
+      <div className="h-64 animate-pulse rounded-[2rem] border border-slate-200 bg-white" />
     </div>
   );
 }

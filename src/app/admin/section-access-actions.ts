@@ -1,6 +1,6 @@
 'use server';
 
-import { revalidatePath } from 'next/cache';
+import { refresh } from 'next/cache';
 import { prisma } from '@/lib/prisma';
 import { requireAdmin } from '@/lib/admin';
 import {
@@ -72,8 +72,7 @@ export async function grantSectionAccess(formData: FormData) {
       },
     });
 
-    revalidatePath('/admin');
-    revalidatePath('/dashboard');
+    refresh();
     return { success: true };
   } catch (error: unknown) {
     console.error('Grant section access failed:', error);
@@ -96,8 +95,7 @@ export async function revokeSectionAccess(accessId: string) {
       where: { id: accessId },
     });
 
-    revalidatePath('/admin');
-    revalidatePath('/dashboard');
+    refresh();
     return { success: true };
   } catch (error: unknown) {
     console.error('Revoke section access failed:', error);

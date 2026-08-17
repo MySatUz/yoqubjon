@@ -21,8 +21,12 @@ export default function Navbar() {
   }, []);
 
   return (
+    // Only the shadow transitions. `padding` is a layout property: animating it
+    // made the browser re-lay-out the whole header subtree on every frame for
+    // 300 ms, which is what made the first scroll of the landing page stutter.
+    // The vertical padding now switches in one step.
     <nav
-      className={`fixed top-0 left-0 right-0 z-50 border-b border-slate-200 bg-white transition-[box-shadow,padding] duration-300 ${
+      className={`fixed top-0 left-0 right-0 z-50 border-b border-slate-200 bg-white transition-shadow duration-300 ${
         scrolled
           ? "py-3 shadow-lg shadow-slate-900/[0.03]"
           : "py-5 shadow-sm shadow-slate-900/[0.03]"

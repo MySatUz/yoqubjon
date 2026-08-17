@@ -98,13 +98,13 @@ export async function POST() {
       }
     ];
 
-    for (const q of questions) {
-      await prisma.question.upsert({
-        where: { id: q.id },
-        update: q,
-        create: q,
-      });
-    }
+    // One transaction instead of five sequential upserts. The fixed `q1..q5`
+    // ids are kept so re-seeding reuses the same rows rather than leaving the
+    // old ones behind under new ids.
+    await prisma.$transaction([
+      prisma.question.deleteMany({ where: { testId: test1.id } }),
+      prisma.question.createMany({ data: questions }),
+    ]);
 
     return NextResponse.json({ message: "Seeding completed successfully" });
   } catch (error: unknown) {

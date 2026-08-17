@@ -1,7 +1,6 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { ArrowLeft, ArrowRight, Atom, FileDown, FolderKanban, Layers3, LayoutDashboard, Lock, Repeat2, Sparkles } from 'lucide-react';
 import {
   findCategoryByQuery,
@@ -83,7 +82,6 @@ export default function PracticeCatalog({
   accessibleCategories,
   canDownloadPdf,
 }: PracticeCatalogProps) {
-  const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [activeCategory, setActiveCategory] = useState<TestCategory | null>(initialCategory);
   const visibleCollections = useMemo(
@@ -133,11 +131,6 @@ export default function PracticeCatalog({
     });
   };
 
-  const prefetchTestLinks = (testId: string) => {
-    router.prefetch(`/exam/${testId}`);
-    if (canDownloadPdf) router.prefetch(`/exam/${testId}/pdf`);
-  };
-
   return (
     <div className="lg:col-span-3">
       <header className="mb-10">
@@ -172,7 +165,7 @@ export default function PracticeCatalog({
                 type="button"
                 onClick={() => switchCategory(collection.value)}
                 disabled={isPending}
-                className="group relative overflow-hidden rounded-[2rem] border border-slate-200 bg-white p-8 text-left shadow-sm transition-all hover:-translate-y-1 hover:border-blue-200 hover:shadow-2xl hover:shadow-blue-900/10 disabled:cursor-wait disabled:opacity-80"
+                className="group relative overflow-hidden rounded-[2rem] border border-slate-200 bg-white p-8 text-left shadow-sm transition-[transform,border-color] duration-300 hover:-translate-y-1 hover:border-blue-200 hover:shadow-2xl hover:shadow-blue-900/10 disabled:cursor-wait disabled:opacity-80"
               >
                 <div className="absolute right-0 top-0 h-40 w-40 rounded-bl-full bg-slate-50 transition-transform group-hover:scale-110"></div>
                 <div className="relative z-10">
@@ -221,8 +214,7 @@ export default function PracticeCatalog({
             return (
               <div
                 key={test.id}
-                onMouseEnter={() => prefetchTestLinks(test.id)}
-                className="bg-white rounded-3xl p-8 shadow-sm border border-slate-200 hover:shadow-xl hover:shadow-blue-900/5 transition-all group relative overflow-hidden"
+                className="bg-white rounded-3xl p-8 shadow-sm border border-slate-200 hover:shadow-xl hover:shadow-blue-900/5 transition-[transform,border-color] duration-300 group relative overflow-hidden"
               >
                 <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-bl-full -mr-16 -mt-16 transition-transform group-hover:scale-110"></div>
 
@@ -274,11 +266,13 @@ export default function PracticeCatalog({
                           Attempt limit reached
                         </button>
                       ) : (
+                        // Default prefetch ("auto"): /exam/[id] is dynamic, so only
+                        // the shell up to exam/[id]/loading.tsx is fetched. An
+                        // explicit `prefetch` would pull the full RSC payload —
+                        // every question of the test — for every card in view.
                         <Link
                           href={`/exam/${test.id}`}
-                          prefetch
-                          onFocus={() => prefetchTestLinks(test.id)}
-                          className="inline-flex items-center justify-center w-full py-4 px-6 rounded-2xl text-sm font-black text-white bg-slate-900 hover:bg-blue-600 transition-all transform active:scale-95 shadow-xl shadow-slate-200"
+                          className="inline-flex items-center justify-center w-full py-4 px-6 rounded-2xl text-sm font-black text-white bg-slate-900 hover:bg-blue-600 transition-[background-color,transform] duration-200 active:scale-95 shadow-xl shadow-slate-200"
                         >
                           Start Practice Module
                         </Link>
@@ -286,9 +280,8 @@ export default function PracticeCatalog({
                       {canDownloadPdf && (
                         <Link
                           href={`/exam/${test.id}/pdf`}
-                          prefetch
-                          onFocus={() => router.prefetch(`/exam/${test.id}/pdf`)}
-                          className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-6 py-3 text-sm font-black text-slate-600 transition hover:border-blue-200 hover:text-blue-600"
+                          prefetch={false}
+                          className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-6 py-3 text-sm font-black text-slate-600 transition-[color,border-color] duration-200 hover:border-blue-200 hover:text-blue-600"
                         >
                           <FileDown className="h-4 w-4" />
                           Download questions PDF
@@ -299,8 +292,7 @@ export default function PracticeCatalog({
                     <div className="space-y-4">
                       <Link
                         href="/dashboard/subscription"
-                        prefetch
-                        className="inline-flex items-center justify-center w-full py-4 px-6 rounded-2xl text-sm font-black text-white bg-blue-600 hover:bg-blue-700 transition-all transform active:scale-95 shadow-xl shadow-blue-100"
+                        className="inline-flex items-center justify-center w-full py-4 px-6 rounded-2xl text-sm font-black text-white bg-blue-600 hover:bg-blue-700 transition-[background-color,transform] duration-200 active:scale-95 shadow-xl shadow-blue-100"
                       >
                         Unlock with Premium
                       </Link>

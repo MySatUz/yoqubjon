@@ -17,16 +17,37 @@ export default async function ResultPage({ params }: { params: Promise<{ id: str
     redirect('/login');
   }
   
+  // `select`, not `include`: the review only needs five columns per question.
+  // `moduleIndex` (question) and `durationSeconds`/`moduleDurations` (test) are
+  // load-bearing — buildExamModules collapses every module into one without them.
   const result = await prisma.result.findFirst({
     where: {
       id,
       userId: session.user.id,
     },
-    include: { 
+    select: {
+      score: true,
+      timeSpent: true,
+      createdAt: true,
+      answers: true,
       test: {
-        include: { questions: { orderBy: { order: 'asc' } } }
-      } 
-    }
+        select: {
+          title: true,
+          durationSeconds: true,
+          moduleDurations: true,
+          questions: {
+            orderBy: { order: 'asc' },
+            select: {
+              id: true,
+              content: true,
+              imageUrl: true,
+              correctAnswer: true,
+              moduleIndex: true,
+            },
+          },
+        },
+      },
+    },
   });
 
   if (!result) notFound();
@@ -177,11 +198,15 @@ export default async function ResultPage({ params }: { params: Promise<{ id: str
                     </div>
                     {data.imageUrl && (
                       <div className="mt-4 p-2 bg-slate-50 rounded-xl border border-slate-100 inline-block">
+                        {/* Rendered box is capped at max-h-48 (~192 px tall), so
+                            without `sizes` the browser would fetch the 828/1920 w
+                            variants for every question on the page. */}
                         <Image
                           src={data.imageUrl}
                           alt="Question"
                           width={800}
                           height={480}
+                          sizes="(min-width: 640px) 320px, 60vw"
                           className="max-h-48 w-auto rounded-lg"
                         />
                       </div>

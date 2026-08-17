@@ -1,5 +1,5 @@
 import PageLoadingSkeleton from '@/components/layout/PageLoadingSkeleton';
 
 export default function Loading() {
-  return <PageLoadingSkeleton title="Loading practice center" />;
+  return <PageLoadingSkeleton variant="practice" title="Loading practice center" />;
 }

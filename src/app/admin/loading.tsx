@@ -1,29 +1,34 @@
-import PageLoadingSkeleton from '@/components/layout/PageLoadingSkeleton';
-import { GraduationCap } from 'lucide-react';
-
+/**
+ * Content-only skeleton. The sidebar, mobile header and bottom bar live in
+ * src/app/admin/layout.tsx, which sits above this boundary and stays mounted
+ * across `/admin/**` navigations — repeating them here would draw them a second
+ * time and make them flicker on every hop.
+ *
+ * Mirrors the wrapper every admin page uses (`px-4 py-10 sm:px-6 lg:px-8` around
+ * a `mx-auto max-w-6xl` column) so the swap to real content does not shift the
+ * page horizontally.
+ */
 export default function Loading() {
   return (
-    <div className="min-h-screen bg-slate-50 md:flex">
-      <aside className="hidden h-screen w-72 border-r border-slate-200 bg-white md:flex md:flex-col">
-        <div className="p-8">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-900 shadow-lg shadow-slate-200">
-              <GraduationCap className="h-6 w-6 text-white" />
-            </div>
-            <span className="text-2xl font-black tracking-tight text-slate-900">MYSATuz</span>
-          </div>
-        </div>
-        <div className="space-y-2 px-4">
-          <div className="h-12 animate-pulse rounded-xl bg-slate-100" />
-          <div className="h-12 animate-pulse rounded-xl bg-slate-100" />
-          <div className="h-12 animate-pulse rounded-xl bg-slate-100" />
-          <div className="h-12 animate-pulse rounded-xl bg-blue-50" />
-        </div>
-      </aside>
+    <div className="px-4 py-10 sm:px-6 lg:px-8">
+      <p className="sr-only">Loading admin panel</p>
+      <div className="mx-auto max-w-6xl">
+        {/* "Back to admin" pill: same 3rem box the real link occupies. */}
+        <div className="mb-6 h-12 w-44 animate-pulse rounded-2xl bg-slate-200" />
 
-      <main className="flex-1">
-        <PageLoadingSkeleton title="Loading admin panel" />
-      </main>
+        <div className="space-y-6">
+          <div className="h-40 animate-pulse rounded-[2rem] border border-slate-200 bg-white" />
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            {[0, 1, 2, 3].map((i) => (
+              <div
+                key={i}
+                className="h-44 animate-pulse rounded-3xl border border-slate-200 bg-white"
+              />
+            ))}
+          </div>
+          <div className="h-72 animate-pulse rounded-[2rem] border border-slate-200 bg-white" />
+        </div>
+      </div>
     </div>
   );
 }

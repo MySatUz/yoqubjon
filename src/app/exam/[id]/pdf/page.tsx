@@ -1,4 +1,5 @@
 /* eslint-disable @next/next/no-img-element */
+import 'katex/dist/katex.min.css';
 import PrintPdfButton from '@/components/exam/PrintPdfButton';
 import { requireAdminPage } from '@/lib/admin';
 import { prisma } from '@/lib/prisma';

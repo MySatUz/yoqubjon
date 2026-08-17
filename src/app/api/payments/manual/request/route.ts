@@ -1,8 +1,9 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, after } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import {
   createManualReceiptSignedUrl,
+  isTelegramPaymentConfigured,
   notifyManualPaymentTelegram,
   readManualPaymentFields,
   uploadManualReceipt,
@@ -10,6 +11,8 @@ import {
 import { getSubscriptionSettings } from '@/lib/subscription-settings';
 
 export const runtime = 'nodejs';
+// `after()` work runs within the route's max duration, so it has to be set here.
+export const maxDuration = 60;
 
 const MANUAL_PAYMENT_DAILY_REQUEST_LIMIT = 5;
 const MANUAL_PAYMENT_RATE_LIMIT_WINDOW_MS = 24 * 60 * 60 * 1000;
@@ -22,7 +25,38 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const subscriptionSettings = await getSubscriptionSettings();
+    const userId = session.user.id;
+
+    // None of these four reads depends on another, so they run in one round-trip
+    // batch. The checks below stay in the original order so the HTTP status codes
+    // (503 -> 400 -> 409 -> 429) are unchanged.
+    const [subscriptionSettings, activeSubscription, pendingRequest, recentRequestCount] =
+      await Promise.all([
+        getSubscriptionSettings(),
+        prisma.subscription.findFirst({
+          where: {
+            userId,
+            isActive: true,
+            expiresAt: { gt: new Date() },
+          },
+          select: { id: true },
+        }),
+        prisma.manualPaymentRequest.findFirst({
+          where: {
+            userId,
+            status: 'PENDING',
+          },
+          select: { id: true },
+        }),
+        prisma.manualPaymentRequest.count({
+          where: {
+            userId,
+            createdAt: {
+              gte: new Date(Date.now() - MANUAL_PAYMENT_RATE_LIMIT_WINDOW_MS),
+            },
+          },
+        }),
+      ]);
 
     if (!subscriptionSettings.isEnabled) {
       return NextResponse.json(
@@ -31,15 +65,6 @@ export async function POST(req: Request) {
       );
     }
 
-    const activeSubscription = await prisma.subscription.findFirst({
-      where: {
-        userId: session.user.id,
-        isActive: true,
-        expiresAt: { gt: new Date() },
-      },
-      select: { id: true },
-    });
-
     if (activeSubscription) {
       return NextResponse.json(
         { error: 'Subscription is already active' },
@@ -47,29 +72,12 @@ export async function POST(req: Request) {
       );
     }
 
-    const pendingRequest = await prisma.manualPaymentRequest.findFirst({
-      where: {
-        userId: session.user.id,
-        status: 'PENDING',
-      },
-      select: { id: true },
-    });
-
     if (pendingRequest) {
       return NextResponse.json(
         { error: 'A payment request is already waiting for review' },
         { status: 409 }
       );
     }
-
-    const recentRequestCount = await prisma.manualPaymentRequest.count({
-      where: {
-        userId: session.user.id,
-        createdAt: {
-          gte: new Date(Date.now() - MANUAL_PAYMENT_RATE_LIMIT_WINDOW_MS),
-        },
-      },
-    });
 
     if (recentRequestCount >= MANUAL_PAYMENT_DAILY_REQUEST_LIMIT) {
       return NextResponse.json(
@@ -91,7 +99,7 @@ export async function POST(req: Request) {
     const requestId = crypto.randomUUID();
     const receiptPath = await uploadManualReceipt({
       requestId,
-      userId: session.user.id,
+      userId,
       file: receipt,
     });
     const fields = readManualPaymentFields(formData);
@@ -99,7 +107,7 @@ export async function POST(req: Request) {
     const manualRequest = await prisma.manualPaymentRequest.create({
       data: {
         id: requestId,
-        userId: session.user.id,
+        userId,
         amount: subscriptionSettings.amount,
         currency: 'UZS',
         payerName: fields.payerName,
@@ -112,33 +120,45 @@ export async function POST(req: Request) {
       },
     });
 
-    const receiptUrl = await createManualReceiptSignedUrl(receiptPath, 60 * 60 * 24 * 7);
-    const notification = await notifyManualPaymentTelegram({
-      requestId: manualRequest.id,
-      userEmail: session.user.email,
-      userName: manualRequest.payerName || session.user.name,
-      amount: manualRequest.amount,
-      receiptUrl,
-      contact: manualRequest.contact,
-      paymentReference: manualRequest.paymentReference,
-      message: manualRequest.message,
-      transfer: {
-        cardHolder: subscriptionSettings.cardHolder,
-        cardNumber: subscriptionSettings.cardNumber,
-        cardType: subscriptionSettings.cardType,
-      },
-    });
+    const userEmail = session.user.email;
+    const userName = manualRequest.payerName || session.user.name;
 
-    if (!notification.ok && !notification.skipped) {
-      console.warn('Manual payment Telegram notification failed', {
+    // Signing the receipt URL and calling the Telegram API used to block the
+    // response; both now run after it is sent. The request is already persisted,
+    // so a failing/slow Telegram never delays or fails the submission.
+    after(async () => {
+      const receiptUrl = await createManualReceiptSignedUrl(receiptPath, 60 * 60 * 24 * 7);
+      const notification = await notifyManualPaymentTelegram({
         requestId: manualRequest.id,
+        userEmail,
+        userName,
+        amount: manualRequest.amount,
+        receiptUrl,
+        contact: manualRequest.contact,
+        paymentReference: manualRequest.paymentReference,
+        message: manualRequest.message,
+        transfer: {
+          cardHolder: subscriptionSettings.cardHolder,
+          cardNumber: subscriptionSettings.cardNumber,
+          cardType: subscriptionSettings.cardType,
+        },
       });
-    }
+
+      if (!notification.ok && !notification.skipped) {
+        console.warn('Manual payment Telegram notification failed', {
+          requestId: manualRequest.id,
+        });
+      }
+    });
 
     return NextResponse.json({
       success: true,
       requestId: manualRequest.id,
-      notification,
+      // Kept for `ManualPaymentForm`, which branches on this field. Since the
+      // send now happens after the response, `ok` means "queued" and `skipped`
+      // still reports a server without Telegram credentials. The delivery
+      // failure branch in the client can no longer be reached.
+      notification: { ok: true, skipped: !isTelegramPaymentConfigured() },
     });
   } catch (error) {
     console.error('Manual payment request failed:', error);

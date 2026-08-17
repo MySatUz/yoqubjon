@@ -1,8 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { memo, useCallback, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import {
   createTestCollection,
   deleteTestCollection,
@@ -28,9 +27,116 @@ function getSectionIcon(category: string) {
   return Layers3;
 }
 
+type SectionCardProps = {
+  option: TestCollectionOption;
+  icon: ReturnType<typeof getSectionIcon>;
+  isDeleting: boolean;
+  canDelete: boolean;
+  onDelete: (collection: TestCollectionOption) => void;
+};
+
+/**
+ * The visibility toggle lives here so ticking one section re-renders one card
+ * instead of the whole grid. The checkbox is still read from the form on submit.
+ */
+const SectionCard = memo(function SectionCard({
+  option,
+  icon: Icon,
+  isDeleting,
+  canDelete,
+  onDelete,
+}: SectionCardProps) {
+  const [isVisible, setIsVisible] = useState(option.visible);
+
+  return (
+    <div
+      className={`rounded-2xl border p-5 transition-all ${
+        isVisible
+          ? 'border-blue-500 bg-blue-50 ring-4 ring-blue-100'
+          : 'border-slate-200 bg-slate-50 hover:border-blue-200'
+      }`}
+    >
+      <input type="hidden" name="category" value={option.value} />
+      <div className="mb-5 flex items-start justify-between gap-4">
+        <Link
+          href={`/admin/sections/${option.value.toLowerCase()}`}
+          prefetch={false}
+          className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-white text-blue-600 shadow-sm transition hover:text-blue-700"
+          aria-label={`Open ${option.label} results`}
+        >
+          <Icon className="h-5 w-5" />
+        </Link>
+        <label className={`inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-full bg-white shadow-sm transition hover:ring-4 hover:ring-blue-100 ${
+          isVisible ? 'text-blue-600' : 'text-slate-300'
+        }`}>
+        <input
+          type="checkbox"
+          name={`visible_${option.value}`}
+          value="true"
+          checked={isVisible}
+          onChange={(event) => setIsVisible(event.target.checked)}
+          className="sr-only"
+          aria-label={`${isVisible ? 'Hide' : 'Show'} ${option.label}`}
+        />
+          {isVisible ? (
+            <Eye className="h-4 w-4" />
+          ) : (
+            <EyeOff className="h-4 w-4" />
+          )}
+        </label>
+      </div>
+
+      <Link
+        href={`/admin/sections/${option.value.toLowerCase()}`}
+        prefetch={false}
+        className="group block rounded-xl outline-none focus-visible:ring-4 focus-visible:ring-blue-100"
+      >
+        <h4 className="text-lg font-black text-slate-900">{option.label}</h4>
+        <p className="mt-2 min-h-12 text-xs font-bold leading-relaxed text-slate-500">{option.description}</p>
+        <p className="mt-4 text-xs font-black uppercase tracking-widest text-blue-600">
+          {isVisible ? 'Shown in Practice Center' : 'Hidden from students'}
+        </p>
+        <span className="mt-4 inline-flex items-center gap-2 text-xs font-black uppercase tracking-widest text-slate-500 transition group-hover:text-blue-600">
+          Open results
+          <ArrowUpRight className="h-4 w-4" />
+        </span>
+      </Link>
+
+      <label className="mt-5 flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3">
+        <span className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-slate-500">
+          <Repeat2 className="h-4 w-4" />
+          Attempts
+        </span>
+        <span className="flex items-center gap-2">
+          <input
+            name={`attempts_${option.value}`}
+            type="number"
+            min={MIN_TEST_MAX_ATTEMPTS}
+            max={MAX_TEST_MAX_ATTEMPTS}
+            step={1}
+            required
+            defaultValue={option.maxAttempts}
+            aria-label={`Attempts per user in ${option.label}`}
+            className="w-16 bg-transparent text-right text-sm font-black text-slate-900 outline-none"
+          />
+          <span className="text-xs font-black uppercase tracking-widest text-slate-400">per user</span>
+        </span>
+      </label>
+
+      <button
+        type="button"
+        onClick={() => onDelete(option)}
+        disabled={isDeleting || !canDelete}
+        className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-red-100 bg-white px-4 py-3 text-xs font-black text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-40"
+      >
+        {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+        Delete section
+      </button>
+    </div>
+  );
+});
+
 export default function SectionVisibilityForm({ collections }: SectionVisibilityFormProps) {
-  const router = useRouter();
-  const [visibilityOverrides, setVisibilityOverrides] = useState<Record<string, boolean>>({});
   const [isSaving, setIsSaving] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [deletingCategory, setDeletingCategory] = useState<string | null>(null);
@@ -42,14 +148,14 @@ export default function SectionVisibilityForm({ collections }: SectionVisibility
     setResult(null);
 
     const form = event.currentTarget;
+    // Each of these actions expires the `test-collections` tag and then calls
+    // `refresh()`, so the new card list comes back with the action response.
     const response = await createTestCollection(new FormData(form));
     setResult(response.success ? { ...response, message: 'Section created.' } : response);
     setIsCreating(false);
 
     if (response.success) {
       form.reset();
-      setVisibilityOverrides({});
-      router.refresh();
     }
   };
 
@@ -61,14 +167,9 @@ export default function SectionVisibilityForm({ collections }: SectionVisibility
     const response = await updateSectionSettings(new FormData(event.currentTarget));
     setResult(response.success ? { ...response, message: 'Sections updated.' } : response);
     setIsSaving(false);
-
-    if (response.success) {
-      setVisibilityOverrides({});
-      router.refresh();
-    }
   };
 
-  const handleDelete = async (collection: TestCollectionOption) => {
+  const handleDelete = useCallback(async (collection: TestCollectionOption) => {
     if (!confirm(`Delete section "${collection.label}"? Tests in this section will become unassigned.`)) return;
 
     setDeletingCategory(collection.value);
@@ -76,12 +177,7 @@ export default function SectionVisibilityForm({ collections }: SectionVisibility
     const response = await deleteTestCollection(collection.value);
     setResult(response.success ? { ...response, message: 'Section deleted.' } : response);
     setDeletingCategory(null);
-
-    if (response.success) {
-      setVisibilityOverrides({});
-      router.refresh();
-    }
-  };
+  }, []);
 
   return (
     <section className="rounded-3xl border border-slate-200 bg-white p-8 shadow-xl">
@@ -141,104 +237,17 @@ export default function SectionVisibilityForm({ collections }: SectionVisibility
 
       <form onSubmit={handleSubmit}>
         <div className="grid gap-4 md:grid-cols-3">
-          {collections.map((option) => {
-            const Icon = getSectionIcon(option.value);
-            const isVisible = visibilityOverrides[option.value] ?? option.visible;
-            const isDeleting = deletingCategory === option.value;
-
-            return (
-              <div
-                key={option.value}
-                className={`rounded-2xl border p-5 transition-all ${
-                  isVisible
-                    ? 'border-blue-500 bg-blue-50 ring-4 ring-blue-100'
-                    : 'border-slate-200 bg-slate-50 hover:border-blue-200'
-                }`}
-              >
-                <input type="hidden" name="category" value={option.value} />
-                <div className="mb-5 flex items-start justify-between gap-4">
-                  <Link
-                    href={`/admin/sections/${option.value.toLowerCase()}`}
-                    prefetch={false}
-                    className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-white text-blue-600 shadow-sm transition hover:text-blue-700"
-                    aria-label={`Open ${option.label} results`}
-                  >
-                    <Icon className="h-5 w-5" />
-                  </Link>
-                  <label className={`inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-full bg-white shadow-sm transition hover:ring-4 hover:ring-blue-100 ${
-                    isVisible ? 'text-blue-600' : 'text-slate-300'
-                  }`}>
-                  <input
-                    type="checkbox"
-                    name={`visible_${option.value}`}
-                    value="true"
-                    checked={isVisible}
-                    onChange={(event) => {
-                      setVisibilityOverrides((current) => ({
-                        ...current,
-                        [option.value]: event.target.checked,
-                      }));
-                    }}
-                    className="sr-only"
-                    aria-label={`${isVisible ? 'Hide' : 'Show'} ${option.label}`}
-                  />
-                    {isVisible ? (
-                      <Eye className="h-4 w-4" />
-                    ) : (
-                      <EyeOff className="h-4 w-4" />
-                    )}
-                  </label>
-                </div>
-
-                <Link
-                  href={`/admin/sections/${option.value.toLowerCase()}`}
-                  prefetch={false}
-                  className="group block rounded-xl outline-none focus-visible:ring-4 focus-visible:ring-blue-100"
-                >
-                  <h4 className="text-lg font-black text-slate-900">{option.label}</h4>
-                  <p className="mt-2 min-h-12 text-xs font-bold leading-relaxed text-slate-500">{option.description}</p>
-                  <p className="mt-4 text-xs font-black uppercase tracking-widest text-blue-600">
-                    {isVisible ? 'Shown in Practice Center' : 'Hidden from students'}
-                  </p>
-                  <span className="mt-4 inline-flex items-center gap-2 text-xs font-black uppercase tracking-widest text-slate-500 transition group-hover:text-blue-600">
-                    Open results
-                    <ArrowUpRight className="h-4 w-4" />
-                  </span>
-                </Link>
-
-                <label className="mt-5 flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3">
-                  <span className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-slate-500">
-                    <Repeat2 className="h-4 w-4" />
-                    Attempts
-                  </span>
-                  <span className="flex items-center gap-2">
-                    <input
-                      name={`attempts_${option.value}`}
-                      type="number"
-                      min={MIN_TEST_MAX_ATTEMPTS}
-                      max={MAX_TEST_MAX_ATTEMPTS}
-                      step={1}
-                      required
-                      defaultValue={option.maxAttempts}
-                      aria-label={`Attempts per user in ${option.label}`}
-                      className="w-16 bg-transparent text-right text-sm font-black text-slate-900 outline-none"
-                    />
-                    <span className="text-xs font-black uppercase tracking-widest text-slate-400">per user</span>
-                  </span>
-                </label>
-
-                <button
-                  type="button"
-                  onClick={() => handleDelete(option)}
-                  disabled={isDeleting || collections.length <= 1}
-                  className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-red-100 bg-white px-4 py-3 text-xs font-black text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-                  Delete section
-                </button>
-              </div>
-            );
-          })}
+          {collections.map((option) => (
+            <SectionCard
+              // Rebuilt when the saved visibility changes, so a refresh re-applies the server value.
+              key={`${option.value}:${option.visible}`}
+              option={option}
+              icon={getSectionIcon(option.value)}
+              isDeleting={deletingCategory === option.value}
+              canDelete={collections.length > 1}
+              onDelete={handleDelete}
+            />
+          ))}
         </div>
 
         <button

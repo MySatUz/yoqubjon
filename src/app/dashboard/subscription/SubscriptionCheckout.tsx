@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { useRouter } from 'next/navigation';
 import { ArrowLeft, CalendarClock, Check, CreditCard, Loader2, ShieldCheck, X } from 'lucide-react';
 import { ManualPaymentForm } from './ManualPaymentForm';
 import { cancelActiveSubscription } from './actions';
@@ -50,7 +49,6 @@ type SubscriptionCheckoutProps = {
 };
 
 export function SubscriptionCheckout(props: SubscriptionCheckoutProps) {
-  const router = useRouter();
   const [mode, setMode] = useState<'plans' | 'manual'>('plans');
   const [isCanceling, startCancelTransition] = useTransition();
   const [cancelError, setCancelError] = useState<string | null>(null);
@@ -66,7 +64,7 @@ export function SubscriptionCheckout(props: SubscriptionCheckoutProps) {
         setCancelError(result.error || 'Could not cancel subscription');
         return;
       }
-      router.refresh();
+      // The action calls refresh() itself, so the fresh payload arrives with it.
     });
   };
 

@@ -1,7 +1,9 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { CheckCircle2, Clock3, ExternalLink, FileText, UserRound, XCircle } from 'lucide-react';
+import { useFormStatus } from 'react-dom';
+import { CheckCircle2, Clock3, ExternalLink, FileText, Loader2, UserRound, XCircle } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import {
   approveManualPaymentRequest,
   rejectManualPaymentRequest,
@@ -26,12 +28,43 @@ type ManualPaymentRequestItem = {
     email: string;
     name: string | null;
   };
-  receiptSignedUrl: string | null;
+  hasReceipt: boolean;
 };
 
 type ManualPaymentRequestsProps = {
   requests: ManualPaymentRequestItem[];
 };
+
+/**
+ * Lives inside the <form> so `useFormStatus` can report the pending state of
+ * the surrounding server action; without it a double click sent two POSTs for
+ * the same requestId.
+ */
+function DecisionButton({
+  icon: Icon,
+  label,
+  pendingLabel,
+  className,
+}: {
+  icon: LucideIcon;
+  label: string;
+  pendingLabel: string;
+  className: string;
+}) {
+  const { pending } = useFormStatus();
+
+  return (
+    <button
+      type="submit"
+      disabled={pending}
+      aria-disabled={pending}
+      className={`inline-flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-black text-white transition disabled:cursor-not-allowed disabled:opacity-60 ${className}`}
+    >
+      {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Icon className="h-4 w-4" />}
+      {pending ? pendingLabel : label}
+    </button>
+  );
+}
 
 function toDate(value: DateValue) {
   return value instanceof Date ? value : new Date(value);
@@ -230,9 +263,9 @@ export default function ManualPaymentRequests({ requests }: ManualPaymentRequest
                 )}
 
                 <div className="mt-4 flex flex-wrap items-center gap-3">
-                  {selectedRequest.receiptSignedUrl ? (
+                  {selectedRequest.hasReceipt ? (
                     <a
-                      href={selectedRequest.receiptSignedUrl}
+                      href={`/api/admin/payments/${selectedRequest.id}/receipt`}
                       target="_blank"
                       rel="noreferrer"
                       className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-black text-white transition hover:bg-blue-600"
@@ -269,10 +302,12 @@ export default function ManualPaymentRequests({ requests }: ManualPaymentRequest
                         placeholder="Optional note"
                         className="w-full resize-none rounded-xl border border-green-200 bg-white px-3 py-2 text-sm font-bold outline-none focus:border-green-500"
                       />
-                      <button className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-green-600 px-4 py-3 text-sm font-black text-white transition hover:bg-green-500">
-                        <CheckCircle2 className="h-4 w-4" />
-                        Approve and activate
-                      </button>
+                      <DecisionButton
+                        icon={CheckCircle2}
+                        label="Approve and activate"
+                        pendingLabel="Approving..."
+                        className="bg-green-600 hover:bg-green-500"
+                      />
                     </form>
 
                     <form action={rejectManualPaymentRequest} className="space-y-3 rounded-2xl bg-red-50 p-4">
@@ -283,10 +318,12 @@ export default function ManualPaymentRequests({ requests }: ManualPaymentRequest
                         placeholder="Reason for rejection"
                         className="w-full resize-none rounded-xl border border-red-200 bg-white px-3 py-2 text-sm font-bold outline-none focus:border-red-500"
                       />
-                      <button className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-red-600 px-4 py-3 text-sm font-black text-white transition hover:bg-red-500">
-                        <XCircle className="h-4 w-4" />
-                        Reject
-                      </button>
+                      <DecisionButton
+                        icon={XCircle}
+                        label="Reject"
+                        pendingLabel="Rejecting..."
+                        className="bg-red-600 hover:bg-red-500"
+                      />
                     </form>
                   </div>
                 )}

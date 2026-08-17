@@ -1,4 +1,3 @@
-@import "katex/dist/katex.min.css";
 @import "tailwindcss";
 
 :root {
@@ -18,7 +17,6 @@
   --color-accent-warm: var(--accent-secondary);
   --color-surface: var(--surface);
   --color-surface-elevated: var(--surface-elevated);
-  --font-serif: var(--font-lora), serif;
   --font-sans: var(--font-jakarta), sans-serif;
 }
 
@@ -64,26 +62,6 @@ body {
   to { opacity: 1; }
 }
 
-@keyframes float {
-  0%, 100% { transform: translateY(0px); }
-  50% { transform: translateY(-12px); }
-}
-
-@keyframes pulse-glow {
-  0%, 100% { opacity: 0.4; }
-  50% { opacity: 0.8; }
-}
-
-@keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
-}
-
-@keyframes rotate-slow {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-
 @keyframes scale-in {
   from {
     opacity: 0;
@@ -100,6 +78,15 @@ body {
   to { opacity: 1; transform: translateY(0); }
 }
 
+/* Exam calculator panel. Its slot is already reserved by the flex layout when
+   it opens, so the panel only translates inside it — `transform` is
+   compositable and costs no layout. The panel's container is
+   `overflow-hidden`, so the off-screen start position adds no scrollbar. */
+@keyframes slide-in-right {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
 .animate-fade-in-up {
   animation: fade-in-up 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
@@ -108,20 +95,29 @@ body {
   animation: fade-in 0.5s ease forwards;
 }
 
-.animate-float {
-  animation: float 6s ease-in-out infinite;
-}
-
-.animate-pulse-glow {
-  animation: pulse-glow 3s ease-in-out infinite;
-}
-
 .animate-scale-in {
   animation: scale-in 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 .animate-count-up {
   animation: count-up 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Respect the OS "reduce motion" setting: no animation, and never leave
+   animated content stuck at the keyframe's initial opacity: 0. */
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-in-up,
+  .animate-fade-in,
+  .animate-scale-in,
+  .animate-count-up,
+  .animate-slide-in-right {
+    animation: none !important;
+    opacity: 1 !important;
+  }
 }
 
 /* Staggered delay helpers */
@@ -135,19 +131,19 @@ body {
 .delay-800 { animation-delay: 0.8s; }
 
 /* ═══════════════════════════════════════════════
-   GLASSMORPHISM
+   FROSTED PANELS
+   No `backdrop-filter`: the compositor re-blurs the whole backdrop on every
+   frame while these panels are on screen, and at ~90 % opacity the blur is
+   invisible anyway. The alpha values below stand in for what the blur used
+   to contribute.
    ═══════════════════════════════════════════════ */
 .glass {
-  background: rgba(255, 255, 255, 0.72);
-  backdrop-filter: blur(16px) saturate(180%);
-  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  background: rgba(255, 255, 255, 0.92);
   border: 1px solid rgba(255, 255, 255, 0.4);
 }
 
 .glass-dark {
-  background: rgba(15, 23, 42, 0.75);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  background: rgba(19, 29, 51, 0.92);
   border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
@@ -193,14 +189,31 @@ body {
 /* ═══════════════════════════════════════════════
    INTERACTIVE CARD EFFECTS
    ═══════════════════════════════════════════════ */
+/* `box-shadow` is not a compositable property: animating it repaints the whole
+   card on every frame. The shadow lives on an always-present pseudo-element
+   instead, and only its `opacity` is animated.
+   NB: the host element must not be `overflow: hidden`, or the pseudo-element's
+   outer shadow gets clipped away. */
 .card-hover {
-  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1),
-              box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.card-hover::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  box-shadow: 0 20px 40px -12px rgba(79, 70, 229, 0.12),
+              0 8px 16px -8px rgba(0, 0, 0, 0.06);
+  transition: opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .card-hover:hover {
   transform: translateY(-4px);
-  box-shadow: 0 20px 40px -12px rgba(79, 70, 229, 0.12),
-              0 8px 16px -8px rgba(0, 0, 0, 0.06);
+}
+.card-hover:hover::after {
+  opacity: 1;
 }
 
 /* ═══════════════════════════════════════════════
@@ -208,12 +221,24 @@ body {
    ═══════════════════════════════════════════════ */
 .btn-primary {
   position: relative;
-  overflow: hidden;
-  transition: transform 0.15s ease, box-shadow 0.3s ease;
+  transition: transform 0.15s ease;
+}
+/* Hover shadow as an opacity fade — see the note on .card-hover. */
+.btn-primary::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  box-shadow: 0 8px 24px -4px rgba(79, 70, 229, 0.4);
+  transition: opacity 0.3s ease;
 }
 .btn-primary:hover {
   transform: translateY(-1px);
-  box-shadow: 0 8px 24px -4px rgba(79, 70, 229, 0.4);
+}
+.btn-primary:hover::before {
+  opacity: 1;
 }
 .btn-primary:active {
   transform: translateY(0) scale(0.98);
@@ -222,6 +247,7 @@ body {
   content: "";
   position: absolute;
   inset: 0;
+  border-radius: inherit;
   background: linear-gradient(135deg, rgba(255,255,255,0.15) 0%, transparent 60%);
   pointer-events: none;
 }

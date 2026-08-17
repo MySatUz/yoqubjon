@@ -8,10 +8,18 @@ import ModuleTransition from '@/components/exam/ModuleTransition';
 import { useExamStore } from '@/store/useExamStore';
 import { toExamModuleSpecs, type ExamModule } from '@/lib/examModules';
 
+/**
+ * Question text arrives as HTML: `/exam/[id]` runs it through KaTeX on the
+ * server (see `@/lib/examQuestions`), so nothing in this tree imports `katex`.
+ * The strings are produced by `renderMathHtml`, which escapes every plain-text
+ * segment itself - they are the only values allowed near
+ * `dangerouslySetInnerHTML` here.
+ */
 export type ExamRunnerQuestion = {
   id: string;
-  content: string;
-  options: unknown;
+  contentHtml: string;
+  /** Empty for grid-in questions. */
+  optionsHtml: string[];
   imageUrl: string | null;
 };
 
@@ -28,6 +36,7 @@ export default function ExamRunner({ testId, modules }: ExamRunnerProps) {
   const activeTestId = useExamStore((state) => state.activeTestId);
   const currentModuleIndex = useExamStore((state) => state.currentModuleIndex);
   const modulePhase = useExamStore((state) => state.modulePhase);
+  const isSubmitted = useExamStore((state) => state.isSubmitted);
 
   // The saved attempt only exists in the browser, so the server and the first
   // client render both show module 1 and the stored progress lands right after.
@@ -41,11 +50,21 @@ export default function ExamRunner({ testId, modules }: ExamRunnerProps) {
     initializeExam(testId, specs);
   }, [initializeExam, specs, testId]);
 
+  // The clock only has to run while a module is counting down. In every other
+  // phase `syncTimeLeft` would return `{}`, which zustand still turns into a
+  // new state object and broadcasts to every subscriber once a second.
+  //
+  // This component already subscribes to `modulePhase` and `isSubmitted`, so
+  // the moment `startCurrentModule()` flips `pending` -> `active` it re-renders
+  // and this effect runs again, calling `syncTimeLeft()` immediately and
+  // reinstalling the interval. The clock can never stay stopped.
   useEffect(() => {
+    if (modulePhase !== 'active' || isSubmitted) return;
+
     syncTimeLeft();
     const interval = setInterval(syncTimeLeft, 1000);
     return () => clearInterval(interval);
-  }, [syncTimeLeft]);
+  }, [isSubmitted, modulePhase, syncTimeLeft]);
 
   const isReady = isHydrated && activeTestId === testId;
   const moduleIndex = isReady

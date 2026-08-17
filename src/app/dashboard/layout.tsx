@@ -1,19 +1,52 @@
-import React from 'react';
-import { auth } from "@/auth";
-import { isAdminUser } from '@/lib/admin';
-import AppShell from '@/components/layout/AppShell';
+import React, { Suspense } from 'react';
+import AppShellFrame from '@/components/layout/AppShellFrame';
+import ShellAdminNav from '@/components/layout/ShellAdminNav';
+import {
+  ShellUserAvatar,
+  ShellUserAvatarSkeleton,
+  ShellUserCard,
+  ShellUserCardSkeleton,
+} from '@/components/layout/ShellUser';
 
-export default async function DashboardLayout({
+/**
+ * Synchronous on purpose. `loading.tsx` sits below `layout.tsx` in the
+ * component hierarchy, so it cannot cover runtime data read by the layout
+ * itself — and with Cache Components disabled the navigation simply blocks
+ * until the layout finishes rendering. Session and admin lookups therefore
+ * live in their own <Suspense> islands.
+ *
+ * Anonymous access is still handled above this point by src/proxy.ts, so no
+ * redirect happens after streaming has started.
+ */
+export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const session = await auth();
-  const canManageTests = await isAdminUser(session?.user?.id);
-
   return (
-    <AppShell session={session} canManageTests={canManageTests}>
+    <AppShellFrame
+      userAvatar={
+        <Suspense fallback={<ShellUserAvatarSkeleton />}>
+          <ShellUserAvatar />
+        </Suspense>
+      }
+      userCard={
+        <Suspense fallback={<ShellUserCardSkeleton />}>
+          <ShellUserCard />
+        </Suspense>
+      }
+      desktopAdminNav={
+        <Suspense fallback={null}>
+          <ShellAdminNav variant="desktop" />
+        </Suspense>
+      }
+      mobileAdminNav={
+        <Suspense fallback={null}>
+          <ShellAdminNav variant="mobile" />
+        </Suspense>
+      }
+    >
       {children}
-    </AppShell>
+    </AppShellFrame>
   );
 }

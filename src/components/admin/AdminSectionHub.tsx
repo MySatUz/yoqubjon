@@ -77,7 +77,6 @@ export default function AdminSectionHub({
           <Link
             key={card.href}
             href={card.href}
-            prefetch={false}
             className="group min-h-[220px] rounded-3xl border border-slate-200 bg-white p-6 text-left shadow-sm transition hover:-translate-y-1 hover:border-blue-200 hover:shadow-xl hover:shadow-slate-200/70"
           >
             <div className="mb-8 flex items-start justify-between gap-4">

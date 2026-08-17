@@ -1,8 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { memo, useCallback, useMemo, useOptimistic, useState, useTransition } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { deleteTest, updateQuestion, updateTestDetails, updateTestVisibility } from '@/app/admin/actions';
 import { ChevronDown, Clock3, Edit3, Eye, EyeOff, FileDown, ImageIcon, Layers, Loader2, Plus, Repeat2, Save, Settings2, Trash2, Video, X } from 'lucide-react';
 import { getCategoryLabel, getTestCategory, type TestCollectionOption } from '@/lib/testCatalog';
@@ -41,10 +40,30 @@ interface TestListProps {
   initialOpenTestId?: string | null;
 }
 
+// Built once: `toLocaleDateString()` rebuilds the formatter on every call.
+const UPLOADED_DATE_FORMAT = new Intl.DateTimeFormat(undefined, {
+  year: 'numeric',
+  month: 'numeric',
+  day: 'numeric',
+});
+
 function readOptions(options: unknown) {
   return Array.isArray(options)
     ? options.filter((option): option is string => typeof option === 'string')
     : [];
+}
+
+/**
+ * Answer options arrive as a plain string array, so rows need their own ids to
+ * survive a removal in the middle of the list.
+ */
+type OptionDraft = { id: string; text: string };
+
+let optionDraftCounter = 0;
+
+function createOptionDraft(text: string): OptionDraft {
+  optionDraftCounter += 1;
+  return { id: `option-${optionDraftCounter}`, text };
 }
 
 function durationToMinutes(seconds: number) {
@@ -68,7 +87,6 @@ function TestSettingsEditor({
   test: AdminTest;
   collections: TestCollectionOption[];
 }) {
-  const router = useRouter();
   const [isSaving, setIsSaving] = useState(false);
   const [result, setResult] = useState<{ success?: boolean; error?: string } | null>(null);
   const category = getTestCategory(test);
@@ -83,13 +101,11 @@ function TestSettingsEditor({
     setIsSaving(true);
     setResult(null);
 
+    // `updateTestDetails` calls `refresh()` itself, so the updated row arrives
+    // with this response instead of costing a second round-trip.
     const response = await updateTestDetails(test.id, new FormData(event.currentTarget));
     setResult(response);
     setIsSaving(false);
-
-    if (response.success) {
-      router.refresh();
-    }
   };
 
   return (
@@ -159,7 +175,7 @@ function TestSettingsEditor({
             <div className="space-y-2">
               {moduleDurations.map((duration, index) => (
                 <div
-                  key={index}
+                  key={`module-${index}-${duration}`}
                   className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3"
                 >
                   <span className="text-[10px] font-black uppercase tracking-wide text-slate-400">
@@ -246,31 +262,97 @@ function TestSettingsEditor({
   );
 }
 
-function QuestionEditor({ question }: { question: AdminQuestion }) {
-  const router = useRouter();
-  const [isOpen, setIsOpen] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  const [options, setOptions] = useState(() => readOptions(question.options));
+/**
+ * Owns the editable answer options. It is remounted through a `key` built from
+ * the saved options, so a refresh that actually changed them re-syncs the
+ * fields while leaving the surrounding form open.
+ */
+function QuestionOptionsEditor({ initialOptions }: { initialOptions: string[] }) {
+  const [options, setOptions] = useState(() => initialOptions.map(createOptionDraft));
 
-  const handleOptionChange = (index: number, value: string) => {
-    setOptions((current) => current.map((option, optionIndex) => (
-      optionIndex === index ? value : option
+  const handleOptionChange = (id: string, value: string) => {
+    setOptions((current) => current.map((option) => (
+      option.id === id ? { ...option, text: value } : option
     )));
   };
 
-  const handleRemoveOption = (index: number) => {
-    setOptions((current) => current.filter((_, optionIndex) => optionIndex !== index));
+  const handleRemoveOption = (id: string) => {
+    setOptions((current) => current.filter((option) => option.id !== id));
   };
+
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h4 className="text-xs font-black uppercase tracking-wide text-slate-500">Answer options</h4>
+          <p className="text-xs font-semibold text-slate-400">
+            Leave empty for grid-in questions. Use at least two options for multiple choice.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setOptions((current) => [...current, createOptionDraft('')])}
+          className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-3 py-2 text-xs font-black text-white transition hover:bg-blue-600"
+        >
+          <Plus className="h-4 w-4" />
+          Add option
+        </button>
+      </div>
+
+      {options.length > 0 ? (
+        <div className="grid gap-3">
+          {options.map((option, index) => (
+            <div key={option.id} className="flex gap-3">
+              <span className="mt-2 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-sm font-black text-slate-500">
+                {String.fromCharCode(65 + index)}
+              </span>
+              <textarea
+                name="options"
+                value={option.text}
+                onChange={(event) => handleOptionChange(option.id, event.target.value)}
+                rows={2}
+                className="min-h-20 flex-1 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold leading-relaxed text-slate-900 outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+              />
+              <button
+                type="button"
+                onClick={() => handleRemoveOption(option.id)}
+                className="mt-2 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-slate-400 transition hover:bg-red-50 hover:text-red-600"
+                aria-label={`Remove option ${String.fromCharCode(65 + index)}`}
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-5 text-center text-xs font-bold text-slate-400">
+          No options. This question will be treated as a grid-in answer.
+        </div>
+      )}
+    </div>
+  );
+}
+
+function QuestionEditor({ question }: { question: AdminQuestion }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const savedOptions = useMemo(() => readOptions(question.options), [question.options]);
+  // Version of the saved data, not a random value: the fields reset only when
+  // the options themselves changed.
+  const savedOptionsVersion = useMemo(
+    () => `${savedOptions.length}:${savedOptions.join('\u0000')}`,
+    [savedOptions]
+  );
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     setIsSaving(true);
+    // On success the action's own `refresh()` re-renders this row, which is what
+    // re-keys `QuestionOptionsEditor` when the saved options changed.
     const res = await updateQuestion(question.id, new FormData(event.currentTarget));
     if (!res.success) {
       alert('Failed to update question: ' + res.error);
-    } else {
-      router.refresh();
     }
     setIsSaving(false);
   };
@@ -287,7 +369,7 @@ function QuestionEditor({ question }: { question: AdminQuestion }) {
             <span className="rounded-full bg-white px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-slate-500">
               Question {question.order}
             </span>
-            {readOptions(question.options).length === 0 && (
+            {savedOptions.length === 0 && (
               <span className="rounded-full bg-blue-100 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-blue-700">
                 Grid-in
               </span>
@@ -319,55 +401,7 @@ function QuestionEditor({ question }: { question: AdminQuestion }) {
             />
           </label>
 
-          <div className="space-y-3">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <h4 className="text-xs font-black uppercase tracking-wide text-slate-500">Answer options</h4>
-                <p className="text-xs font-semibold text-slate-400">
-                  Leave empty for grid-in questions. Use at least two options for multiple choice.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setOptions((current) => [...current, ''])}
-                className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-3 py-2 text-xs font-black text-white transition hover:bg-blue-600"
-              >
-                <Plus className="h-4 w-4" />
-                Add option
-              </button>
-            </div>
-
-            {options.length > 0 ? (
-              <div className="grid gap-3">
-                {options.map((option, index) => (
-                  <div key={index} className="flex gap-3">
-                    <span className="mt-2 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-sm font-black text-slate-500">
-                      {String.fromCharCode(65 + index)}
-                    </span>
-                    <textarea
-                      name="options"
-                      value={option}
-                      onChange={(event) => handleOptionChange(index, event.target.value)}
-                      rows={2}
-                      className="min-h-20 flex-1 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold leading-relaxed text-slate-900 outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveOption(index)}
-                      className="mt-2 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-slate-400 transition hover:bg-red-50 hover:text-red-600"
-                      aria-label={`Remove option ${String.fromCharCode(65 + index)}`}
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-5 text-center text-xs font-bold text-slate-400">
-                No options. This question will be treated as a grid-in answer.
-              </div>
-            )}
-          </div>
+          <QuestionOptionsEditor key={savedOptionsVersion} initialOptions={savedOptions} />
 
           <div className="grid gap-4 md:grid-cols-2">
             <label className="block">
@@ -442,37 +476,219 @@ function QuestionEditor({ question }: { question: AdminQuestion }) {
   );
 }
 
+type TestRowProps = {
+  test: AdminTest;
+  collections: TestCollectionOption[];
+  categoryLabels: Map<string, string>;
+  isOpen: boolean;
+  isDeleting: boolean;
+  isSavingVisibility: boolean;
+  onToggleOpen: (testId: string) => void;
+  onToggleVisibility: (testId: string, visible: boolean) => void;
+  onDelete: (testId: string) => void;
+};
+
+const TestRow = memo(function TestRow({
+  test,
+  collections,
+  categoryLabels,
+  isOpen,
+  isDeleting,
+  isSavingVisibility,
+  onToggleOpen,
+  onToggleVisibility,
+  onDelete,
+}: TestRowProps) {
+  const category = getTestCategory(test);
+  const categoryLabel = category
+    ? categoryLabels.get(category) ?? getCategoryLabel(category, collections)
+    : getCategoryLabel(category, collections);
+  const moduleBadge = formatModuleBadge(test);
+  const questions = test.questions;
+  const hasLoadedQuestions = Array.isArray(questions);
+
+  return (
+    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-all hover:border-blue-200">
+      <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
+        <button
+          type="button"
+          onClick={() => onToggleOpen(test.id)}
+          className="flex min-w-0 flex-1 items-start gap-3 text-left"
+        >
+          <span className="mt-1 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-500">
+            <ChevronDown className={`h-5 w-5 transition ${isOpen ? 'rotate-180' : ''}`} />
+          </span>
+          <span className="min-w-0">
+            <span className="flex flex-wrap items-center gap-2">
+              <span className="font-black text-slate-900">{test.title}</span>
+              <span className={`rounded-full px-2 py-0.5 text-[10px] font-black uppercase ${
+                category ? 'bg-blue-100 text-blue-700' : 'bg-slate-200 text-slate-600'
+              }`}>
+                {categoryLabel}
+              </span>
+              {test.isFree && (
+                <span className="rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-black uppercase text-green-700">Free</span>
+              )}
+              <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-black uppercase ${
+                test.visible
+                  ? 'bg-blue-100 text-blue-700'
+                  : 'bg-slate-200 text-slate-600'
+              }`}>
+                {test.visible ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
+                {test.visible ? 'Shown' : 'Hidden'}
+              </span>
+              <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-black uppercase text-slate-600">
+                <Clock3 className="h-3 w-3" />
+                {formatDuration(test.durationSeconds)}
+              </span>
+              {moduleBadge && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-black uppercase text-blue-700">
+                  <Layers className="h-3 w-3" />
+                  {moduleBadge}
+                </span>
+              )}
+              <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-black uppercase text-slate-600">
+                <Repeat2 className="h-3 w-3" />
+                {test.maxAttempts} attempts
+              </span>
+            </span>
+            <span className="mt-1 block text-xs font-bold text-slate-400">
+              {test._count.questions} questions | Uploaded {UPLOADED_DATE_FORMAT.format(new Date(test.createdAt))}
+            </span>
+          </span>
+        </button>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => onToggleVisibility(test.id, !test.visible)}
+            disabled={isSavingVisibility}
+            className={`inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-black transition-all disabled:opacity-50 ${
+              test.visible
+                ? 'text-slate-500 hover:bg-amber-50 hover:text-amber-600'
+                : 'text-blue-600 hover:bg-blue-50'
+            }`}
+          >
+            {isSavingVisibility ? (
+              <Loader2 className="h-5 w-5 animate-spin" />
+            ) : test.visible ? (
+              <EyeOff className="h-5 w-5" />
+            ) : (
+              <Eye className="h-5 w-5" />
+            )}
+            {test.visible ? 'Hide' : 'Show'}
+          </button>
+
+          <Link
+            href={`/exam/${test.id}/pdf`}
+            className="inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-black text-slate-500 transition-all hover:bg-blue-50 hover:text-blue-600"
+          >
+            <FileDown className="h-5 w-5" />
+            PDF
+          </Link>
+
+          <button
+            type="button"
+            onClick={() => onDelete(test.id)}
+            disabled={isDeleting}
+            className="inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-black text-slate-400 transition-all hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
+          >
+            {isDeleting ? (
+              <Loader2 className="h-5 w-5 animate-spin" />
+            ) : (
+              <Trash2 className="h-5 w-5" />
+            )}
+            Delete
+          </button>
+        </div>
+      </div>
+
+      {isOpen && (
+        <div className="space-y-3 border-t border-slate-100 bg-slate-50 p-4 sm:p-5">
+          <TestSettingsEditor test={test} collections={collections} />
+
+          {hasLoadedQuestions ? (
+            questions.length > 0 ? (
+              questions.map((question) => (
+                <QuestionEditor key={question.id} question={question} />
+              ))
+            ) : (
+              <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-6 text-center text-sm font-bold text-slate-400">
+                This test has no questions.
+              </div>
+            )
+          ) : (
+            <Link
+              href={`/admin/tests/${test.id}`}
+              prefetch={false}
+              className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-blue-100 bg-white px-5 py-4 text-sm font-black text-blue-600 transition hover:border-blue-200 hover:bg-blue-50"
+            >
+              <Edit3 className="h-4 w-4" />
+              Open question editor
+            </Link>
+          )}
+        </div>
+      )}
+    </div>
+  );
+});
+
 export default function TestList({ tests, collections, initialOpenTestId = null }: TestListProps) {
-  const router = useRouter();
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [savingVisibilityId, setSavingVisibilityId] = useState<string | null>(null);
   const [openTestId, setOpenTestId] = useState<string | null>(initialOpenTestId);
-  const visibleTestCount = tests.filter((test) => test.visible).length;
+  const [, startTransition] = useTransition();
+  // Only the toggled test gets a new object, so every other row keeps its identity
+  // and stays out of the re-render.
+  const [optimisticTests, applyOptimisticVisibility] = useOptimistic(
+    tests,
+    (current: AdminTest[], change: { id: string; visible: boolean }) => current.map((test) => (
+      test.id === change.id ? { ...test, visible: change.visible } : test
+    ))
+  );
+  const categoryLabels = useMemo(
+    () => new Map(collections.map((collection) => [collection.value as string, collection.label])),
+    [collections]
+  );
+  const visibleTestCount = optimisticTests.filter((test) => test.visible).length;
 
-  const handleDelete = async (id: string) => {
+  const handleToggleOpen = useCallback((id: string) => {
+    setOpenTestId((current) => current === id ? null : id);
+  }, []);
+
+  const handleDelete = useCallback((id: string) => {
     if (!confirm('Are you sure you want to delete this test? All questions and results will be lost.')) return;
 
     setDeletingId(id);
-    const res = await deleteTest(id);
-    if (!res.success) {
-      alert('Failed to delete test: ' + res.error);
-    } else {
-      router.refresh();
-      setOpenTestId((current) => current === id ? null : current);
-    }
-    setDeletingId(null);
-  };
+    startTransition(async () => {
+      // `deleteTest` calls `refresh()` on the server, so the new list is part of
+      // this action's response and the transition stays pending until it lands.
+      const res = await deleteTest(id);
+      if (!res.success) {
+        alert('Failed to delete test: ' + res.error);
+      } else {
+        setOpenTestId((current) => current === id ? null : current);
+      }
+      setDeletingId(null);
+    });
+  }, []);
 
-  const handleVisibilityToggle = async (test: AdminTest) => {
-    setSavingVisibilityId(test.id);
-    const res = await updateTestVisibility(test.id, !test.visible);
-    if (!res.success) {
-      alert('Failed to update visibility: ' + res.error);
-    } else {
-      router.refresh();
-    }
-    setSavingVisibilityId(null);
-  };
+  const handleVisibilityToggle = useCallback((id: string, visible: boolean) => {
+    setSavingVisibilityId(id);
+    startTransition(async () => {
+      applyOptimisticVisibility({ id, visible });
+      const res = await updateTestVisibility(id, visible);
+      if (!res.success) {
+        // The action reports failure instead of throwing, so the optimistic value
+        // has to be dropped here: leaving the transition restores the server state.
+        alert('Failed to update visibility: ' + res.error);
+      }
+      // On success the action's `refresh()` sends the updated row back in the
+      // same response, so the optimistic value is replaced by the server value
+      // when the transition ends - no intermediate flash of the old state.
+      setSavingVisibilityId(null);
+    });
+  }, [applyOptimisticVisibility]);
 
   return (
     <div className="mt-12 space-y-6">
@@ -480,148 +696,30 @@ export default function TestList({ tests, collections, initialOpenTestId = null 
         <h2 className="text-2xl font-black tracking-tight text-slate-900">Existing Tests</h2>
         <span className="inline-flex items-center gap-2 rounded-full bg-blue-50 px-4 py-2 text-xs font-black uppercase tracking-widest text-blue-700">
           <Eye className="h-4 w-4" />
-          {visibleTestCount} shown / {tests.length} total
+          {visibleTestCount} shown / {optimisticTests.length} total
         </span>
       </div>
 
-      {tests.length === 0 ? (
+      {optimisticTests.length === 0 ? (
         <div className="rounded-3xl border border-dashed border-slate-200 bg-white p-8 text-center font-bold text-slate-400">
           No tests uploaded yet.
         </div>
       ) : (
         <div className="grid gap-4">
-          {tests.map((test) => {
-            const isOpen = openTestId === test.id;
-            const category = getTestCategory(test);
-            const categoryLabel = getCategoryLabel(category, collections);
-            const questions = test.questions;
-            const hasLoadedQuestions = Array.isArray(questions);
-
-            return (
-              <div key={test.id} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-all hover:border-blue-200">
-                <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
-                  <button
-                    type="button"
-                    onClick={() => setOpenTestId((current) => current === test.id ? null : test.id)}
-                    className="flex min-w-0 flex-1 items-start gap-3 text-left"
-                  >
-                    <span className="mt-1 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-500">
-                      <ChevronDown className={`h-5 w-5 transition ${isOpen ? 'rotate-180' : ''}`} />
-                    </span>
-                    <span className="min-w-0">
-                      <span className="flex flex-wrap items-center gap-2">
-                        <span className="font-black text-slate-900">{test.title}</span>
-                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-black uppercase ${
-                          category ? 'bg-blue-100 text-blue-700' : 'bg-slate-200 text-slate-600'
-                        }`}>
-                          {categoryLabel}
-                        </span>
-                        {test.isFree && (
-                          <span className="rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-black uppercase text-green-700">Free</span>
-                        )}
-                        <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-black uppercase ${
-                          test.visible
-                            ? 'bg-blue-100 text-blue-700'
-                            : 'bg-slate-200 text-slate-600'
-                        }`}>
-                          {test.visible ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
-                          {test.visible ? 'Shown' : 'Hidden'}
-                        </span>
-                        <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-black uppercase text-slate-600">
-                          <Clock3 className="h-3 w-3" />
-                          {formatDuration(test.durationSeconds)}
-                        </span>
-                        {formatModuleBadge(test) && (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-black uppercase text-blue-700">
-                            <Layers className="h-3 w-3" />
-                            {formatModuleBadge(test)}
-                          </span>
-                        )}
-                        <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-black uppercase text-slate-600">
-                          <Repeat2 className="h-3 w-3" />
-                          {test.maxAttempts} attempts
-                        </span>
-                      </span>
-                      <span className="mt-1 block text-xs font-bold text-slate-400">
-                        {test._count.questions} questions | Uploaded {new Date(test.createdAt).toLocaleDateString()}
-                      </span>
-                    </span>
-                  </button>
-
-                  <div className="flex flex-wrap items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => handleVisibilityToggle(test)}
-                      disabled={savingVisibilityId === test.id}
-                      className={`inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-black transition-all disabled:opacity-50 ${
-                        test.visible
-                          ? 'text-slate-500 hover:bg-amber-50 hover:text-amber-600'
-                          : 'text-blue-600 hover:bg-blue-50'
-                      }`}
-                    >
-                      {savingVisibilityId === test.id ? (
-                        <Loader2 className="h-5 w-5 animate-spin" />
-                      ) : test.visible ? (
-                        <EyeOff className="h-5 w-5" />
-                      ) : (
-                        <Eye className="h-5 w-5" />
-                      )}
-                      {test.visible ? 'Hide' : 'Show'}
-                    </button>
-
-                    <Link
-                      href={`/exam/${test.id}/pdf`}
-                      className="inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-black text-slate-500 transition-all hover:bg-blue-50 hover:text-blue-600"
-                    >
-                      <FileDown className="h-5 w-5" />
-                      PDF
-                    </Link>
-
-                    <button
-                      type="button"
-                      onClick={() => handleDelete(test.id)}
-                      disabled={deletingId === test.id}
-                      className="inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-black text-slate-400 transition-all hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
-                    >
-                      {deletingId === test.id ? (
-                        <Loader2 className="h-5 w-5 animate-spin" />
-                      ) : (
-                        <Trash2 className="h-5 w-5" />
-                      )}
-                      Delete
-                    </button>
-                  </div>
-                </div>
-
-                {isOpen && (
-                  <div className="space-y-3 border-t border-slate-100 bg-slate-50 p-4 sm:p-5">
-                    <TestSettingsEditor test={test} collections={collections} />
-
-                    {hasLoadedQuestions ? (
-                      questions.length > 0 ? (
-                        questions.map((question) => (
-                          <QuestionEditor key={question.id} question={question} />
-                        ))
-                      ) : (
-                        <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-6 text-center text-sm font-bold text-slate-400">
-                          This test has no questions.
-                        </div>
-                      )
-                    ) : (
-                      <Link
-                        href={`/admin/tests/${test.id}`}
-                        prefetch={false}
-                        className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-blue-100 bg-white px-5 py-4 text-sm font-black text-blue-600 transition hover:border-blue-200 hover:bg-blue-50"
-                      >
-                        <Edit3 className="h-4 w-4" />
-                        Open question editor
-                      </Link>
-                    )}
-                  </div>
-                )}
-              </div>
-            );
-          })}
+          {optimisticTests.map((test) => (
+            <TestRow
+              key={test.id}
+              test={test}
+              collections={collections}
+              categoryLabels={categoryLabels}
+              isOpen={openTestId === test.id}
+              isDeleting={deletingId === test.id}
+              isSavingVisibility={savingVisibilityId === test.id}
+              onToggleOpen={handleToggleOpen}
+              onToggleVisibility={handleVisibilityToggle}
+              onDelete={handleDelete}
+            />
+          ))}
         </div>
       )}
     </div>

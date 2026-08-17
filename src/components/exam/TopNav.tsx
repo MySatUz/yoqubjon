@@ -3,6 +3,7 @@
 import React, { useEffect, useRef } from 'react';
 import { useExamStore } from '@/store/useExamStore';
 import ReferenceModal from '@/components/exam/ReferenceModal';
+import { flushPendingAnswer } from '@/components/exam/pendingAnswer';
 import { useExamSubmit } from '@/components/exam/useExamSubmit';
 import type { ExamModuleSpec } from '@/lib/examModules';
 import { BookOpen, Calculator } from 'lucide-react';
@@ -13,17 +14,17 @@ interface TopNavProps {
 }
 
 export default function TopNav({ testId, modules }: TopNavProps) {
-  const {
-    timeLeftSeconds,
-    modulePhase,
-    currentModuleIndex,
-    finishCurrentModule,
-    isCalculatorOpen,
-    setCalculatorOpen,
-    isReferenceOpen,
-    setReferenceOpen,
-    currentQuestionIndex,
-  } = useExamStore();
+  // The clock lives here, so this is the one component that has to follow
+  // `timeLeftSeconds` - the auto handover below depends on it.
+  const timeLeftSeconds = useExamStore((state) => state.timeLeftSeconds);
+  const modulePhase = useExamStore((state) => state.modulePhase);
+  const currentModuleIndex = useExamStore((state) => state.currentModuleIndex);
+  const currentQuestionIndex = useExamStore((state) => state.currentQuestionIndex);
+  const isCalculatorOpen = useExamStore((state) => state.isCalculatorOpen);
+  const isReferenceOpen = useExamStore((state) => state.isReferenceOpen);
+  const finishCurrentModule = useExamStore((state) => state.finishCurrentModule);
+  const setCalculatorOpen = useExamStore((state) => state.setCalculatorOpen);
+  const setReferenceOpen = useExamStore((state) => state.setReferenceOpen);
   const { isSubmitting, submitExam } = useExamSubmit(testId);
   const autoEndedModuleRef = useRef<number | null>(null);
 
@@ -37,6 +38,7 @@ export default function TopNav({ testId, modules }: TopNavProps) {
 
     // Time is up: hand over to the next module, or submit the whole test.
     autoEndedModuleRef.current = currentModuleIndex;
+    flushPendingAnswer();
 
     if (isLastModule) {
       void submitExam();
@@ -53,6 +55,8 @@ export default function TopNav({ testId, modules }: TopNavProps) {
   ]);
 
   const handleEndModule = () => {
+    flushPendingAnswer();
+
     if (isLastModule) {
       void submitExam(
         timeLeftSeconds === 0

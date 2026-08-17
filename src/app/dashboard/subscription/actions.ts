@@ -2,7 +2,7 @@
 
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
-import { revalidatePath } from 'next/cache';
+import { refresh } from 'next/cache';
 
 export async function cancelActiveSubscription() {
   const session = await auth();
@@ -22,9 +22,10 @@ export async function cancelActiveSubscription() {
     },
   });
 
-  revalidatePath('/dashboard/subscription');
-  revalidatePath('/dashboard/profile');
-  revalidatePath('/dashboard');
+  // Every dashboard page reads the session, so all three were dynamic and had
+  // no cache entry to invalidate; the fresh payload now comes back with this
+  // action's response.
+  refresh();
 
   return { success: true, canceled: result.count };
 }

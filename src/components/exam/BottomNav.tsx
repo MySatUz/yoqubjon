@@ -1,8 +1,9 @@
 "use client";
 
-import React from 'react';
+import React, { memo, useCallback } from 'react';
 import { Check, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import { useExamStore } from '@/store/useExamStore';
+import { flushPendingAnswer } from '@/components/exam/pendingAnswer';
 import { useExamSubmit } from '@/components/exam/useExamSubmit';
 import type { ExamModuleSpec } from '@/lib/examModules';
 
@@ -11,16 +12,54 @@ interface BottomNavProps {
   modules: ExamModuleSpec[];
 }
 
+interface PaletteButtonProps {
+  index: number;
+  isCurrent: boolean;
+  isMarked: boolean;
+  isAnswered: boolean;
+  onSelect: (index: number) => void;
+}
+
+/**
+ * A module has 22-27 of these. Only the two buttons around a jump actually
+ * change, so they are memoized on plain booleans; `onSelect` is stable and
+ * receives the index, which keeps the props shallow-equal between renders.
+ */
+const PaletteButton = memo(function PaletteButton({
+  index,
+  isCurrent,
+  isMarked,
+  isAnswered,
+  onSelect,
+}: PaletteButtonProps) {
+  return (
+    <button
+      onClick={() => onSelect(index)}
+      className={`flex-shrink-0 w-8 h-8 rounded-xl text-xs font-black transition-all flex items-center justify-center border sm:h-9 sm:w-9 sm:text-sm ${
+        isCurrent
+          ? 'border-blue-600 bg-blue-600 text-white shadow-md shadow-blue-200 scale-105'
+          : isAnswered
+            ? 'border-emerald-200 text-emerald-700 bg-emerald-50'
+          : isMarked
+            ? 'border-red-200 text-red-600 bg-red-50'
+            : 'border-slate-200 text-slate-600 bg-white hover:border-slate-300 hover:text-slate-900'
+      }`}
+    >
+      {index + 1}
+    </button>
+  );
+});
+
 export default function BottomNav({ testId, modules }: BottomNavProps) {
-  const {
-    currentQuestionIndex,
-    setCurrentQuestionIndex,
-    markedForReview,
-    toggleMarkForReview,
-    answers,
-    currentModuleIndex,
-    finishCurrentModule,
-  } = useExamStore();
+  // No subscription to the clock here: the palette must not repaint every second.
+  const currentQuestionIndex = useExamStore((state) => state.currentQuestionIndex);
+  const currentModuleIndex = useExamStore((state) => state.currentModuleIndex);
+  // These two references only change when an answer or a mark changes.
+  const answers = useExamStore((state) => state.answers);
+  const markedForReview = useExamStore((state) => state.markedForReview);
+  const setCurrentQuestionIndex = useExamStore((state) => state.setCurrentQuestionIndex);
+  const toggleMarkForReview = useExamStore((state) => state.toggleMarkForReview);
+  const finishCurrentModule = useExamStore((state) => state.finishCurrentModule);
   const { isSubmitting, submitExam } = useExamSubmit(testId);
 
   const moduleCount = modules.length;
@@ -31,7 +70,15 @@ export default function BottomNav({ testId, modules }: BottomNavProps) {
   const currentQuestionId = questionIds[currentQuestionIndex] ?? questionIds[0];
   const isLastQuestion = currentQuestionIndex === totalQuestions - 1;
 
+  // Stable across renders, so `PaletteButton` stays memoized.
+  const handleSelectQuestion = useCallback(
+    (index: number) => setCurrentQuestionIndex(index),
+    [setCurrentQuestionIndex]
+  );
+
   const handleNextOrFinish = () => {
+    flushPendingAnswer();
+
     if (!isLastQuestion) {
       setCurrentQuestionIndex(Math.min(totalQuestions - 1, currentQuestionIndex + 1));
       return;
@@ -54,28 +101,16 @@ export default function BottomNav({ testId, modules }: BottomNavProps) {
   return (
     <footer className="min-h-16 bg-white border-t border-slate-200 flex items-center gap-2 px-2 sm:gap-3 sm:px-5 shrink-0 z-10 sticky bottom-0 shadow-[0_-12px_30px_rgba(15,23,42,0.06)]">
       <div className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto overscroll-x-contain rounded-2xl bg-slate-50/80 px-1.5 py-2 no-scrollbar sm:gap-1.5 sm:px-2">
-        {questionIds.map((questionId, i) => {
-          const isCurrent = i === currentQuestionIndex;
-          const isMarked = markedForReview[questionId];
-          const isAnswered = Boolean(answers[questionId]?.trim());
-          return (
-            <button
-              key={questionId}
-              onClick={() => setCurrentQuestionIndex(i)}
-              className={`flex-shrink-0 w-8 h-8 rounded-xl text-xs font-black transition-all flex items-center justify-center border sm:h-9 sm:w-9 sm:text-sm ${
-                isCurrent
-                  ? 'border-blue-600 bg-blue-600 text-white shadow-md shadow-blue-200 scale-105'
-                  : isAnswered
-                    ? 'border-emerald-200 text-emerald-700 bg-emerald-50'
-                  : isMarked
-                    ? 'border-red-200 text-red-600 bg-red-50'
-                    : 'border-slate-200 text-slate-600 bg-white hover:border-slate-300 hover:text-slate-900'
-              }`}
-            >
-              {i + 1}
-            </button>
-          );
-        })}
+        {questionIds.map((questionId, i) => (
+          <PaletteButton
+            key={questionId}
+            index={i}
+            isCurrent={i === currentQuestionIndex}
+            isMarked={Boolean(markedForReview[questionId])}
+            isAnswered={Boolean(answers[questionId]?.trim())}
+            onSelect={handleSelectQuestion}
+          />
+        ))}
       </div>
 
       <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">

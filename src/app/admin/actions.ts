@@ -4,8 +4,10 @@ import type { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { parseTexFile } from '@/lib/texParser';
 import { getSupabaseAdmin } from '@/lib/supabase';
-import { revalidatePath } from 'next/cache';
+import { refresh, revalidateTag } from 'next/cache';
 import { requireAdmin } from '@/lib/admin';
+import { TEST_COLLECTIONS_CACHE_TAG } from '@/lib/testCollections';
+import { examQuestionsCacheTag } from '@/lib/examQuestions';
 import {
   EXAM_DURATION_SECONDS,
   MAX_EXAM_DURATION_SECONDS,
@@ -18,7 +20,7 @@ import {
   isTestCategory,
   normalizeCategoryId,
 } from '@/lib/testCatalog';
-import { DEFAULT_TEST_MAX_ATTEMPTS, normalizeTestMaxAttempts } from '@/lib/testAttempts';
+import { normalizeTestMaxAttempts } from '@/lib/testAttempts';
 import {
   MAX_MODULE_COUNT,
   MIN_MODULE_COUNT,
@@ -127,11 +129,12 @@ export async function uploadTest(formData: FormData) {
       : '';
     const isFree = formData.get('isFree') === 'true';
     const visible = readBooleanField(formData, 'isVisible', true);
-    const testCategory = await resolveCollectionCategory(formData.get('testCategory'));
+    const collection = await resolveCollectionCategory(formData.get('testCategory'));
+    const testCategory = collection.category;
     const examFormat = normalizeExamFormat(formData);
     const maxAttempts = normalizeTestMaxAttempts(
       formData.get('maxAttempts'),
-      await getCollectionMaxAttempts(testCategory)
+      collection.maxAttempts
     );
     const texFile = formData.get('texFile') as File;
     const imageFiles = formData.getAll('images') as File[];
@@ -235,8 +238,15 @@ export async function uploadTest(formData: FormData) {
       }
     });
 
-    revalidatePath('/admin');
-    revalidatePath('/dashboard');
+    // A re-uploaded test may reuse an existing id, so the pre-rendered question
+    // HTML for that id has to go. `{ expire: 0 }` = the very next exam start
+    // re-renders instead of serving the old questions.
+    revalidateTag(examQuestionsCacheTag(testId), { expire: 0 });
+    // Every admin page is `force-dynamic`, so there is no route cache for
+    // `revalidatePath` to clear. `refresh()` re-renders the page that called the
+    // action and ships the new RSC payload in this same response, which removes
+    // the extra `router.refresh()` round-trip the client used to make.
+    refresh();
     return { success: true, testId };
 
   } catch (error: unknown) {
@@ -255,8 +265,8 @@ export async function deleteTest(testId: string) {
       await tx.test.delete({ where: { id: testId } });
     });
 
-    revalidatePath('/admin');
-    revalidatePath('/dashboard');
+    revalidateTag(examQuestionsCacheTag(testId), { expire: 0 });
+    refresh();
     return { success: true };
   } catch (error: unknown) {
     console.error("Delete Test Error:", error);
@@ -333,43 +343,46 @@ function normalizeDurationSeconds(value: FormDataEntryValue | null) {
   return minutes * 60;
 }
 
+/**
+ * Resolves the section a test belongs to and returns that section's attempt
+ * limit alongside it.
+ *
+ * The limit used to be a second `testCollectionVisibility` read right after this
+ * one; it comes from the same row, so it is selected here instead. Callers keep
+ * passing it to `normalizeTestMaxAttempts` as the *fallback*, which still only
+ * applies when the form left the field empty.
+ */
 async function resolveCollectionCategory(value: FormDataEntryValue | null) {
   const collections = await prisma.testCollectionVisibility.findMany({
     orderBy: [
       { position: 'asc' },
       { category: 'asc' },
     ],
-    select: { category: true },
+    select: { category: true, maxAttempts: true },
   });
 
   if (collections.length === 0) {
     throw new Error('Create at least one section before uploading tests');
   }
 
-  const collectionSet = new Set(collections.map((collection) => collection.category));
   if (typeof value === 'string' && value.trim()) {
     if (!isTestCategory(value)) {
       throw new Error('Selected section is invalid');
     }
 
     const requestedCategory = normalizeCategoryId(value);
-    if (collectionSet.has(requestedCategory)) {
-      return requestedCategory;
+    const requested = collections.find((collection) => collection.category === requestedCategory);
+    if (requested) {
+      return { category: requestedCategory, maxAttempts: requested.maxAttempts };
     }
 
     throw new Error('Selected section no longer exists');
   }
 
-  return collectionSet.has('STANDARD') ? 'STANDARD' : collections[0].category;
-}
+  const fallback = collections.find((collection) => collection.category === 'STANDARD')
+    ?? collections[0];
 
-async function getCollectionMaxAttempts(category: string) {
-  const collection = await prisma.testCollectionVisibility.findUnique({
-    where: { category },
-    select: { maxAttempts: true },
-  });
-
-  return collection?.maxAttempts ?? DEFAULT_TEST_MAX_ATTEMPTS;
+  return { category: fallback.category, maxAttempts: fallback.maxAttempts };
 }
 
 export async function updateSectionSettings(formData: FormData) {
@@ -429,8 +442,12 @@ export async function updateSectionSettings(formData: FormData) {
 
     await prisma.$transaction(updates);
 
-    revalidatePath('/admin');
-    revalidatePath('/dashboard');
+    // `{ expire: 0 }` = immediate expiry, so a hidden section disappears on the
+    // very next request instead of after a stale-while-revalidate round.
+    revalidateTag(TEST_COLLECTIONS_CACHE_TAG, { expire: 0 });
+    // Order matters: the tag is expired first, so the re-render triggered by
+    // `refresh()` reads the collections back from the database, not the cache.
+    refresh();
     return { success: true };
   } catch (error: unknown) {
     console.error('Update Section Settings Error:', error);
@@ -474,8 +491,8 @@ export async function createTestCollection(formData: FormData) {
       },
     });
 
-    revalidatePath('/admin');
-    revalidatePath('/dashboard');
+    revalidateTag(TEST_COLLECTIONS_CACHE_TAG, { expire: 0 });
+    refresh();
     return { success: true };
   } catch (error: unknown) {
     console.error('Create Collection Error:', error);
@@ -501,8 +518,8 @@ export async function deleteTestCollection(categoryValue: string) {
       where: { category },
     });
 
-    revalidatePath('/admin');
-    revalidatePath('/dashboard');
+    revalidateTag(TEST_COLLECTIONS_CACHE_TAG, { expire: 0 });
+    refresh();
     return { success: true };
   } catch (error: unknown) {
     console.error('Delete Collection Error:', error);
@@ -519,20 +536,26 @@ export async function updateTestDetails(testId: string, formData: FormData) {
     }
 
     const title = normalizeRequiredText(formData.get('title'), 'Test title');
-    const testCategory = await resolveCollectionCategory(formData.get('testCategory'));
+    // Neither read depends on the other, so they share one round-trip. Errors
+    // still surface in the original order: an invalid section rejects the whole
+    // `Promise.all`, and only then is the test row inspected.
+    const [collection, existingTest] = await Promise.all([
+      resolveCollectionCategory(formData.get('testCategory')),
+      prisma.test.findUnique({
+        where: { id: testId },
+        select: {
+          description: true,
+          visible: true,
+          moduleDurations: true,
+        },
+      }),
+    ]);
+    const testCategory = collection.category;
     const maxAttempts = normalizeTestMaxAttempts(
       formData.get('maxAttempts'),
-      await getCollectionMaxAttempts(testCategory)
+      collection.maxAttempts
     );
     const isFree = formData.get('isFree') === 'true';
-    const existingTest = await prisma.test.findUnique({
-      where: { id: testId },
-      select: {
-        description: true,
-        visible: true,
-        moduleDurations: true,
-      },
-    });
 
     if (!existingTest) {
       throw new Error('Test not found');
@@ -575,9 +598,8 @@ export async function updateTestDetails(testId: string, formData: FormData) {
       },
     });
 
-    revalidatePath('/admin');
-    revalidatePath('/dashboard');
-    revalidatePath(`/exam/${testId}`);
+    revalidateTag(examQuestionsCacheTag(testId), { expire: 0 });
+    refresh();
     return { success: true };
   } catch (error: unknown) {
     console.error('Update Test Details Error:', error);
@@ -599,9 +621,9 @@ export async function updateTestVisibility(testId: string, visible: boolean) {
       select: { id: true },
     });
 
-    revalidatePath('/admin');
-    revalidatePath('/dashboard');
-    revalidatePath(`/exam/${testId}`);
+    // `/exam/[id]` reads the session, so it is dynamic as well: nothing cached
+    // to invalidate there either.
+    refresh();
     return { success: true };
   } catch (error: unknown) {
     console.error('Update Test Visibility Error:', error);
@@ -647,9 +669,10 @@ export async function updateQuestion(questionId: string, formData: FormData) {
       },
     });
 
-    revalidatePath('/admin');
-    revalidatePath('/dashboard');
-    revalidatePath(`/exam/${existingQuestion.testId}`);
+    // Edited question text has to reach the exam page immediately, so the
+    // pre-rendered HTML for its test is expired here.
+    revalidateTag(examQuestionsCacheTag(existingQuestion.testId), { expire: 0 });
+    refresh();
     return { success: true };
   } catch (error: unknown) {
     console.error('Update Question Error:', error);

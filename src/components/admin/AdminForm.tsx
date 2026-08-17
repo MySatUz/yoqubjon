@@ -30,18 +30,50 @@ type AdminFormProps = {
 
 type ExamFormat = 'modular' | 'single';
 
+/**
+ * Numbers are kept as strings so clearing a field does not produce `NaN` and
+ * make React rewrite the value under the caret. They are parsed on submit.
+ */
 type ModuleDraft = {
-  questions: number;
-  minutes: number;
+  id: string;
+  questions: string;
+  minutes: string;
 };
 
 const MIN_MODULAR_MODULE_COUNT = 2;
 
+/** Uploads run in parallel, but only a few at a time so nothing times out in a queue. */
+const IMAGE_UPLOAD_CONCURRENCY = 4;
+const IMAGE_UPLOAD_TIMEOUT_MS = 60_000;
+const MAX_LISTED_FAILED_UPLOADS = 10;
+
+let moduleDraftCounter = 0;
+
 function createModuleDrafts(count: number): ModuleDraft[] {
-  return Array.from({ length: count }, () => ({
-    questions: DEFAULT_MODULE_QUESTION_COUNT,
-    minutes: Math.round(DEFAULT_MODULE_DURATION_SECONDS / 60),
-  }));
+  return Array.from({ length: count }, () => {
+    moduleDraftCounter += 1;
+
+    return {
+      id: `module-${moduleDraftCounter}`,
+      questions: String(DEFAULT_MODULE_QUESTION_COUNT),
+      minutes: String(Math.round(DEFAULT_MODULE_DURATION_SECONDS / 60)),
+    };
+  });
+}
+
+/** Fields hold raw text while typing, so the value is only turned into a number here. */
+function parseDraftNumber(value: string, fallback: number) {
+  const parsed = Number.parseInt(value, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+function describeFailedUploads(failed: string[], total: number) {
+  const listed = failed.slice(0, MAX_LISTED_FAILED_UPLOADS).join(', ');
+  const rest = failed.length - MAX_LISTED_FAILED_UPLOADS;
+
+  return `Could not upload ${failed.length} of ${total} images: ${listed}${
+    rest > 0 ? ` and ${rest} more` : ''
+  }. Fix them and upload the test again.`;
 }
 
 export default function AdminForm({ collections }: AdminFormProps) {
@@ -58,9 +90,9 @@ export default function AdminForm({ collections }: AdminFormProps) {
   const [examFormat, setExamFormat] = useState<ExamFormat>('modular');
   const [modules, setModules] = useState<ModuleDraft[]>(() => createModuleDrafts(DEFAULT_MODULE_COUNT));
 
-  const updateModule = (index: number, patch: Partial<ModuleDraft>) => {
-    setModules((current) => current.map((module, moduleIndex) => (
-      moduleIndex === index ? { ...module, ...patch } : module
+  const updateModule = (id: string, patch: Partial<ModuleDraft>) => {
+    setModules((current) => current.map((module) => (
+      module.id === id ? { ...module, ...patch } : module
     )));
   };
 
@@ -72,6 +104,7 @@ export default function AdminForm({ collections }: AdminFormProps) {
     const response = await fetch(upload.signedUrl, {
       method: 'PUT',
       body,
+      signal: AbortSignal.timeout(IMAGE_UPLOAD_TIMEOUT_MS),
     });
 
     if (!response.ok) {
@@ -127,14 +160,40 @@ export default function AdminForm({ collections }: AdminFormProps) {
 
         testId = prepareData.testId;
         setStatusText(`Uploading images 0/${imageFiles.length}...`);
+
+        const uploadsByName = new Map(prepareData.uploads.map((upload) => [upload.name, upload]));
+        const queue = [...imageFiles];
+        const failed: string[] = [];
         let completed = 0;
-        await Promise.all(imageFiles.map(async (file) => {
-          const upload = prepareData.uploads?.find((item) => item.name === file.name);
-          if (!upload) throw new Error(`No upload URL for ${file.name}`);
-          await uploadImageToSignedUrl(file, upload);
-          completed += 1;
-          setStatusText(`Uploading images ${completed}/${imageFiles.length}...`);
-        }));
+
+        // Workers pull from a shared queue: a failing file is recorded and the rest
+        // keep going, instead of Promise.all aborting the whole upload.
+        await Promise.all(Array.from(
+          { length: Math.min(IMAGE_UPLOAD_CONCURRENCY, queue.length) },
+          async () => {
+            for (let file = queue.shift(); file; file = queue.shift()) {
+              const upload = uploadsByName.get(file.name);
+              if (!upload) {
+                failed.push(file.name);
+                continue;
+              }
+
+              try {
+                await uploadImageToSignedUrl(file, upload);
+              } catch {
+                failed.push(file.name);
+                continue;
+              }
+
+              completed += 1;
+              setStatusText(`Uploading images ${completed}/${imageFiles.length}...`);
+            }
+          }
+        ));
+
+        if (failed.length > 0) {
+          throw new Error(describeFailedUploads(failed, imageFiles.length));
+        }
 
         uploadedImages = prepareData.uploads.map((upload) => ({
           name: upload.name,
@@ -151,8 +210,14 @@ export default function AdminForm({ collections }: AdminFormProps) {
       serverFormData.set('examFormat', examFormat);
       if (examFormat === 'modular') {
         for (const draft of modules) {
-          serverFormData.append('moduleMinutes', String(draft.minutes));
-          serverFormData.append('moduleQuestions', String(draft.questions));
+          serverFormData.append('moduleMinutes', String(parseDraftNumber(
+            draft.minutes,
+            Math.round(DEFAULT_MODULE_DURATION_SECONDS / 60)
+          )));
+          serverFormData.append('moduleQuestions', String(parseDraftNumber(
+            draft.questions,
+            DEFAULT_MODULE_QUESTION_COUNT
+          )));
         }
       } else if (typeof durationMinutes === 'string') {
         serverFormData.set('durationMinutes', durationMinutes);
@@ -278,7 +343,7 @@ export default function AdminForm({ collections }: AdminFormProps) {
             <div className="mt-4 space-y-3">
               {modules.map((module, index) => (
                 <div
-                  key={index}
+                  key={module.id}
                   className="flex flex-wrap items-center gap-3 rounded-2xl border border-slate-100 bg-white px-4 py-3"
                 >
                   <span className="rounded-full bg-slate-100 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-slate-600">
@@ -293,7 +358,7 @@ export default function AdminForm({ collections }: AdminFormProps) {
                       step={1}
                       required
                       value={module.questions}
-                      onChange={(event) => updateModule(index, { questions: Number(event.target.value) })}
+                      onChange={(event) => updateModule(module.id, { questions: event.target.value })}
                       className="w-20 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-black text-slate-900 outline-none focus:border-blue-400"
                     />
                     <span className="text-xs font-black uppercase tracking-wide text-slate-400">questions</span>
@@ -307,7 +372,7 @@ export default function AdminForm({ collections }: AdminFormProps) {
                       step={1}
                       required
                       value={module.minutes}
-                      onChange={(event) => updateModule(index, { minutes: Number(event.target.value) })}
+                      onChange={(event) => updateModule(module.id, { minutes: event.target.value })}
                       className="w-20 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-black text-slate-900 outline-none focus:border-blue-400"
                     />
                     <span className="text-xs font-black uppercase tracking-wide text-slate-400">minutes</span>
@@ -316,7 +381,7 @@ export default function AdminForm({ collections }: AdminFormProps) {
                   {modules.length > MIN_MODULAR_MODULE_COUNT && (
                     <button
                       type="button"
-                      onClick={() => setModules((current) => current.filter((_, i) => i !== index))}
+                      onClick={() => setModules((current) => current.filter((item) => item.id !== module.id))}
                       className="ml-auto inline-flex h-8 w-8 items-center justify-center rounded-xl text-slate-400 transition hover:bg-red-50 hover:text-red-600"
                       aria-label={`Remove module ${index + 1}`}
                     >
@@ -474,7 +539,7 @@ export default function AdminForm({ collections }: AdminFormProps) {
       </button>
 
       {result?.success && (
-        <div className="p-4 bg-green-50 border border-green-100 rounded-2xl flex items-center gap-3 text-green-700 font-bold animate-in zoom-in-95">
+        <div className="p-4 bg-green-50 border border-green-100 rounded-2xl flex items-center gap-3 text-green-700 font-bold">
           <CheckCircle2 className="w-5 h-5 text-green-500" />
           Test uploaded successfully!
         </div>

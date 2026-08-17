@@ -5,6 +5,7 @@ import { auth } from '@/auth';
 import { buildExamModules } from '@/lib/examModules';
 import { isAdminUser } from '@/lib/admin';
 import { userHasActiveSectionAccess } from '@/lib/sectionAccess';
+import { getExamQuestionsHtml } from '@/lib/examQuestions';
 
 export default async function DynamicExamPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -16,78 +17,74 @@ export default async function DynamicExamPage({ params }: { params: Promise<{ id
 
   const userId = session.user.id;
   const userEmail = session.user.email;
-  let adminCheck: Promise<boolean> | null = null;
-  const getIsAdmin = () => {
-    adminCheck ??= isAdminUser(userId);
-    return adminCheck;
-  };
 
-  const test = await prisma.test.findUnique({
-    where: { id },
-    select: {
-      id: true,
-      isFree: true,
-      visible: true,
-      maxAttempts: true,
-      collectionCategory: true,
-      durationSeconds: true,
-      moduleDurations: true,
-      questions: {
-        orderBy: { order: 'asc' },
-        // Correct answers stay on the server so they never reach the exam page.
-        select: {
-          id: true,
-          content: true,
-          options: true,
-          imageUrl: true,
-          moduleIndex: true,
-        },
+  // None of these five reads depends on another, so they all start at once
+  // instead of forming a five-step waterfall before the first byte. Admins and
+  // free tests now pay for two extra cheap index lookups; the check order below
+  // (notFound -> attempt limit -> subscription) is unchanged, so the redirects
+  // stay exactly the same.
+  //
+  // The questions come from a per-test cache and carry their maths already
+  // rendered to HTML, so the exam bundle no longer ships KaTeX. The test row
+  // itself stays uncached: `visible` and `maxAttempts` gate access and have to
+  // be read fresh.
+  const [test, isAdmin, attemptsUsed, subscription, questions] = await Promise.all([
+    prisma.test.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        isFree: true,
+        visible: true,
+        maxAttempts: true,
+        collectionCategory: true,
+        durationSeconds: true,
+        moduleDurations: true,
       },
-    },
-  });
+    }),
+    isAdminUser(userId),
+    prisma.result.count({
+      where: {
+        userId,
+        testId: id,
+      },
+    }),
+    prisma.subscription.findFirst({
+      where: {
+        userId,
+        isActive: true,
+        expiresAt: { gt: new Date() },
+      },
+      select: { id: true },
+    }),
+    getExamQuestionsHtml(id),
+  ]);
 
   if (!test) {
     notFound();
   }
 
-  const isAdmin = await getIsAdmin();
-
   if (!test.visible && !isAdmin) {
     notFound();
   }
 
-  if (!isAdmin) {
-    const attemptsUsed = await prisma.result.count({
-      where: {
-        userId,
-        testId: test.id,
-      },
-    });
-
-    if (attemptsUsed >= test.maxAttempts) {
-      redirect('/dashboard?attemptLimit=reached');
-    }
+  if (!isAdmin && attemptsUsed >= test.maxAttempts) {
+    redirect('/dashboard?attemptLimit=reached');
   }
 
   if (!test.isFree) {
-    const [subscription, hasSectionAccess] = await Promise.all([
-      prisma.subscription.findFirst({
-        where: {
-          userId,
-          isActive: true,
-          expiresAt: { gt: new Date() },
-        },
-        select: { id: true },
-      }),
-      userHasActiveSectionAccess(userId, userEmail, test.collectionCategory),
-    ]);
+    // Depends on `test.collectionCategory`, so it cannot join the batch above.
+    const hasSectionAccess = await userHasActiveSectionAccess(
+      userId,
+      userEmail,
+      test.collectionCategory
+    );
 
     if (!subscription && !hasSectionAccess && !isAdmin) {
       redirect('/dashboard/subscription');
     }
   }
 
-  const modules = buildExamModules(test, test.questions);
+  const modules = buildExamModules(test, questions);
 
   if (modules.length === 0) {
     notFound();

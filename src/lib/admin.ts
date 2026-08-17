@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
@@ -20,7 +21,14 @@ export function isOwnerSessionUser(user?: { email?: string | null } | null) {
   return isOwnerEmail(user?.email);
 }
 
-export async function isAdminUser(userId?: string | null) {
+/**
+ * Request-scoped memoization: `layout`, `page` and the shell islands all ask for
+ * the same flag, and React does not deduplicate Prisma calls the way it does for
+ * `fetch`. `cache()` lives for exactly one request, so role changes still take
+ * effect on the next page load (reading the role from the JWT instead would
+ * delay them until the user signs in again).
+ */
+export const isAdminUser = cache(async (userId?: string | null) => {
   if (!userId) return false;
 
   const user = await prisma.user.findUnique({
@@ -29,9 +37,9 @@ export async function isAdminUser(userId?: string | null) {
   });
 
   return isAdminSessionUser(user);
-}
+});
 
-export async function isOwnerAdmin(userId?: string | null) {
+export const isOwnerAdmin = cache(async (userId?: string | null) => {
   if (!userId) return false;
 
   const user = await prisma.user.findUnique({
@@ -40,7 +48,7 @@ export async function isOwnerAdmin(userId?: string | null) {
   });
 
   return isOwnerEmail(user?.email);
-}
+});
 
 export async function requireAdmin() {
   const session = await auth();

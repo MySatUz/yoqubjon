@@ -4,8 +4,15 @@ import { prisma } from "@/lib/prisma";
 import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { isBlockedPassword } from "@/lib/password-policy";
+import { authConfig } from "@/auth.config";
 
+/**
+ * The full NextAuth instance: everything from `authConfig` plus the parts that
+ * need a database and a password hasher. Only import this from server code that
+ * is allowed to touch Prisma — `src/proxy.ts` uses `@/auth.config` instead.
+ */
 export const { handlers, signIn, signOut, auth } = NextAuth({
+  ...authConfig,
   adapter: PrismaAdapter(prisma),
   providers: [
     Credentials({
@@ -56,26 +63,4 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       },
     }),
   ],
-  session: {
-    strategy: "jwt",
-  },
-  pages: {
-    signIn: "/login",
-  },
-  callbacks: {
-    async jwt({ token, user }) {
-      if (user?.role) {
-        token.role = user.role;
-      }
-
-      return token;
-    },
-    async session({ session, token }) {
-      if (token.sub && session.user) {
-        session.user.id = token.sub;
-        session.user.role = token.role === "ADMIN" ? "ADMIN" : "USER";
-      }
-      return session;
-    },
-  },
 });

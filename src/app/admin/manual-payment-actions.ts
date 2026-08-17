@@ -1,6 +1,6 @@
 'use server';
 
-import { revalidatePath } from 'next/cache';
+import { refresh } from 'next/cache';
 import { requireAdmin } from '@/lib/admin';
 import {
   activateManualSubscription,
@@ -37,9 +37,11 @@ export async function approveManualPaymentRequest(formData: FormData) {
       adminNote,
     });
 
-    revalidatePath('/admin');
-    revalidatePath('/dashboard');
-    revalidatePath('/dashboard/subscription');
+    // These run as `<form action={...}>` on `/admin/payments`, a page that
+    // `revalidatePath('/admin')` did not cover: the decision buttons stayed on
+    // screen until a manual reload. `refresh()` re-renders the page that
+    // submitted the form, in the same response.
+    refresh();
   } catch (error) {
     console.error('Approve manual payment failed:', error);
   }
@@ -60,8 +62,7 @@ export async function rejectManualPaymentRequest(formData: FormData) {
       adminNote,
     });
 
-    revalidatePath('/admin');
-    revalidatePath('/dashboard/subscription');
+    refresh();
   } catch (error) {
     console.error('Reject manual payment failed:', error);
   }

@@ -2,7 +2,7 @@
 
 import { prisma } from '@/lib/prisma';
 import { OWNER_ADMIN_EMAIL, requireOwnerAdmin } from '@/lib/admin';
-import { revalidatePath } from 'next/cache';
+import { refresh } from 'next/cache';
 
 function readEmail(formData: FormData) {
   const value = formData.get('email');
@@ -30,8 +30,9 @@ export async function grantAdminRole(formData: FormData) {
       data: { role: 'ADMIN' },
     });
 
-    revalidatePath('/admin');
-    revalidatePath('/dashboard');
+    // The panel lives on `/admin/users`, which `revalidatePath('/admin')` never
+    // covered, so the role list only updated after a manual reload.
+    refresh();
     return { success: true };
   } catch (error: unknown) {
     return {
@@ -65,8 +66,7 @@ export async function revokeAdminRole(formData: FormData) {
       data: { role: 'USER' },
     });
 
-    revalidatePath('/admin');
-    revalidatePath('/dashboard');
+    refresh();
     return { success: true };
   } catch (error: unknown) {
     return {

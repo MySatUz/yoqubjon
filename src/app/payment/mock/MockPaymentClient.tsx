@@ -47,7 +47,7 @@ export default function MockPaymentClient() {
           <h1 className="text-3xl font-black text-slate-900">Payment Successful!</h1>
           <p className="text-slate-500 font-medium">Your subscription has been activated. Redirecting to your dashboard...</p>
           <div className="h-1 bg-slate-100 rounded-full overflow-hidden">
-            <div className="h-full bg-green-500 animate-[progress_2s_ease-in-out]"></div>
+            <div className="h-full bg-green-500"></div>
           </div>
         </div>
       </div>

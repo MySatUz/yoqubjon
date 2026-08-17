@@ -238,11 +238,28 @@ export function findCategoryByQuery(
   })?.value ?? null;
 }
 
+// Only these two collections are ordered by the set number parsed out of the title;
+// everything else falls through to createdAt/title.
+const NUMBERED_SET_CATEGORIES = new Set<TestCategory>(['ADVANCED', 'PLANCK']);
+
+// `^<label>\s*(\d+)` per category. The label comes from the built-in collection
+// list, so there is a fixed handful of these — compile each one once.
+const setNumberPatterns = new Map<TestCategory, RegExp>();
+
+function getSetNumberPattern(category: TestCategory) {
+  const cached = setNumberPatterns.get(category);
+  if (cached) return cached;
+
+  const label = getCategoryLabel(category).replace(/\s+/g, '\\s+');
+  const pattern = new RegExp(`^${label}\\s*(\\d+)`, 'i');
+  setNumberPatterns.set(category, pattern);
+  return pattern;
+}
+
 function getSetNumber(title: string, category: TestCategory | null) {
   if (!category) return Number.POSITIVE_INFINITY;
 
-  const label = getCategoryLabel(category).replace(/\s+/g, '\\s+');
-  const match = title.match(new RegExp(`^${label}\\s*(\\d+)`, 'i'));
+  const match = title.match(getSetNumberPattern(category));
   return match ? Number(match[1]) : Number.POSITIVE_INFINITY;
 }
 
@@ -251,22 +268,77 @@ function getCreatedTime(test: CatalogTest) {
   return new Date(test.createdAt).getTime();
 }
 
-export function compareCatalogTests(a: CatalogTest, b: CatalogTest) {
-  const categoryA = getTestCategory(a);
-  const categoryB = getTestCategory(b);
+type CatalogSortKey = {
+  category: TestCategory | null;
+  setNumber: number;
+  created: number;
+  title: string;
+};
 
-  if (categoryA && categoryA === categoryB && (categoryA === 'ADVANCED' || categoryA === 'PLANCK')) {
-    const numberA = getSetNumber(a.title, categoryA);
-    const numberB = getSetNumber(b.title, categoryB);
+// `localeCompare(t, undefined, opts)` is specified as `new Intl.Collator(undefined, opts).compare(t)`,
+// so hoisting the collator is order-preserving and skips rebuilding it on every comparison.
+const catalogCollator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
 
-    if (numberA !== numberB) return numberA - numberB;
+function buildCatalogSortKey(test: CatalogTest): CatalogSortKey {
+  const category = getTestCategory(test);
+
+  return {
+    category,
+    setNumber: category && NUMBERED_SET_CATEGORIES.has(category)
+      ? getSetNumber(test.title, category)
+      : Number.POSITIVE_INFINITY,
+    created: getCreatedTime(test),
+    title: test.title,
+  };
+}
+
+function compareCatalogSortKeys(a: CatalogSortKey, b: CatalogSortKey) {
+  if (a.category && a.category === b.category && NUMBERED_SET_CATEGORIES.has(a.category)) {
+    // Both are +Infinity when neither title is numbered, and the guard keeps that
+    // out of the subtraction (Infinity - Infinity would be NaN).
+    if (a.setNumber !== b.setNumber) return a.setNumber - b.setNumber;
   }
 
-  if (categoryA === null && categoryB !== null) return 1;
-  if (categoryA !== null && categoryB === null) return -1;
+  if (a.category === null && b.category !== null) return 1;
+  if (a.category !== null && b.category === null) return -1;
 
-  const createdDiff = getCreatedTime(a) - getCreatedTime(b);
+  const createdDiff = a.created - b.created;
   if (createdDiff !== 0) return createdDiff;
 
-  return a.title.localeCompare(b.title, undefined, { numeric: true, sensitivity: 'base' });
+  return catalogCollator.compare(a.title, b.title);
+}
+
+/**
+ * Sorts the catalog without mutating the input (Prisma hands back a live array)
+ * and without recomputing the regexp-derived keys on every comparison: the keys
+ * are built once per test, the sort then only touches plain fields.
+ *
+ * Ordering is identical to `compareCatalogTests` — the comparison logic is
+ * unchanged, only the point at which the keys are computed moved.
+ */
+export function sortCatalogTests<T extends CatalogTest>(tests: readonly T[]): T[] {
+  const decorated = tests.map((test) => ({ test, key: buildCatalogSortKey(test) }));
+  decorated.sort((a, b) => compareCatalogSortKeys(a.key, b.key));
+  return decorated.map((entry) => entry.test);
+}
+
+// Keys are memoised per test object so the existing `.sort(compareCatalogTests)`
+// call sites also pay for them once instead of once per comparison. Safe because
+// catalog rows are per-request Prisma objects that are never mutated between
+// sorts; if a caller ever starts editing `title`/`createdAt` in place before
+// sorting, it must use `sortCatalogTests` instead.
+const catalogSortKeys = new WeakMap<CatalogTest, CatalogSortKey>();
+
+function getCatalogSortKey(test: CatalogTest) {
+  const cached = catalogSortKeys.get(test);
+  if (cached) return cached;
+
+  const key = buildCatalogSortKey(test);
+  catalogSortKeys.set(test, key);
+  return key;
+}
+
+/** Prefer `sortCatalogTests` — it avoids mutating the array it is given. */
+export function compareCatalogTests(a: CatalogTest, b: CatalogTest) {
+  return compareCatalogSortKeys(getCatalogSortKey(a), getCatalogSortKey(b));
 }

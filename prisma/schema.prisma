@@ -121,6 +121,10 @@ model Result {
 
   @@index([userId])
   @@index([userId, createdAt])
+  // Serves result.count({ where: { userId, testId } }) on the exam page and in
+  // examSubmission, plus groupBy(['testId']) on the dashboard. Without it the
+  // planner has to BitmapAnd Result_testId_idx with Result_userId_createdAt_idx.
+  @@index([userId, testId])
   @@index([testId])
 }
 
@@ -166,8 +170,9 @@ model Payment {
 
   user          User     @relation(fields: [userId], references: [id])
 
+  // `transactionId @unique` already creates Payment_transactionId_key; a second
+  // plain index on the same column was a pure duplicate and has been removed.
   @@index([userId])
-  @@index([transactionId])
 }
 
 model ManualPaymentRequest {
@@ -192,5 +197,8 @@ model ManualPaymentRequest {
   user             User     @relation(fields: [userId], references: [id])
 
   @@index([userId])
-  @@index([status, createdAt])
+  // /admin/payments orders by status ASC, createdAt DESC. With both columns ASC
+  // the planner can only use this as a presorted prefix and still runs an
+  // Incremental Sort; matching the DESC direction removes the sort node.
+  @@index([status, createdAt(sort: Desc)])
 }

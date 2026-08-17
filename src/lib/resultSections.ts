@@ -1,3 +1,4 @@
+import { prisma } from "@/lib/prisma";
 import {
   getCategoryLabel,
   getTestCategory,
@@ -243,4 +244,94 @@ export function buildSectionLeaderboard(
       toTime(b.latestAt) - toTime(a.latestAt) ||
       a.email.localeCompare(b.email)
     );
+}
+
+export const SECTION_LEADERBOARD_PAGE_SIZE = 100;
+
+type SectionLeaderboardRawRow = {
+  userId: string;
+  name: string | null;
+  email: string;
+  attempts: bigint;
+  uniqueTests: bigint;
+  totalScore: bigint | null;
+  bestScore: number | null;
+  totalTimeSpent: bigint | null;
+  latestAt: Date | null;
+};
+
+/**
+ * Database-side equivalent of `buildSectionLeaderboard` for a single section.
+ *
+ * `buildSectionLeaderboard` stays in use for callers that already hold the raw
+ * rows (user profile, CSV export); this variant exists so pages never have to
+ * pull the whole attempt history into Node just to fold it back down to one row
+ * per user.
+ *
+ * The ORDER BY intentionally mirrors the JS comparator above 1:1:
+ * totalScore -> bestScore -> attempts -> latestAt -> email.
+ * `COUNT(DISTINCT ...)` is why this is `$queryRaw` and not `prisma.groupBy`.
+ */
+export async function fetchSectionLeaderboard(
+  category: string,
+  options: { take?: number; skip?: number } = {}
+): Promise<UserLeaderboardEntry[]> {
+  const take = Math.max(1, Math.trunc(options.take ?? SECTION_LEADERBOARD_PAGE_SIZE));
+  const skip = Math.max(0, Math.trunc(options.skip ?? 0));
+
+  const rows = await prisma.$queryRaw<SectionLeaderboardRawRow[]>`
+    SELECT r."userId"                  AS "userId",
+           u."name"                    AS "name",
+           u."email"                   AS "email",
+           COUNT(*)                    AS "attempts",
+           COUNT(DISTINCT r."testId")  AS "uniqueTests",
+           SUM(r."score")              AS "totalScore",
+           MAX(r."score")              AS "bestScore",
+           SUM(r."timeSpent")          AS "totalTimeSpent",
+           MAX(r."createdAt")          AS "latestAt"
+      FROM "Result" r
+      JOIN "Test" t ON t."id" = r."testId"
+      JOIN "User" u ON u."id" = r."userId"
+     WHERE t."collectionCategory" = ${category}
+     GROUP BY r."userId", u."name", u."email"
+     ORDER BY "totalScore" DESC,
+              "bestScore" DESC,
+              "attempts" DESC,
+              "latestAt" DESC,
+              "email" ASC
+     LIMIT ${take} OFFSET ${skip}
+  `;
+
+  return rows.map((row) => {
+    const attempts = Number(row.attempts);
+    const totalScore = Number(row.totalScore ?? 0);
+
+    return {
+      userId: row.userId,
+      name: row.name,
+      email: row.email,
+      attempts,
+      uniqueTests: Number(row.uniqueTests),
+      totalScore,
+      averageScore: attempts > 0 ? Math.round(totalScore / attempts) : 0,
+      bestScore: row.bestScore ?? 0,
+      totalTimeSpent: Number(row.totalTimeSpent ?? 0),
+      latestAt: row.latestAt,
+    };
+  });
+}
+
+/**
+ * Number of distinct users with at least one attempt in the section, i.e. the
+ * full length the leaderboard would have without `LIMIT`.
+ */
+export async function countSectionParticipants(category: string) {
+  const rows = await prisma.$queryRaw<Array<{ participants: number }>>`
+    SELECT COUNT(DISTINCT r."userId")::int AS "participants"
+      FROM "Result" r
+      JOIN "Test" t ON t."id" = r."testId"
+     WHERE t."collectionCategory" = ${category}
+  `;
+
+  return rows[0]?.participants ?? 0;
 }

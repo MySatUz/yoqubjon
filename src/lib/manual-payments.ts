@@ -22,7 +22,12 @@ export function sanitizeReceiptFileName(fileName: string) {
   return safe || `${crypto.randomUUID()}.bin`;
 }
 
-export async function ensureManualPaymentBucket() {
+// The bucket is created once per process instead of on every upload: the old
+// code issued a `createBucket` call per receipt and normally just got an
+// "already exists" error back, costing a Storage round-trip each time.
+let manualPaymentBucketPromise: Promise<void> | null = null;
+
+async function createManualPaymentBucket() {
   const supabase = getSupabaseAdmin();
   const { error } = await supabase.storage.createBucket(MANUAL_PAYMENT_BUCKET, {
     public: false,
@@ -33,6 +38,16 @@ export async function ensureManualPaymentBucket() {
   if (error && !error.message.toLowerCase().includes('already exists')) {
     throw new Error(`Could not create receipt bucket: ${error.message}`);
   }
+}
+
+export async function ensureManualPaymentBucket() {
+  // On failure the memo is dropped so the next upload retries.
+  manualPaymentBucketPromise ??= createManualPaymentBucket().catch((error) => {
+    manualPaymentBucketPromise = null;
+    throw error;
+  });
+
+  return manualPaymentBucketPromise;
 }
 
 export async function uploadManualReceipt(input: {
@@ -118,6 +133,14 @@ export function getTelegramAdminBaseUrl() {
     process.env.NEXT_PUBLIC_APP_URL ||
     ''
   ).replace(/\/$/, '');
+}
+
+/**
+ * Whether a Telegram notification will be attempted at all. Lets callers that
+ * send the notification in the background still report `skipped` synchronously.
+ */
+export function isTelegramPaymentConfigured() {
+  return Boolean(process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_PAYMENT_CHAT_ID);
 }
 
 export async function notifyManualPaymentTelegram(input: {

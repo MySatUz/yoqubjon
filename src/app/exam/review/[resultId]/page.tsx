@@ -19,11 +19,31 @@ export default async function ReviewPage({ params }: { params: Promise<{ resultI
       id: resultId,
       userId: session.user.id,
     },
-    include: {
+    // Explicit `select`: the old `include` pulled `content`, `options`,
+    // `explanation` and `imageUrl` for every question (kilobytes of TeX each)
+    // even though this page only renders answers and the video link.
+    // `moduleIndex` on questions and `durationSeconds`/`moduleDurations` on the
+    // test are required by `buildExamModules` — dropping them collapses modules.
+    select: {
+      id: true,
+      score: true,
+      answers: true,
       test: {
-        include: {
-          questions: { orderBy: { order: 'asc' } }
-        }
+        select: {
+          title: true,
+          durationSeconds: true,
+          moduleDurations: true,
+          questions: {
+            orderBy: { order: 'asc' },
+            select: {
+              id: true,
+              order: true,
+              correctAnswer: true,
+              videoUrl: true,
+              moduleIndex: true,
+            },
+          },
+        },
       },
     },
   });

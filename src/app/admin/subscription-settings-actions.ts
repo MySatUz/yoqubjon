@@ -1,8 +1,9 @@
 'use server';
 
-import { revalidatePath } from 'next/cache';
+import { refresh, revalidateTag } from 'next/cache';
 import { requireAdmin, requireOwnerAdmin } from '@/lib/admin';
 import {
+  SUBSCRIPTION_SETTINGS_CACHE_TAG,
   setSubscriptionEnabled,
   setSubscriptionPaymentSettings,
 } from '@/lib/subscription-settings';
@@ -17,8 +18,12 @@ export async function updateSubscriptionAvailability(isEnabled: boolean) {
 
     const setting = await setSubscriptionEnabled(isEnabled);
 
-    revalidatePath('/admin');
-    revalidatePath('/dashboard/subscription');
+    // Must expire immediately: switching sales off has to take effect on the
+    // next request, not after a stale-while-revalidate round.
+    revalidateTag(SUBSCRIPTION_SETTINGS_CACHE_TAG, { expire: 0 });
+    // Runs only on the success path, so a failed toggle still returns without a
+    // re-render and the control keeps its own rollback.
+    refresh();
 
     return { success: true, isEnabled: setting.isEnabled };
   } catch (error) {
@@ -63,8 +68,8 @@ export async function updateSubscriptionPaymentSettings(formData: FormData) {
       amount,
     });
 
-    revalidatePath('/admin');
-    revalidatePath('/dashboard/subscription');
+    revalidateTag(SUBSCRIPTION_SETTINGS_CACHE_TAG, { expire: 0 });
+    refresh();
 
     return { success: true, settings: setting };
   } catch (error) {
