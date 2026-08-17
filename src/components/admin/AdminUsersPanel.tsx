@@ -70,28 +70,28 @@ export default function AdminUsersPanel({
 
   return (
     <div className="space-y-6">
-      <section className="rounded-3xl border border-blue-100 bg-white p-8 shadow-xl">
+      <section className="rounded-2xl border border-blue-100 bg-white p-8 shadow-lg">
       <div className="mb-6 flex items-start justify-between gap-4">
         <div>
-          <div className="mb-2 flex items-center gap-2 text-xs font-black uppercase tracking-widest text-blue-600">
+          <div className="mb-2 flex items-center gap-2 text-xs font-medium uppercase tracking-widest text-blue-600">
             <Shield className="h-4 w-4" />
             Owner controls
           </div>
-          <h2 className="text-2xl font-black tracking-tight text-slate-900">Admin access</h2>
+          <h2 className="text-2xl font-semibold tracking-tight text-slate-900">Admin access</h2>
         </div>
 
         <button
           type="button"
           onClick={() => setShowUsers((current) => !current)}
-          className={`inline-flex items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-black transition ${
+          className={`inline-flex items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-semibold transition ${
             showUsers
-              ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100'
-              : 'border border-slate-200 bg-slate-50 text-slate-700 hover:border-indigo-200 hover:text-indigo-700'
+              ? 'bg-blue-600 text-white shadow-lg'
+              : 'border border-slate-200 bg-slate-50 text-slate-700 hover:border-blue-200 hover:text-blue-700'
           }`}
         >
           <Users className="h-5 w-5" />
           Users
-          <span className={`rounded-full px-2 py-0.5 text-[10px] font-black ${
+          <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${
             showUsers ? 'bg-white/20 text-white' : 'bg-white text-slate-500'
           }`}>
             {userCount}
@@ -110,11 +110,11 @@ export default function AdminUsersPanel({
             onChange={(event) => setEmailQuery(event.target.value)}
             placeholder="Search by email or name"
             autoComplete="off"
-            className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-4 pl-12 pr-5 font-bold text-slate-900 transition-all focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-500/10"
+            className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-4 pl-12 pr-5 font-semibold text-slate-900 transition-all focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-500/10"
           />
 
           {suggestedUsers.length > 0 && (
-            <div className="absolute left-0 right-0 top-[calc(100%+0.5rem)] z-20 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl shadow-slate-200">
+            <div className="absolute left-0 right-0 top-[calc(100%+0.5rem)] z-20 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
               {suggestedUsers.map((user) => {
                 const isOwner = user.email.toLowerCase() === ownerEmail;
                 const isAdmin = user.role === 'ADMIN' || isOwner;
@@ -127,11 +127,11 @@ export default function AdminUsersPanel({
                     className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-blue-50"
                   >
                     <span className="min-w-0">
-                      <span className="block truncate text-sm font-black text-slate-900">{user.name || user.email}</span>
-                      <span className="block truncate text-xs font-bold text-slate-500">{user.email}</span>
+                      <span className="block truncate text-sm font-semibold text-slate-900">{user.name || user.email}</span>
+                      <span className="block truncate text-xs font-medium text-slate-500">{user.email}</span>
                     </span>
                     {isAdmin && (
-                      <span className="shrink-0 rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-black uppercase text-blue-700">
+                      <span className="shrink-0 rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-medium uppercase text-blue-700">
                         {isOwner ? 'Owner' : 'Admin'}
                       </span>
                     )}
@@ -144,7 +144,7 @@ export default function AdminUsersPanel({
         <button
           type="submit"
           disabled={busyEmail !== null || !emailQuery.trim()}
-          className="inline-flex items-center justify-center gap-2 rounded-2xl bg-blue-600 px-6 py-4 font-black text-white shadow-lg shadow-blue-100 transition-all hover:bg-blue-700 disabled:opacity-50"
+          className="inline-flex items-center justify-center gap-2 rounded-2xl bg-blue-600 px-6 py-4 font-semibold text-white shadow-lg transition-all hover:bg-blue-700 disabled:opacity-50"
         >
           <ShieldPlus className="h-5 w-5" />
           Make admin
@@ -152,14 +152,14 @@ export default function AdminUsersPanel({
       </form>
 
       {grantResult?.success && (
-        <div className="mb-4 flex items-center gap-2 rounded-2xl border border-green-100 bg-green-50 p-4 font-bold text-green-700">
+        <div className="mb-4 flex items-center gap-2 rounded-2xl border border-emerald-100 bg-emerald-50 p-4 font-semibold text-emerald-700">
           <CheckCircle2 className="h-5 w-5" />
           Admin access updated.
         </div>
       )}
 
       {grantResult?.error && (
-        <div className="mb-4 flex items-center gap-2 rounded-2xl border border-red-100 bg-red-50 p-4 font-bold text-red-700">
+        <div className="mb-4 flex items-center gap-2 rounded-2xl border border-red-100 bg-red-50 p-4 font-semibold text-red-700">
           <AlertCircle className="h-5 w-5" />
           {grantResult.error}
         </div>
@@ -172,12 +172,12 @@ export default function AdminUsersPanel({
             <div key={user.id} className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 md:flex-row md:items-center md:justify-between">
               <div>
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="font-black text-slate-900">{user.name || user.email}</span>
-                  <span className={`rounded-full px-2 py-0.5 text-[10px] font-black uppercase ${user.role === 'ADMIN' || isOwner ? 'bg-blue-100 text-blue-700' : 'bg-slate-200 text-slate-600'}`}>
+                  <span className="font-semibold text-slate-900">{user.name || user.email}</span>
+                  <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium uppercase ${user.role === 'ADMIN' || isOwner ? 'bg-blue-100 text-blue-700' : 'bg-slate-200 text-slate-600'}`}>
                     {isOwner ? 'Owner' : user.role}
                   </span>
                 </div>
-                <p className="text-sm font-bold text-slate-500">{user.email}</p>
+                <p className="text-sm font-semibold text-slate-500">{user.email}</p>
               </div>
 
               {user.role === 'ADMIN' && !isOwner && (
@@ -185,7 +185,7 @@ export default function AdminUsersPanel({
                   type="button"
                   onClick={() => handleRevoke(user.email)}
                   disabled={busyEmail === user.email}
-                  className="inline-flex items-center justify-center gap-2 rounded-2xl border border-red-100 bg-white px-4 py-3 text-sm font-black text-red-600 transition-all hover:bg-red-50 disabled:opacity-50"
+                  className="inline-flex items-center justify-center gap-2 rounded-2xl border border-red-100 bg-white px-4 py-3 text-sm font-semibold text-red-600 transition-all hover:bg-red-50 disabled:opacity-50"
                 >
                   <ShieldMinus className="h-4 w-4" />
                   Remove admin
@@ -196,7 +196,7 @@ export default function AdminUsersPanel({
         })}
 
         {visibleUsers.length === 0 && (
-          <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-6 text-center text-sm font-bold text-slate-400">
+          <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-6 text-center text-sm font-semibold text-slate-400">
             No admins yet. Search for a registered user above to grant access.
           </div>
         )}

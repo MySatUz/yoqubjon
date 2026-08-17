@@ -53,7 +53,7 @@ function NavLink({ item, variant, active }: { item: NavItem; variant: ShellNavVa
     return (
       <Link
         href={item.href}
-        className={`flex min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-2xl px-1 py-2 text-[10px] font-black transition-colors ${
+        className={`flex min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-2xl px-1 py-2 text-[10px] font-medium transition-colors ${
           active
             ? 'bg-blue-50 text-blue-600'
             : 'text-slate-500 hover:bg-blue-50 hover:text-blue-600'
@@ -68,7 +68,7 @@ function NavLink({ item, variant, active }: { item: NavItem; variant: ShellNavVa
   return (
     <Link
       href={item.href}
-      className={`flex items-center gap-3 rounded-xl px-4 py-3 font-bold transition-all ${
+      className={`flex items-center gap-3 rounded-xl px-4 py-3 font-semibold transition-all ${
         active
           ? 'bg-blue-50 text-blue-600'
           : 'text-slate-600 hover:bg-slate-50 hover:text-blue-600'

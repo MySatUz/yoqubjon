@@ -23,7 +23,7 @@ export default function ShellSignOutForm({ variant }: ShellSignOutFormProps) {
 
   return (
     <form action={signOutAction}>
-      <button className="flex items-center justify-center gap-2 w-full py-3 text-red-500 font-bold hover:bg-red-50 rounded-xl transition-colors">
+      <button className="flex items-center justify-center gap-2 w-full py-3 text-red-500 font-semibold hover:bg-red-50 rounded-xl transition-colors">
         <LogOut className="w-4 h-4" />
         Sign Out
       </button>

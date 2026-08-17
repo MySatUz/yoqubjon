@@ -70,7 +70,7 @@ export default function SubscriptionAvailabilityControl({
 
   return (
     <section
-      className={`mb-6 overflow-hidden rounded-3xl border p-6 shadow-sm transition-colors sm:p-7 ${
+      className={`mb-6 overflow-hidden rounded-2xl border p-6 shadow-sm transition-colors sm:p-7 ${
         isEnabled
           ? 'border-emerald-200 bg-emerald-50/70'
           : 'border-amber-200 bg-amber-50/80'
@@ -86,13 +86,13 @@ export default function SubscriptionAvailabilityControl({
             {isEnabled ? <CircleCheck className="h-6 w-6" /> : <LockKeyhole className="h-6 w-6" />}
           </span>
           <div>
-            <p className="text-[10px] font-black uppercase tracking-[0.24em] text-slate-500">
+            <p className="text-[10px] font-medium uppercase tracking-[0.24em] text-slate-500">
               Subscription availability
             </p>
-            <h2 className="mt-1 text-2xl font-black tracking-tight text-slate-900">
+            <h2 className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">
               {isEnabled ? 'Subscription section is open' : 'Subscription section is closed'}
             </h2>
-            <p className="mt-2 max-w-2xl text-sm font-bold leading-relaxed text-slate-600">
+            <p className="mt-2 max-w-2xl text-sm font-semibold leading-relaxed text-slate-600">
               {isEnabled
                 ? 'Students can see the transfer details and send payment receipts.'
                 : 'Students see a temporary closure notice. Card details and new payment requests are blocked.'}
@@ -114,7 +114,7 @@ export default function SubscriptionAvailabilityControl({
           }`}
         >
           <span
-            className={`inline-flex h-9 w-9 items-center justify-center rounded-full bg-white text-slate-500 shadow-md transition-transform ${
+            className={`inline-flex h-9 w-9 items-center justify-center rounded-full bg-white text-slate-500 shadow-sm transition-transform ${
               isEnabled ? 'translate-x-12' : 'translate-x-0'
             }`}
           >
@@ -124,7 +124,7 @@ export default function SubscriptionAvailabilityControl({
       </div>
 
       {error && (
-        <p className="mt-4 rounded-2xl bg-red-50 px-4 py-3 text-sm font-bold text-red-700">
+        <p className="mt-4 rounded-2xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
           {error}
         </p>
       )}
@@ -137,13 +137,13 @@ export default function SubscriptionAvailabilityControl({
                 <CreditCard className="h-5 w-5" />
               </span>
               <div>
-                <h3 className="text-lg font-black tracking-tight text-slate-900">Payment details</h3>
-                <p className="mt-1 text-sm font-bold text-slate-600">
+                <h3 className="text-lg font-semibold tracking-tight text-slate-900">Payment details</h3>
+                <p className="mt-1 text-sm font-semibold text-slate-600">
                   These values appear on the student subscription page and in new payment requests.
                 </p>
               </div>
             </div>
-            <span className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-white">
+            <span className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-3 py-1.5 text-[10px] font-medium uppercase tracking-widest text-white">
               <Crown className="h-3.5 w-3.5 text-amber-300" />
               Owner only
             </span>
@@ -151,19 +151,19 @@ export default function SubscriptionAvailabilityControl({
 
           <form onSubmit={savePaymentSettings} className="grid gap-4 lg:grid-cols-2">
             <label className="space-y-2">
-              <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Card holder</span>
+              <span className="text-[10px] font-medium uppercase tracking-widest text-slate-500">Card holder</span>
               <input
                 name="cardHolder"
                 defaultValue={initialPaymentSettings.cardHolder}
                 required
                 maxLength={120}
                 autoComplete="off"
-                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
               />
             </label>
 
             <label className="space-y-2">
-              <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Card number</span>
+              <span className="text-[10px] font-medium uppercase tracking-widest text-slate-500">Card number</span>
               <input
                 name="cardNumber"
                 defaultValue={initialPaymentSettings.cardNumber}
@@ -171,12 +171,12 @@ export default function SubscriptionAvailabilityControl({
                 maxLength={40}
                 inputMode="numeric"
                 autoComplete="off"
-                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 font-mono text-sm font-black tracking-wider text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 font-mono text-sm font-semibold tracking-wider text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
               />
             </label>
 
             <label className="space-y-2">
-              <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Card type</span>
+              <span className="text-[10px] font-medium uppercase tracking-widest text-slate-500">Card type</span>
               <input
                 name="cardType"
                 defaultValue={initialPaymentSettings.cardType}
@@ -184,12 +184,12 @@ export default function SubscriptionAvailabilityControl({
                 maxLength={30}
                 autoComplete="off"
                 placeholder="HUMO, Uzcard, Visa..."
-                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
               />
             </label>
 
             <label className="space-y-2">
-              <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Monthly price (UZS)</span>
+              <span className="text-[10px] font-medium uppercase tracking-widest text-slate-500">Monthly price (UZS)</span>
               <input
                 name="amount"
                 type="number"
@@ -199,24 +199,24 @@ export default function SubscriptionAvailabilityControl({
                 max={1000000000}
                 step={1000}
                 inputMode="numeric"
-                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
               />
             </label>
 
             <div className="flex flex-col gap-3 lg:col-span-2 sm:flex-row sm:items-center sm:justify-between">
               <div className="min-h-6">
                 {saved && (
-                  <p className="inline-flex items-center gap-2 text-sm font-black text-emerald-700">
+                  <p className="inline-flex items-center gap-2 text-sm font-semibold text-emerald-700">
                     <CircleCheck className="h-4 w-4" />
                     Payment settings saved.
                   </p>
                 )}
-                {saveError && <p className="text-sm font-black text-red-700">{saveError}</p>}
+                {saveError && <p className="text-sm font-semibold text-red-700">{saveError}</p>}
               </div>
               <button
                 type="submit"
                 disabled={isSaving}
-                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-900 px-5 py-3 text-sm font-black text-white shadow-lg transition hover:bg-blue-600 disabled:cursor-wait disabled:opacity-60"
+                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white shadow-lg transition hover:bg-blue-600 disabled:cursor-wait disabled:opacity-60"
               >
                 {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                 {isSaving ? 'Saving' : 'Save payment details'}

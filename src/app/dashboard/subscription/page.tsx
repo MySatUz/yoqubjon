@@ -45,19 +45,19 @@ export default async function SubscriptionPage() {
   if (!subscriptionSettings.isEnabled) {
     return (
       <div className="px-4 py-10 sm:px-6 lg:px-8">
-        <section className="mx-auto max-w-4xl overflow-hidden rounded-[2rem] border border-amber-200 bg-white shadow-xl shadow-amber-100/60">
+        <section className="mx-auto max-w-4xl overflow-hidden rounded-2xl border border-amber-200 bg-white shadow-lg">
           <div className="h-2 bg-amber-400" />
           <div className="px-7 py-14 text-center sm:px-12 sm:py-20">
-            <span className="mx-auto inline-flex h-16 w-16 items-center justify-center rounded-3xl bg-amber-100 text-amber-700">
+            <span className="mx-auto inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-amber-100 text-amber-700">
               <Clock3 className="h-8 w-8" />
             </span>
-            <p className="mt-7 text-[10px] font-black uppercase tracking-[0.3em] text-amber-700">
+            <p className="mt-7 text-[10px] font-medium uppercase tracking-[0.3em] text-amber-700">
               MYSATuz Premium
             </p>
             <h1 className="mt-3 text-3xl font-black tracking-tight text-slate-900 sm:text-4xl">
               Subscriptions are temporarily unavailable
             </h1>
-            <p className="mx-auto mt-4 max-w-xl text-base font-bold leading-relaxed text-slate-500">
+            <p className="mx-auto mt-4 max-w-xl text-base font-semibold leading-relaxed text-slate-500">
               New subscription purchases are currently paused.
             </p>
           </div>
@@ -68,33 +68,33 @@ export default async function SubscriptionPage() {
 
   return (
     <div className="px-4 py-10 sm:px-6 lg:px-8">
-      <header className="mx-auto mb-10 max-w-6xl overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-sm">
+      <header className="mx-auto mb-10 max-w-6xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         <div className="grid gap-0 lg:grid-cols-[0.95fr_1.05fr]">
           <div className="bg-slate-900 p-8 text-white sm:p-10">
-            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-blue-300">
+            <p className="text-[10px] font-medium uppercase tracking-[0.3em] text-blue-300">
               MYSATuz Premium
             </p>
             <h1 className="mt-3 text-4xl font-black tracking-tight">Subscription</h1>
-            <p className="mt-4 max-w-xl text-base font-bold leading-relaxed text-slate-300">
+            <p className="mt-4 max-w-xl text-base font-semibold leading-relaxed text-slate-300">
               Send one transfer receipt, get admin-reviewed premium access, and track every subscription detail here.
             </p>
           </div>
           <div className="grid gap-4 p-8 sm:grid-cols-3 sm:p-10">
-            <div className="rounded-3xl bg-blue-50 p-5">
-              <p className="text-[10px] font-black uppercase tracking-widest text-blue-600">Access</p>
-              <p className="mt-2 text-2xl font-black text-slate-900">30 days</p>
+            <div className="rounded-2xl bg-blue-50 p-5">
+              <p className="text-[10px] font-medium uppercase tracking-widest text-blue-600">Access</p>
+              <p className="mt-2 text-2xl font-semibold text-slate-900">30 days</p>
             </div>
-            <div className="rounded-3xl bg-emerald-50 p-5">
-              <p className="text-[10px] font-black uppercase tracking-widest text-emerald-600">Status</p>
-              <p className="mt-2 text-2xl font-black text-slate-900">
+            <div className="rounded-2xl bg-emerald-50 p-5">
+              <p className="text-[10px] font-medium uppercase tracking-widest text-emerald-600">Status</p>
+              <p className="mt-2 text-2xl font-semibold text-slate-900">
                 <Suspense fallback={<span className="inline-block h-6 w-16 animate-pulse rounded-lg bg-emerald-100 align-middle" />}>
                   <PlanStatusLabel userId={userId} />
                 </Suspense>
               </p>
             </div>
-            <div className="rounded-3xl bg-amber-50 p-5">
-              <p className="text-[10px] font-black uppercase tracking-widest text-amber-600">Review</p>
-              <p className="mt-2 text-2xl font-black text-slate-900">Manual</p>
+            <div className="rounded-2xl bg-amber-50 p-5">
+              <p className="text-[10px] font-medium uppercase tracking-widest text-amber-600">Review</p>
+              <p className="mt-2 text-2xl font-semibold text-slate-900">Manual</p>
             </div>
           </div>
         </div>
@@ -208,10 +208,10 @@ function CheckoutFallback() {
   return (
     <div className="mx-auto max-w-6xl space-y-6">
       <div className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
-        <div className="h-80 animate-pulse rounded-[2rem] border border-slate-200 bg-white" />
-        <div className="h-80 animate-pulse rounded-[2rem] border border-slate-200 bg-white" />
+        <div className="h-80 animate-pulse rounded-2xl border border-slate-200 bg-white" />
+        <div className="h-80 animate-pulse rounded-2xl border border-slate-200 bg-white" />
       </div>
-      <div className="h-64 animate-pulse rounded-[2rem] border border-slate-200 bg-white" />
+      <div className="h-64 animate-pulse rounded-2xl border border-slate-200 bg-white" />
     </div>
   );
 }

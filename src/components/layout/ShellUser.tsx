@@ -15,7 +15,7 @@ function userInitialOf(session: ShellSession) {
 
 export function ShellUserAvatarView({ session }: { session: ShellSession }) {
   return (
-    <div className="h-8 w-8 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold uppercase">
+    <div className="h-8 w-8 rounded-lg bg-blue-600 flex items-center justify-center text-white font-medium uppercase">
       {userInitialOf(session)}
     </div>
   );
@@ -36,12 +36,12 @@ export async function ShellUserAvatar() {
 export function ShellUserCardView({ session }: { session: ShellSession }) {
   return (
     <div className="bg-slate-50 rounded-2xl p-4 flex items-center gap-3 mb-4">
-      <div className="h-10 w-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white font-black uppercase">
+      <div className="h-10 w-10 rounded-xl bg-blue-600 flex items-center justify-center text-white font-medium uppercase">
         {userInitialOf(session)}
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-black text-slate-900 truncate">{session?.user?.name || 'User'}</p>
-        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest truncate">
+        <p className="text-sm font-semibold text-slate-900 truncate">{session?.user?.name || 'User'}</p>
+        <p className="text-[10px] font-medium text-slate-400 uppercase tracking-widest truncate">
           {session?.user?.email}
         </p>
       </div>

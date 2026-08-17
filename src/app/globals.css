@@ -1,22 +1,19 @@
 @import "tailwindcss";
 
+/* The palette is Tailwind's own scale, narrowed to five families — see
+   AGENTS.md, "Design system". Components write `bg-blue-600` / `text-red-600`
+   directly; there is deliberately no parallel token vocabulary for them,
+   because the previous one (`--color-accent`, `--color-surface`, …) drifted out
+   of sync with the classes actually in use and nothing noticed.
+   What stays here is what CSS itself needs: the page ground, and the accent
+   that the component classes further down tint their shadows with. */
 :root {
-  --background: #f8fafc;
-  --foreground: #0f172a;
-  --accent-primary: #4f46e5;
-  --accent-secondary: #f59e0b;
-  --surface: #ffffff;
-  --surface-elevated: #f1f5f9;
-  --border-subtle: #e2e8f0;
+  --background: #f8fafc;   /* slate-50  */
+  --foreground: #0f172a;   /* slate-900 */
+  --accent: #2563eb;       /* blue-600 — keep in step with the classes  */
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-accent: var(--accent-primary);
-  --color-accent-warm: var(--accent-secondary);
-  --color-surface: var(--surface);
-  --color-surface-elevated: var(--surface-elevated);
   --font-sans: var(--font-jakarta), sans-serif;
 }
 
@@ -130,61 +127,9 @@ body {
 .delay-700 { animation-delay: 0.7s; }
 .delay-800 { animation-delay: 0.8s; }
 
-/* ═══════════════════════════════════════════════
-   FROSTED PANELS
-   No `backdrop-filter`: the compositor re-blurs the whole backdrop on every
-   frame while these panels are on screen, and at ~90 % opacity the blur is
-   invisible anyway. The alpha values below stand in for what the blur used
-   to contribute.
-   ═══════════════════════════════════════════════ */
-.glass {
-  background: rgba(255, 255, 255, 0.92);
-  border: 1px solid rgba(255, 255, 255, 0.4);
-}
-
-.glass-dark {
-  background: rgba(19, 29, 51, 0.92);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-/* ═══════════════════════════════════════════════
-   GRADIENT UTILITIES
-   ═══════════════════════════════════════════════ */
-.gradient-text {
-  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #f59e0b 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.gradient-hero {
-  background:
-    radial-gradient(ellipse 60% 50% at 50% 0%, rgba(79, 70, 229, 0.08) 0%, transparent 70%),
-    radial-gradient(ellipse 40% 40% at 80% 20%, rgba(245, 158, 11, 0.05) 0%, transparent 60%),
-    var(--background);
-}
-
-.gradient-cta {
-  background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
-}
-
-.gradient-warm {
-  background: linear-gradient(135deg, #f59e0b 0%, #ef4444 100%);
-}
-
-/* ═══════════════════════════════════════════════
-   NOISE TEXTURE OVERLAY
-   ═══════════════════════════════════════════════ */
-.noise-overlay::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  opacity: 0.03;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
-  background-repeat: repeat;
-  background-size: 256px 256px;
-}
+/* The frosted-panel, gradient and noise-overlay utilities that used to live
+   here are gone. Panels are plain surfaces with a slate border; depth comes
+   from the elevation scale below, not from tinted translucency. */
 
 /* ═══════════════════════════════════════════════
    INTERACTIVE CARD EFFECTS
@@ -205,8 +150,8 @@ body {
   border-radius: inherit;
   pointer-events: none;
   opacity: 0;
-  box-shadow: 0 20px 40px -12px rgba(79, 70, 229, 0.12),
-              0 8px 16px -8px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 20px 40px -12px color-mix(in srgb, var(--foreground) 10%, transparent),
+              0 8px 16px -8px color-mix(in srgb, var(--foreground) 6%, transparent);
   transition: opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .card-hover:hover {
@@ -231,7 +176,7 @@ body {
   border-radius: inherit;
   pointer-events: none;
   opacity: 0;
-  box-shadow: 0 8px 24px -4px rgba(79, 70, 229, 0.4);
+  box-shadow: 0 8px 24px -4px color-mix(in srgb, var(--accent) 35%, transparent);
   transition: opacity 0.3s ease;
 }
 .btn-primary:hover {
@@ -243,19 +188,11 @@ body {
 .btn-primary:active {
   transform: translateY(0) scale(0.98);
 }
-.btn-primary::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: linear-gradient(135deg, rgba(255,255,255,0.15) 0%, transparent 60%);
-  pointer-events: none;
-}
 
 /* ═══════════════════════════════════════════════
    SELECTION
    ═══════════════════════════════════════════════ */
 ::selection {
-  background: rgba(79, 70, 229, 0.15);
-  color: #1e1b4b;
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
+  color: var(--foreground);
 }

@@ -17,16 +17,16 @@ export default function Loading() {
         <div className="mb-6 h-12 w-44 animate-pulse rounded-2xl bg-slate-200" />
 
         <div className="space-y-6">
-          <div className="h-40 animate-pulse rounded-[2rem] border border-slate-200 bg-white" />
+          <div className="h-40 animate-pulse rounded-2xl border border-slate-200 bg-white" />
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             {[0, 1, 2, 3].map((i) => (
               <div
                 key={i}
-                className="h-44 animate-pulse rounded-3xl border border-slate-200 bg-white"
+                className="h-44 animate-pulse rounded-2xl border border-slate-200 bg-white"
               />
             ))}
           </div>
-          <div className="h-72 animate-pulse rounded-[2rem] border border-slate-200 bg-white" />
+          <div className="h-72 animate-pulse rounded-2xl border border-slate-200 bg-white" />
         </div>
       </div>
     </div>

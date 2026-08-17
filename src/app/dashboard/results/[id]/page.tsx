@@ -98,15 +98,15 @@ export default async function ResultPage({ params }: { params: Promise<{ id: str
               <p className="text-slate-400 text-lg">Completed on {new Date(result.createdAt).toLocaleDateString()}</p>
             </div>
             
-            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/20 flex items-center gap-6">
+            <div className="bg-slate-800 border border-slate-700 rounded-2xl p-6 flex items-center gap-6">
               <div className="text-center">
-                <span className="block text-slate-400 text-xs font-bold uppercase tracking-widest mb-1">Estimated Score</span>
-                <span className="text-5xl font-black text-blue-400">{result.score}</span>
+                <span className="block text-slate-400 text-xs font-medium uppercase tracking-widest mb-1">Estimated Score</span>
+                <span className="text-5xl font-black text-blue-400 tabular-nums">{result.score}</span>
               </div>
-              <div className="w-px h-12 bg-white/10"></div>
+              <div className="w-px h-12 bg-slate-700"></div>
               <div className="text-center">
-                <span className="block text-slate-400 text-xs font-bold uppercase tracking-widest mb-1">Accuracy</span>
-                <span className="text-3xl font-bold">{accuracy}%</span>
+                <span className="block text-slate-400 text-xs font-medium uppercase tracking-widest mb-1">Accuracy</span>
+                <span className="text-3xl font-semibold tabular-nums">{accuracy}%</span>
               </div>
             </div>
           </div>
@@ -118,12 +118,12 @@ export default async function ResultPage({ params }: { params: Promise<{ id: str
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
             <div className="flex items-center gap-4 mb-4">
-              <div className="p-3 bg-green-50 rounded-lg">
-                <CheckCircle2 className="w-6 h-6 text-green-600" />
+              <div className="p-3 bg-emerald-50 rounded-lg">
+                <CheckCircle2 className="w-6 h-6 text-emerald-600" />
               </div>
               <div>
-                <h3 className="text-sm font-bold text-slate-500 uppercase">Correct</h3>
-                <p className="text-2xl font-black text-slate-900">{correctCount} <span className="text-slate-300 font-medium">/ {totalCount}</span></p>
+                <h3 className="text-sm font-medium text-slate-500 uppercase">Correct</h3>
+                <p className="text-2xl font-semibold text-slate-900">{correctCount} <span className="text-slate-300 font-medium">/ {totalCount}</span></p>
               </div>
             </div>
           </div>
@@ -134,8 +134,8 @@ export default async function ResultPage({ params }: { params: Promise<{ id: str
                 <XCircle className="w-6 h-6 text-red-600" />
               </div>
               <div>
-                <h3 className="text-sm font-bold text-slate-500 uppercase">Incorrect</h3>
-                <p className="text-2xl font-black text-slate-900">{totalCount - correctCount}</p>
+                <h3 className="text-sm font-medium text-slate-500 uppercase">Incorrect</h3>
+                <p className="text-2xl font-semibold text-slate-900">{totalCount - correctCount}</p>
               </div>
             </div>
           </div>
@@ -146,8 +146,8 @@ export default async function ResultPage({ params }: { params: Promise<{ id: str
                 <Clock className="w-6 h-6 text-blue-600" />
               </div>
               <div>
-                <h3 className="text-sm font-bold text-slate-500 uppercase">Time Spent</h3>
-                <p className="text-2xl font-black text-slate-900">{formatTime(result.timeSpent)}</p>
+                <h3 className="text-sm font-medium text-slate-500 uppercase">Time Spent</h3>
+                <p className="text-2xl font-semibold text-slate-900">{formatTime(result.timeSpent)}</p>
               </div>
             </div>
           </div>
@@ -155,7 +155,7 @@ export default async function ResultPage({ params }: { params: Promise<{ id: str
 
         {/* Detailed Review */}
         <div className="mt-12 space-y-8">
-          <h2 className="text-2xl font-bold text-slate-900 mb-6 flex items-center gap-2">
+          <h2 className="text-2xl font-semibold text-slate-900 mb-6 flex items-center gap-2">
             <Award className="w-6 h-6 text-blue-600" />
             Detailed Review
           </h2>
@@ -164,10 +164,10 @@ export default async function ResultPage({ params }: { params: Promise<{ id: str
           <div key={module.index} className="space-y-4">
             {isModular && (
               <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-5 py-4 shadow-sm">
-                <span className="text-sm font-black uppercase tracking-widest text-slate-900">
+                <span className="text-sm font-medium uppercase tracking-widest text-slate-900">
                   Module {module.index}
                 </span>
-                <span className="text-xs font-bold uppercase tracking-widest text-slate-400">
+                <span className="text-xs font-medium uppercase tracking-widest text-slate-400">
                   {module.answers.filter((answer) => answer.isCorrect).length} / {module.answers.length} correct
                   {' | '}
                   {Math.round(module.durationSeconds / 60)} min
@@ -175,17 +175,17 @@ export default async function ResultPage({ params }: { params: Promise<{ id: str
               </div>
             )}
             {module.answers.map((data, index) => (
-              <div key={data.id} className={`p-6 rounded-xl border bg-white shadow-sm transition-all hover:shadow-md ${
-                data.isCorrect ? 'border-l-4 border-l-green-500' : 'border-l-4 border-l-red-500'
+              <div key={data.id} className={`p-6 rounded-xl border bg-white shadow-sm transition-all hover:shadow-sm ${
+                data.isCorrect ? 'border-l-4 border-l-emerald-500' : 'border-l-4 border-l-red-500'
               }`}>
                 <div className="flex items-start justify-between mb-6">
-                  <span className="text-xs font-black text-slate-400 uppercase tracking-widest">Question {index + 1}</span>
+                  <span className="text-xs font-medium text-slate-400 uppercase tracking-widest">Question {index + 1}</span>
                   {data.isCorrect ? (
-                    <span className="flex items-center text-xs font-bold text-green-600 bg-green-50 px-2 py-1 rounded">
+                    <span className="flex items-center text-xs font-medium text-emerald-600 bg-emerald-50 px-2 py-1 rounded">
                       <CheckCircle2 className="w-3 h-3 mr-1" /> Correct
                     </span>
                   ) : (
-                    <span className="flex items-center text-xs font-bold text-red-600 bg-red-50 px-2 py-1 rounded">
+                    <span className="flex items-center text-xs font-medium text-red-600 bg-red-50 px-2 py-1 rounded">
                       <XCircle className="w-3 h-3 mr-1" /> Incorrect
                     </span>
                   )}
@@ -215,15 +215,15 @@ export default async function ResultPage({ params }: { params: Promise<{ id: str
                   
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 border-t border-slate-50 pt-6">
                     <div className="space-y-2">
-                      <p className="text-xs font-bold text-slate-500 uppercase">Your Answer</p>
-                      <p className={`text-lg font-bold ${data.isCorrect ? 'text-green-700' : 'text-red-700'}`}>
+                      <p className="text-xs font-medium text-slate-500 uppercase">Your Answer</p>
+                      <p className={`text-lg font-semibold ${data.isCorrect ? 'text-emerald-700' : 'text-red-700'}`}>
                         {renderMathText(data.userAnswer) || 'Not answered'}
                       </p>
                     </div>
                     {!data.isCorrect && (
                       <div className="space-y-2">
-                        <p className="text-xs font-bold text-slate-500 uppercase">Correct Answer</p>
-                        <p className="text-lg font-bold text-slate-900">{renderMathText(data.correctAnswer)}</p>
+                        <p className="text-xs font-medium text-slate-500 uppercase">Correct Answer</p>
+                        <p className="text-lg font-semibold text-slate-900">{renderMathText(data.correctAnswer)}</p>
                       </div>
                     )}
                   </div>

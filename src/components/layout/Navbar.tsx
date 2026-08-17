@@ -28,8 +28,8 @@ export default function Navbar() {
     <nav
       className={`fixed top-0 left-0 right-0 z-50 border-b border-slate-200 bg-white transition-shadow duration-300 ${
         scrolled
-          ? "py-3 shadow-lg shadow-slate-900/[0.03]"
-          : "py-5 shadow-sm shadow-slate-900/[0.03]"
+          ? "py-3 shadow-lg"
+          : "py-5 shadow-sm"
       }`}
     >
       <div className="mx-auto max-w-7xl px-6 lg:px-8 flex items-center justify-between">
@@ -38,11 +38,11 @@ export default function Navbar() {
           className="flex items-center gap-2 group"
           aria-label="MYSATuz home"
         >
-          <span className="inline-flex items-center justify-center w-9 h-9 rounded-xl gradient-cta text-white text-sm font-black shadow-md shadow-indigo-200/60 group-hover:shadow-indigo-300/80 transition-shadow">
+          <span className="inline-flex items-center justify-center w-9 h-9 rounded-xl bg-blue-600 text-white text-sm font-semibold shadow-sm group-hover:bg-blue-700 transition-colors">
             M
           </span>
-          <span className="text-xl font-black tracking-tight text-slate-900">
-            MYSAT<span className="text-indigo-600">uz</span>
+          <span className="text-xl font-semibold tracking-tight text-slate-900">
+            MYSAT<span className="text-blue-600">uz</span>
           </span>
         </Link>
 
@@ -51,7 +51,7 @@ export default function Navbar() {
             <a
               key={link.href}
               href={link.href}
-              className="text-sm font-semibold text-slate-500 hover:text-slate-900 transition-colors relative after:absolute after:bottom-[-4px] after:left-0 after:w-0 after:h-[2px] after:bg-indigo-600 after:transition-[width] hover:after:w-full"
+              className="text-sm font-medium text-slate-500 hover:text-slate-900 transition-colors relative after:absolute after:bottom-[-4px] after:left-0 after:w-0 after:h-[2px] after:bg-blue-600 after:transition-[width] hover:after:w-full"
             >
               {link.label}
             </a>
@@ -61,13 +61,13 @@ export default function Navbar() {
         <div className="hidden md:flex items-center gap-3">
           <Link
             href="/login"
-            className="text-sm font-bold text-slate-600 hover:text-slate-900 px-4 py-2 rounded-xl transition-colors"
+            className="text-sm font-medium text-slate-600 hover:text-slate-900 px-4 py-2 rounded-xl transition-colors"
           >
             Sign in
           </Link>
           <Link
             href="/register"
-            className="btn-primary text-sm font-bold text-white gradient-cta px-5 py-2.5 rounded-xl"
+            className="btn-primary text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 px-5 py-2.5 rounded-xl transition-colors"
           >
             Get Started Free
           </Link>
@@ -87,14 +87,14 @@ export default function Navbar() {
       </div>
 
       {mobileOpen && (
-        <div className="md:hidden bg-white border border-slate-200 mx-4 mt-2 rounded-2xl p-4 animate-scale-in shadow-xl">
+        <div className="md:hidden bg-white border border-slate-200 mx-4 mt-2 rounded-2xl p-4 animate-scale-in shadow-lg">
           <div className="flex flex-col gap-1">
             {navLinks.map((link) => (
               <a
                 key={link.href}
                 href={link.href}
                 onClick={() => setMobileOpen(false)}
-                className="text-sm font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-50 px-4 py-3 rounded-xl transition-colors"
+                className="text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 px-4 py-3 rounded-xl transition-colors"
               >
                 {link.label}
               </a>
@@ -103,14 +103,14 @@ export default function Navbar() {
             <Link
               href="/login"
               onClick={() => setMobileOpen(false)}
-              className="text-sm font-bold text-slate-600 px-4 py-3 rounded-xl hover:bg-slate-50 transition-colors"
+              className="text-sm font-medium text-slate-600 px-4 py-3 rounded-xl hover:bg-slate-50 transition-colors"
             >
               Sign in
             </Link>
             <Link
               href="/register"
               onClick={() => setMobileOpen(false)}
-              className="btn-primary text-sm font-bold text-white gradient-cta px-4 py-3 rounded-xl text-center mt-1"
+              className="btn-primary text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 px-4 py-3 rounded-xl text-center mt-1 transition-colors"
             >
               Get Started Free
             </Link>

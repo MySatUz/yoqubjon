@@ -53,11 +53,11 @@ const AnswerChoice = memo(function AnswerChoice({
       onClick={() => onSelect(letter)}
       className={`group flex items-center gap-4 p-5 rounded-2xl border-2 transition text-left ${
         isSelected
-          ? 'border-emerald-600 bg-emerald-50 shadow-lg shadow-emerald-100 ring-4 ring-emerald-50 scale-[1.02]'
+          ? 'border-emerald-600 bg-emerald-50 shadow-lg ring-4 ring-emerald-50 scale-[1.02]'
           : 'border-slate-200 bg-white hover:border-emerald-300 hover:bg-slate-50 shadow-sm'
       }`}
     >
-      <span className={`flex-shrink-0 w-10 h-10 rounded-xl border-2 flex items-center justify-center font-black transition ${
+      <span className={`flex-shrink-0 w-10 h-10 rounded-xl border-2 flex items-center justify-center font-semibold transition ${
         isSelected
           ? 'bg-emerald-600 border-emerald-600 text-white rotate-3'
           : 'border-slate-200 text-slate-400 group-hover:border-emerald-300 group-hover:text-emerald-600'
@@ -65,7 +65,7 @@ const AnswerChoice = memo(function AnswerChoice({
         {letter}
       </span>
       <span
-        className={`font-bold transition-[color,font-size] ${
+        className={`font-semibold transition-[color,font-size] ${
           isSelected ? 'text-emerald-900' : 'text-slate-800'
         } ${isCompact ? 'text-base' : 'text-xl'}`}
         dangerouslySetInnerHTML={{ __html: optionHtml }}
@@ -167,7 +167,7 @@ function GridInAnswer({ questionId }: { questionId: string }) {
       onBlur={commitDraft}
       placeholder="Enter value"
       inputMode="decimal"
-      className="w-full rounded-2xl border-2 border-blue-300 bg-white px-4 py-3 text-center text-3xl font-black tracking-tight text-slate-900 shadow-[0_10px_22px_rgba(37,99,235,0.12)] transition-all placeholder:text-slate-200 focus:border-blue-600 focus:outline-none focus:ring-4 focus:ring-blue-100"
+      className="w-full rounded-2xl border-2 border-blue-300 bg-white px-4 py-3 text-center text-3xl font-black tracking-tight text-slate-900 shadow-sm transition-all placeholder:text-slate-200 focus:border-blue-600 focus:outline-none focus:ring-4 focus:ring-blue-100"
     />
   );
 }
@@ -228,7 +228,7 @@ export default function SplitScreen({ questions }: { questions: Question[] }) {
             </div>
 
             {question.imageUrl && (
-              <div className={`my-6 rounded-2xl overflow-hidden border border-slate-200 bg-white p-3 shadow-md mx-auto ${isCalculatorOpen ? 'max-w-md' : 'max-w-xl'}`}>
+              <div className={`my-6 rounded-2xl overflow-hidden border border-slate-200 bg-white p-3 shadow-sm mx-auto ${isCalculatorOpen ? 'max-w-md' : 'max-w-xl'}`}>
                 {/* The diagram is on screen the moment the question is, so the
                     default `loading="lazy"` only ever delays it. In Next 16
                     `priority` is deprecated in favour of these two props. */}
@@ -265,16 +265,15 @@ export default function SplitScreen({ questions }: { questions: Question[] }) {
                 })}
               </div>
             ) : (
-              <div className="mx-auto max-w-sm rounded-[2rem] border border-blue-100 bg-gradient-to-b from-blue-50 to-white p-5 shadow-[0_18px_40px_rgba(59,130,246,0.12)]">
+              <div className="mx-auto max-w-sm rounded-2xl border border-blue-100 bg-blue-50 p-5 shadow-sm">
                 <div className="flex flex-col items-center gap-3">
-                  <h4 className="mb-1 rounded-full border border-blue-100 bg-white px-4 py-1.5 text-[10px] font-black uppercase tracking-[0.2em] text-blue-600 shadow-sm">
+                  <h4 className="mb-1 rounded-full border border-blue-100 bg-white px-4 py-1.5 text-[10px] font-medium uppercase tracking-[0.2em] text-blue-600">
                     Student-Produced Response
                   </h4>
-                  <div className="relative mx-auto w-full max-w-[220px]">
+                  <div className="mx-auto w-full max-w-[220px]">
                     <GridInAnswer key={question.id} questionId={question.id} />
-                    <div className="pointer-events-none absolute inset-0 rounded-2xl border border-white/80"></div>
                   </div>
-                  <p className="text-center text-[11px] font-bold uppercase tracking-[0.18em] text-blue-500">
+                  <p className="text-center text-[11px] font-medium uppercase tracking-[0.18em] text-blue-500">
                     Enter your answer above
                   </p>
                 </div>

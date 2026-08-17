@@ -91,19 +91,19 @@ const SectionCard = memo(function SectionCard({
         prefetch={false}
         className="group block rounded-xl outline-none focus-visible:ring-4 focus-visible:ring-blue-100"
       >
-        <h4 className="text-lg font-black text-slate-900">{option.label}</h4>
-        <p className="mt-2 min-h-12 text-xs font-bold leading-relaxed text-slate-500">{option.description}</p>
-        <p className="mt-4 text-xs font-black uppercase tracking-widest text-blue-600">
+        <h4 className="text-lg font-semibold text-slate-900">{option.label}</h4>
+        <p className="mt-2 min-h-12 text-xs font-medium leading-relaxed text-slate-500">{option.description}</p>
+        <p className="mt-4 text-xs font-medium uppercase tracking-widest text-blue-600">
           {isVisible ? 'Shown in Practice Center' : 'Hidden from students'}
         </p>
-        <span className="mt-4 inline-flex items-center gap-2 text-xs font-black uppercase tracking-widest text-slate-500 transition group-hover:text-blue-600">
+        <span className="mt-4 inline-flex items-center gap-2 text-xs font-medium uppercase tracking-widest text-slate-500 transition group-hover:text-blue-600">
           Open results
           <ArrowUpRight className="h-4 w-4" />
         </span>
       </Link>
 
       <label className="mt-5 flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3">
-        <span className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-slate-500">
+        <span className="flex items-center gap-2 text-xs font-medium uppercase tracking-widest text-slate-500">
           <Repeat2 className="h-4 w-4" />
           Attempts
         </span>
@@ -117,9 +117,9 @@ const SectionCard = memo(function SectionCard({
             required
             defaultValue={option.maxAttempts}
             aria-label={`Attempts per user in ${option.label}`}
-            className="w-16 bg-transparent text-right text-sm font-black text-slate-900 outline-none"
+            className="w-16 bg-transparent text-right text-sm font-semibold text-slate-900 outline-none"
           />
-          <span className="text-xs font-black uppercase tracking-widest text-slate-400">per user</span>
+          <span className="text-xs font-medium uppercase tracking-widest text-slate-400">per user</span>
         </span>
       </label>
 
@@ -127,7 +127,7 @@ const SectionCard = memo(function SectionCard({
         type="button"
         onClick={() => onDelete(option)}
         disabled={isDeleting || !canDelete}
-        className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-red-100 bg-white px-4 py-3 text-xs font-black text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-40"
+        className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-red-100 bg-white px-4 py-3 text-xs font-medium text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-40"
       >
         {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
         Delete section
@@ -180,17 +180,17 @@ export default function SectionVisibilityForm({ collections }: SectionVisibility
   }, []);
 
   return (
-    <section className="rounded-3xl border border-slate-200 bg-white p-8 shadow-xl">
+    <section className="rounded-2xl border border-slate-200 bg-white p-8 shadow-lg">
       <div className="mb-8 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h3 className="text-2xl font-black tracking-tight text-slate-900">Practice sections</h3>
-          <p className="mt-2 max-w-2xl text-sm font-bold leading-relaxed text-slate-500">
+          <h3 className="text-2xl font-semibold tracking-tight text-slate-900">Practice sections</h3>
+          <p className="mt-2 max-w-2xl text-sm font-semibold leading-relaxed text-slate-500">
             Create, delete, and choose which sections appear in Practice Center. The attempt limit
             is the rule for the whole section: changing it applies to every test inside and to new
             uploads.
           </p>
         </div>
-        <span className="inline-flex w-fit items-center gap-2 rounded-full bg-blue-50 px-4 py-2 text-xs font-black uppercase tracking-widest text-blue-700">
+        <span className="inline-flex w-fit items-center gap-2 rounded-full bg-blue-50 px-4 py-2 text-xs font-medium uppercase tracking-widest text-blue-700">
           <Eye className="h-4 w-4" />
           Visibility
         </span>
@@ -202,7 +202,7 @@ export default function SectionVisibilityForm({ collections }: SectionVisibility
           required
           maxLength={80}
           placeholder="New section name"
-          className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-900 outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+          className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-900 outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
         />
         <input
           name="sectionDescription"
@@ -221,14 +221,14 @@ export default function SectionVisibilityForm({ collections }: SectionVisibility
             required
             defaultValue={DEFAULT_TEST_MAX_ATTEMPTS}
             aria-label="Attempts per user in the new section"
-            className="w-16 bg-transparent text-sm font-black text-slate-900 outline-none"
+            className="w-16 bg-transparent text-sm font-semibold text-slate-900 outline-none"
           />
-          <span className="text-xs font-black uppercase tracking-widest text-slate-400">tries</span>
+          <span className="text-xs font-medium uppercase tracking-widest text-slate-400">tries</span>
         </label>
         <button
           type="submit"
           disabled={isCreating}
-          className="inline-flex items-center justify-center gap-2 rounded-2xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-blue-100 transition hover:bg-blue-700 disabled:cursor-wait disabled:opacity-60"
+          className="inline-flex items-center justify-center gap-2 rounded-2xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-lg transition hover:bg-blue-700 disabled:cursor-wait disabled:opacity-60"
         >
           {isCreating ? <Loader2 className="h-5 w-5 animate-spin" /> : <PlusCircle className="h-5 w-5" />}
           Create
@@ -253,7 +253,7 @@ export default function SectionVisibilityForm({ collections }: SectionVisibility
         <button
           type="submit"
           disabled={isSaving}
-          className="mt-8 inline-flex w-full items-center justify-center gap-3 rounded-2xl bg-slate-900 px-6 py-4 text-sm font-black text-white shadow-xl shadow-slate-200 transition hover:bg-blue-600 disabled:cursor-wait disabled:opacity-60 sm:w-auto"
+          className="mt-8 inline-flex w-full items-center justify-center gap-3 rounded-2xl bg-slate-900 px-6 py-4 text-sm font-semibold text-white shadow-lg transition hover:bg-blue-600 disabled:cursor-wait disabled:opacity-60 sm:w-auto"
         >
           {isSaving ? <Loader2 className="h-5 w-5 animate-spin" /> : <CheckCircle2 className="h-5 w-5" />}
           Save sections
@@ -261,13 +261,13 @@ export default function SectionVisibilityForm({ collections }: SectionVisibility
       </form>
 
       {result?.success && (
-        <div className="mt-5 rounded-2xl border border-green-100 bg-green-50 p-4 text-sm font-bold text-green-700">
+        <div className="mt-5 rounded-2xl border border-emerald-100 bg-emerald-50 p-4 text-sm font-semibold text-emerald-700">
           {result.message || 'Sections updated.'}
         </div>
       )}
 
       {result?.error && (
-        <div className="mt-5 rounded-2xl border border-red-100 bg-red-50 p-4 text-sm font-bold text-red-700">
+        <div className="mt-5 rounded-2xl border border-red-100 bg-red-50 p-4 text-sm font-semibold text-red-700">
           Error: {result.error}
         </div>
       )}

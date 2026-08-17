@@ -37,14 +37,6 @@ type PracticeCatalogProps = {
   canDownloadPdf: boolean;
 };
 
-const COLLECTION_THEMES = [
-  'bg-blue-600 text-white shadow-blue-200',
-  'bg-slate-900 text-white shadow-slate-200',
-  'bg-teal-600 text-white shadow-teal-200',
-  'bg-indigo-600 text-white shadow-indigo-200',
-  'bg-emerald-600 text-white shadow-emerald-200',
-];
-
 function readCategoryFromUrl(collections: TestCollectionOption[]) {
   if (typeof window === 'undefined') return null;
 
@@ -98,7 +90,7 @@ function StartPracticeLink({ testId }: { testId: string }) {
       onMouseEnter={showIntent}
       onFocus={showIntent}
       onPointerDown={showIntent}
-      className="inline-flex items-center justify-center w-full py-4 px-6 rounded-2xl text-sm font-black text-white bg-slate-900 hover:bg-blue-600 transition-[background-color,transform] duration-200 active:scale-95 shadow-xl shadow-slate-200"
+      className="inline-flex items-center justify-center w-full py-4 px-6 rounded-2xl text-sm font-semibold text-white bg-slate-900 hover:bg-blue-600 transition-[background-color,transform] duration-200 active:scale-95 shadow-lg"
     >
       Start Practice Module
     </Link>
@@ -170,7 +162,7 @@ export default function PracticeCatalog({
           <button
             type="button"
             onClick={() => switchCategory(null)}
-            className="mb-5 inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-black text-slate-600 transition hover:border-blue-200 hover:text-blue-600"
+            className="mb-5 inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 transition hover:border-blue-200 hover:text-blue-600"
           >
             <ArrowLeft className="h-4 w-4" />
             Back to collections
@@ -186,10 +178,9 @@ export default function PracticeCatalog({
 
       {!effectiveActiveCategory ? (
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
-          {visibleCollections.map((collection, index) => {
+          {visibleCollections.map((collection) => {
             const Icon = getCollectionIcon(collection.value);
             const count = testsByCategory.get(collection.value)?.length ?? 0;
-            const theme = COLLECTION_THEMES[index % COLLECTION_THEMES.length];
 
             return (
               <button
@@ -197,23 +188,25 @@ export default function PracticeCatalog({
                 type="button"
                 onClick={() => switchCategory(collection.value)}
                 disabled={isPending}
-                className="group relative overflow-hidden rounded-[2rem] border border-slate-200 bg-white p-8 text-left shadow-sm transition-[transform,border-color] duration-300 hover:-translate-y-1 hover:border-blue-200 hover:shadow-2xl hover:shadow-blue-900/10 disabled:cursor-wait disabled:opacity-80"
+                className="group relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-8 text-left shadow-sm transition-[transform,border-color] duration-300 hover:-translate-y-1 hover:border-blue-200 hover:shadow-2xl hover: disabled:cursor-wait disabled:opacity-80"
               >
                 <div className="absolute right-0 top-0 h-40 w-40 rounded-bl-full bg-slate-50 transition-transform group-hover:scale-110"></div>
                 <div className="relative z-10">
                   <div className="mb-8 flex items-start justify-between gap-4">
-                    <div className={`rounded-3xl p-5 shadow-xl ${theme}`}>
+                    {/* One treatment for every collection: the icon and the
+                        label carry the difference, not a rotating hue. */}
+                    <div className="rounded-2xl bg-blue-600 p-5 text-white">
                       <Icon className="h-8 w-8" />
                     </div>
-                    <span className="rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-black uppercase tracking-widest text-slate-500">
+                    <span className="rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-medium uppercase tracking-widest text-slate-500">
                       {count} {count === 1 ? 'test' : 'tests'}
                     </span>
                   </div>
                   <h2 className="text-3xl font-black tracking-tight text-slate-900">{collection.label}</h2>
-                  <p className="mt-3 min-h-14 text-base font-bold leading-relaxed text-slate-500">
+                  <p className="mt-3 min-h-14 text-base font-semibold leading-relaxed text-slate-500">
                     {collection.description}
                   </p>
-                  <div className="mt-8 inline-flex items-center gap-2 text-sm font-black text-blue-600">
+                  <div className="mt-8 inline-flex items-center gap-2 text-sm font-semibold text-blue-600">
                     Open collection
                     <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
                   </div>
@@ -223,8 +216,8 @@ export default function PracticeCatalog({
           })}
 
           {visibleCollections.length === 0 && (
-            <div className="col-span-full rounded-3xl border-2 border-dashed border-slate-200 bg-slate-50 px-6 py-20 text-center">
-              <p className="font-bold text-slate-400">No practice collections are available right now.</p>
+            <div className="col-span-full rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 px-6 py-20 text-center">
+              <p className="font-semibold text-slate-400">No practice collections are available right now.</p>
             </div>
           )}
         </div>
@@ -246,32 +239,32 @@ export default function PracticeCatalog({
             return (
               <div
                 key={test.id}
-                className="bg-white rounded-3xl p-8 shadow-sm border border-slate-200 hover:shadow-xl hover:shadow-blue-900/5 transition-[transform,border-color] duration-300 group relative overflow-hidden"
+                className="bg-white rounded-2xl p-8 shadow-sm border border-slate-200 hover:shadow-lg hover: transition-[transform,border-color] duration-300 group relative overflow-hidden"
               >
                 <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-bl-full -mr-16 -mt-16 transition-transform group-hover:scale-110"></div>
 
                 <div className="relative z-10">
                   <div className="flex justify-between items-start mb-6">
-                    <div className={`p-4 rounded-2xl ${canStart ? 'bg-blue-600' : 'bg-slate-100'} text-white shadow-lg ${canStart ? 'shadow-blue-200' : ''}`}>
+                    <div className={`p-4 rounded-2xl ${canStart ? 'bg-blue-600' : 'bg-slate-100'} text-white shadow-lg ${canStart ? '' : ''}`}>
                       {canStart ? <LayoutDashboard className="w-6 h-6" /> : <Lock className="w-6 h-6 text-slate-400" />}
                     </div>
                     <div className="flex flex-col items-end gap-2">
-                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${
+                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-[10px] font-medium uppercase tracking-widest border ${
                         test.isFree
-                          ? 'bg-green-100 text-green-700 border-green-200'
+                          ? 'bg-emerald-100 text-emerald-700 border-emerald-200'
                           : 'bg-amber-100 text-amber-700 border-amber-200'
                       }`}>
                         {accessLabel}
                       </span>
-                      <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[10px] font-black uppercase tracking-widest text-slate-500">
+                      <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[10px] font-medium uppercase tracking-widest text-slate-500">
                         {formatDuration(test.durationSeconds)}
                       </span>
                       {formatModuleBadge(test) && (
-                        <span className="rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-blue-700">
+                        <span className="rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-[10px] font-medium uppercase tracking-widest text-blue-700">
                           {formatModuleBadge(test)}
                         </span>
                       )}
-                      <span className={`inline-flex items-center gap-1 rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-widest ${
+                      <span className={`inline-flex items-center gap-1 rounded-full border px-3 py-1 text-[10px] font-medium uppercase tracking-widest ${
                         attemptLimitReached
                           ? 'border-amber-200 bg-amber-100 text-amber-700'
                           : 'border-slate-200 bg-white text-slate-500'
@@ -282,7 +275,7 @@ export default function PracticeCatalog({
                     </div>
                   </div>
 
-                  <h3 className="text-2xl font-black text-slate-900 mb-3">{test.title}</h3>
+                  <h3 className="text-2xl font-semibold text-slate-900 mb-3">{test.title}</h3>
                   <p className="text-slate-500 text-sm mb-8 font-medium leading-relaxed">
                     {description}
                   </p>
@@ -293,7 +286,7 @@ export default function PracticeCatalog({
                         <button
                           type="button"
                           disabled
-                          className="inline-flex w-full cursor-not-allowed items-center justify-center rounded-2xl bg-slate-200 px-6 py-4 text-sm font-black text-slate-500"
+                          className="inline-flex w-full cursor-not-allowed items-center justify-center rounded-2xl bg-slate-200 px-6 py-4 text-sm font-semibold text-slate-500"
                         >
                           Attempt limit reached
                         </button>
@@ -304,7 +297,7 @@ export default function PracticeCatalog({
                         <Link
                           href={`/exam/${test.id}/pdf`}
                           prefetch={false}
-                          className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-6 py-3 text-sm font-black text-slate-600 transition-[color,border-color] duration-200 hover:border-blue-200 hover:text-blue-600"
+                          className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-6 py-3 text-sm font-semibold text-slate-600 transition-[color,border-color] duration-200 hover:border-blue-200 hover:text-blue-600"
                         >
                           <FileDown className="h-4 w-4" />
                           Download questions PDF
@@ -315,11 +308,11 @@ export default function PracticeCatalog({
                     <div className="space-y-4">
                       <Link
                         href="/dashboard/subscription"
-                        className="inline-flex items-center justify-center w-full py-4 px-6 rounded-2xl text-sm font-black text-white bg-blue-600 hover:bg-blue-700 transition-[background-color,transform] duration-200 active:scale-95 shadow-xl shadow-blue-100"
+                        className="inline-flex items-center justify-center w-full py-4 px-6 rounded-2xl text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 transition-[background-color,transform] duration-200 active:scale-95 shadow-lg"
                       >
                         Unlock with Premium
                       </Link>
-                      <button disabled className="w-full py-3 text-xs font-bold text-slate-400 uppercase tracking-widest">
+                      <button disabled className="w-full py-3 text-xs font-medium text-slate-400 uppercase tracking-widest">
                         Module Locked
                       </button>
                     </div>
@@ -330,8 +323,8 @@ export default function PracticeCatalog({
           })}
 
           {visibleTests.length === 0 && (
-            <div className="col-span-full py-20 bg-slate-50 rounded-3xl border-2 border-dashed border-slate-200 text-center">
-              <p className="text-slate-400 font-bold">No tests available yet. Check back later!</p>
+            <div className="col-span-full py-20 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200 text-center">
+              <p className="text-slate-400 font-semibold">No tests available yet. Check back later!</p>
             </div>
           )}
         </div>

@@ -40,14 +40,14 @@ export default function MockPaymentClient() {
   if (status === 'success') {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-3xl p-12 shadow-2xl border border-slate-200 max-w-md w-full text-center space-y-6">
-          <div className="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-6 scale-110 animate-bounce">
+        <div className="bg-white rounded-2xl p-12 shadow-2xl border border-slate-200 max-w-md w-full text-center space-y-6">
+          <div className="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-6 scale-110 animate-bounce">
             <CheckCircle2 className="w-10 h-10" />
           </div>
           <h1 className="text-3xl font-black text-slate-900">Payment Successful!</h1>
           <p className="text-slate-500 font-medium">Your subscription has been activated. Redirecting to your dashboard...</p>
           <div className="h-1 bg-slate-100 rounded-full overflow-hidden">
-            <div className="h-full bg-green-500"></div>
+            <div className="h-full bg-emerald-500"></div>
           </div>
         </div>
       </div>
@@ -59,19 +59,19 @@ export default function MockPaymentClient() {
       <div className="max-w-md w-full">
         <div className="flex items-center justify-center gap-3 mb-8">
           <div className="w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center">
-            <span className="text-white font-black text-xl">M</span>
+            <span className="text-white font-semibold text-xl">M</span>
           </div>
-          <span className="text-2xl font-black text-slate-900 tracking-tight">
+          <span className="text-2xl font-semibold text-slate-900 tracking-tight">
             MYSATuz <span className="text-blue-600">Pay</span>
           </span>
         </div>
 
-        <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden">
+        <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden">
           <div className="bg-slate-900 p-8 text-white">
-            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-2">Order Summary</p>
+            <p className="text-[10px] font-medium uppercase tracking-[0.2em] text-slate-400 mb-2">Order Summary</p>
             <div className="flex justify-between items-end">
               <div>
-                <h2 className="text-xl font-bold">Premium Pro</h2>
+                <h2 className="text-xl font-semibold">Premium Pro</h2>
                 <p className="text-slate-400 text-sm">Monthly Subscription</p>
               </div>
               <div className="text-right">
@@ -89,8 +89,8 @@ export default function MockPaymentClient() {
                   <CreditCard className="w-6 h-6 text-slate-600" />
                 </div>
                 <div className="flex-1">
-                  <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Card Holder</p>
-                  <p className="text-sm font-black text-slate-900">MOCK TEST USER</p>
+                  <p className="text-xs font-medium text-slate-400 uppercase tracking-widest">Card Holder</p>
+                  <p className="text-sm font-semibold text-slate-900">MOCK TEST USER</p>
                 </div>
               </div>
 
@@ -99,8 +99,8 @@ export default function MockPaymentClient() {
                   <ShieldCheck className="w-6 h-6 text-blue-600" />
                 </div>
                 <div className="flex-1">
-                  <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Security</p>
-                  <p className="text-sm font-black text-slate-900">Development simulation</p>
+                  <p className="text-xs font-medium text-slate-400 uppercase tracking-widest">Security</p>
+                  <p className="text-sm font-semibold text-slate-900">Development simulation</p>
                 </div>
               </div>
             </div>
@@ -108,7 +108,7 @@ export default function MockPaymentClient() {
             <button
               onClick={handlePayment}
               disabled={loading}
-              className="w-full bg-blue-600 hover:bg-blue-500 text-white py-5 rounded-2xl font-black text-lg transition-all shadow-xl shadow-blue-200 flex items-center justify-center gap-3 active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed"
+              className="w-full bg-blue-600 hover:bg-blue-500 text-white py-5 rounded-2xl font-semibold text-lg transition-all shadow-lg flex items-center justify-center gap-3 active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed"
             >
               {loading ? (
                 <>
@@ -122,7 +122,7 @@ export default function MockPaymentClient() {
 
             <button
               onClick={() => router.back()}
-              className="w-full text-slate-400 font-bold text-sm hover:text-slate-600 flex items-center justify-center gap-2"
+              className="w-full text-slate-400 font-semibold text-sm hover:text-slate-600 flex items-center justify-center gap-2"
             >
               <ArrowLeft className="w-4 h-4" />
               Cancel and Return
@@ -130,7 +130,7 @@ export default function MockPaymentClient() {
           </div>
 
           <div className="p-4 bg-slate-50 border-t border-slate-100 text-center">
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center justify-center gap-2">
+            <p className="text-[10px] font-medium text-slate-400 uppercase tracking-widest flex items-center justify-center gap-2">
               <ShieldCheck className="w-3 h-3" />
               Mock transaction for local testing only
             </p>

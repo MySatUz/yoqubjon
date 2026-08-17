@@ -62,23 +62,23 @@ export default async function ReviewPage({ params }: { params: Promise<{ resultI
         
         {/* Score Header */}
         <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 text-center">
-          <h1 className="text-3xl font-bold text-slate-900 tracking-tight mb-2">Test Review</h1>
+          <h1 className="text-3xl font-semibold text-slate-900 tracking-tight mb-2">Test Review</h1>
           <p className="text-slate-500 font-medium mb-8">{result.test.title}</p>
           
           <div className="flex justify-center items-end gap-2">
-            <span className="text-6xl font-black text-blue-600 tracking-tighter">{result.score}</span>
-            <span className="text-xl font-bold text-slate-400 mb-2">/ 800</span>
+            <span className="text-6xl font-black text-blue-600 tracking-tighter tabular-nums">{result.score}</span>
+            <span className="text-xl font-semibold text-slate-400 mb-2">/ 800</span>
           </div>
         </div>
 
         {/* Question Review List */}
         <div className="space-y-4">
-          <h2 className="text-xl font-bold text-slate-900">Question Breakdown</h2>
+          <h2 className="text-xl font-semibold text-slate-900">Question Breakdown</h2>
           
           {modules.map((module) => (
           <div key={module.index} className="grid gap-4">
             {isModular && (
-              <h3 className="mt-2 text-sm font-black uppercase tracking-widest text-slate-500">
+              <h3 className="mt-2 text-sm font-medium uppercase tracking-widest text-slate-500">
                 Module {module.index}
               </h3>
             )}
@@ -92,13 +92,13 @@ export default async function ReviewPage({ params }: { params: Promise<{ resultI
                 <div key={q.id} className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                   <div className={`p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 ${q.videoUrl ? 'border-b border-slate-100' : ''}`}>
                     <div className="flex items-center gap-4">
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold shrink-0 ${
-                        isCorrect ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold shrink-0 ${
+                        isCorrect ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'
                       }`}>
                         {i + 1}
                       </div>
                       <div>
-                        <p className="font-medium text-slate-900">Your Answer: <span className="font-bold">{userAnswer || 'Omitted'}</span></p>
+                        <p className="font-medium text-slate-900">Your Answer: <span className="font-semibold">{userAnswer || 'Omitted'}</span></p>
                         {!isCorrect && (
                           <p className="text-sm text-slate-500 mt-1">Correct Answer: {correctAnswer}</p>
                         )}

@@ -42,7 +42,7 @@ function PracticeSkeleton() {
 
           <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
             {[0, 1, 2].map((i) => (
-              <div key={i} className={`h-80 rounded-[2rem] ${block}`} />
+              <div key={i} className={`h-80 rounded-2xl ${block}`} />
             ))}
           </div>
         </div>
@@ -75,16 +75,16 @@ function ProfileSkeleton() {
       </header>
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.05fr_0.95fr]">
-        <div className={`h-80 rounded-[2rem] ${block}`} />
+        <div className={`h-80 rounded-2xl ${block}`} />
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           {[0, 1, 2, 3].map((i) => (
-            <div key={i} className={`h-40 rounded-3xl ${block}`} />
+            <div key={i} className={`h-40 rounded-2xl ${block}`} />
           ))}
         </div>
 
-        <div className={`h-72 rounded-[2rem] xl:col-span-2 ${block}`} />
-        <div className="h-44 animate-pulse rounded-[2rem] bg-slate-200 xl:col-span-2" />
+        <div className={`h-72 rounded-2xl xl:col-span-2 ${block}`} />
+        <div className="h-44 animate-pulse rounded-2xl bg-slate-200 xl:col-span-2" />
       </div>
     </div>
   );
@@ -94,14 +94,14 @@ function ProfileSkeleton() {
 function SubscriptionSkeleton() {
   return (
     <div className="px-4 py-10 sm:px-6 lg:px-8">
-      <div className={`mx-auto mb-10 h-56 max-w-6xl rounded-[2rem] ${block}`} />
+      <div className={`mx-auto mb-10 h-56 max-w-6xl rounded-2xl ${block}`} />
 
       <div className="mx-auto max-w-6xl space-y-6">
         <div className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
-          <div className={`h-80 rounded-[2rem] ${block}`} />
-          <div className={`h-80 rounded-[2rem] ${block}`} />
+          <div className={`h-80 rounded-2xl ${block}`} />
+          <div className={`h-80 rounded-2xl ${block}`} />
         </div>
-        <div className={`h-64 rounded-[2rem] ${block}`} />
+        <div className={`h-64 rounded-2xl ${block}`} />
       </div>
     </div>
   );

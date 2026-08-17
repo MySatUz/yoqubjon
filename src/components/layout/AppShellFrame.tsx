@@ -37,10 +37,10 @@ export default function AppShellFrame({
           nobody can see. */}
       <div className="sticky top-0 z-40 md:hidden bg-white border-b border-slate-200 p-3 flex items-center justify-between">
         <Link href="/dashboard" className="flex items-center gap-3">
-          <div className="h-9 w-9 rounded-xl bg-slate-900 flex items-center justify-center text-white shadow-lg shadow-slate-200">
+          <div className="h-9 w-9 rounded-xl bg-slate-900 flex items-center justify-center text-white shadow-lg">
             <GraduationCap className="h-5 w-5" />
           </div>
-          <span className="text-xl font-black text-slate-900">MYSATuz</span>
+          <span className="text-xl font-semibold text-slate-900">MYSATuz</span>
         </Link>
         <div className="flex items-center gap-3">
           {userAvatar}
@@ -51,10 +51,10 @@ export default function AppShellFrame({
       <aside className="hidden md:flex w-72 bg-white border-r border-slate-200 flex-col sticky top-0 h-screen">
         <div className="p-8">
           <Link href="/dashboard" className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center shadow-lg shadow-slate-200">
+            <div className="w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center shadow-lg">
               <GraduationCap className="text-white w-6 h-6" />
             </div>
-            <span className="text-2xl font-black text-slate-900 tracking-tight">MYSATuz</span>
+            <span className="text-2xl font-semibold text-slate-900 tracking-tight">MYSATuz</span>
           </Link>
         </div>
 

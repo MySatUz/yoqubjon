@@ -54,14 +54,14 @@ export default async function AdminSectionsPage() {
         <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
           <Link
             href="/admin"
-            className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-700 shadow-sm transition hover:border-blue-200 hover:text-blue-600"
+            className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-blue-200 hover:text-blue-600"
           >
             <ArrowLeft className="h-4 w-4" />
             Back to admin
           </Link>
           <a
             href="/api/admin/results/sections/export"
-            className="inline-flex items-center gap-2 rounded-2xl bg-slate-900 px-4 py-3 text-sm font-black text-white shadow-sm transition hover:bg-blue-600"
+            className="inline-flex items-center gap-2 rounded-2xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-600"
           >
             <Download className="h-4 w-4" />
             Download results CSV

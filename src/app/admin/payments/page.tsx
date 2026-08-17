@@ -46,7 +46,7 @@ async function PaymentRequestList() {
 /** Same rounded card wrapper as <ManualPaymentRequests>, so the swap holds place. */
 function PaymentRequestListSkeleton() {
   return (
-    <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+    <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
       <div className="mb-6 space-y-3">
         <div className="h-3 w-24 animate-pulse rounded-full bg-blue-100" />
         <div className="h-8 w-72 max-w-full animate-pulse rounded-2xl bg-slate-200" />
@@ -70,7 +70,7 @@ export default async function AdminPaymentsPage() {
       <div className="mx-auto max-w-6xl">
         <Link
           href="/admin"
-          className="mb-6 inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-700 shadow-sm transition hover:border-blue-200 hover:text-blue-600"
+          className="mb-6 inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-blue-200 hover:text-blue-600"
         >
           <ArrowLeft className="h-4 w-4" />
           Back to admin

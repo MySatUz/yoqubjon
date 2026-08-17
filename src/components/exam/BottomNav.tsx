@@ -35,9 +35,9 @@ const PaletteButton = memo(function PaletteButton({
   return (
     <button
       onClick={() => onSelect(index)}
-      className={`flex-shrink-0 w-8 h-8 rounded-xl text-xs font-black transition-all flex items-center justify-center border sm:h-9 sm:w-9 sm:text-sm ${
+      className={`flex-shrink-0 w-8 h-8 rounded-xl text-xs font-medium transition-all flex items-center justify-center border sm:h-9 sm:w-9 sm:text-sm ${
         isCurrent
-          ? 'border-blue-600 bg-blue-600 text-white shadow-md shadow-blue-200 scale-105'
+          ? 'border-blue-600 bg-blue-600 text-white shadow-sm scale-105'
           : isAnswered
             ? 'border-emerald-200 text-emerald-700 bg-emerald-50'
           : isMarked
@@ -121,7 +121,7 @@ export default function BottomNav({ testId, modules }: BottomNavProps) {
             onChange={() => currentQuestionId && toggleMarkForReview(currentQuestionId)}
             className="w-4 h-4 rounded border-slate-300 text-red-600 focus:ring-red-600 cursor-pointer"
           />
-          <span className="text-sm font-bold text-slate-700 group-hover:text-slate-900 transition-colors hidden xl:inline-block">Mark for Review</span>
+          <span className="text-sm font-semibold text-slate-700 group-hover:text-slate-900 transition-colors hidden xl:inline-block">Mark for Review</span>
         </label>
 
         <div className="flex items-center gap-2">
@@ -136,7 +136,7 @@ export default function BottomNav({ testId, modules }: BottomNavProps) {
           <button
             onClick={handleNextOrFinish}
             disabled={isSubmitting || totalQuestions === 0}
-            className="flex min-w-[5.4rem] items-center justify-center gap-1.5 px-3 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-black rounded-xl shadow-md shadow-blue-200 transition-all active:scale-95 sm:min-w-[6.8rem] sm:gap-2 sm:px-5 sm:text-sm"
+            className="flex min-w-[5.4rem] items-center justify-center gap-1.5 px-3 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-medium rounded-xl shadow-sm transition-all active:scale-95 sm:min-w-[6.8rem] sm:gap-2 sm:px-5 sm:text-sm"
           >
             {isSubmitting ? (
               <>

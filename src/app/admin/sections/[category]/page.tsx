@@ -42,10 +42,13 @@ function formatDate(value: Date | string | null) {
   });
 }
 
+// Only first place gets the accent tone; 2nd and 3rd step down through the
+// neutral ramp. Bronze used to be `orange`, which is outside the palette — and
+// folding it into amber would have made 1st and 3rd identical.
 function getRankTone(rank: number) {
   if (rank === 1) return "bg-amber-100 text-amber-700";
   if (rank === 2) return "bg-slate-200 text-slate-700";
-  if (rank === 3) return "bg-orange-100 text-orange-700";
+  if (rank === 3) return "bg-slate-100 text-slate-500";
   return "bg-white text-slate-500";
 }
 
@@ -120,35 +123,35 @@ export default async function AdminSectionResultsPage({
         <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
           <Link
             href="/admin/sections"
-            className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-700 shadow-sm transition hover:border-blue-200 hover:text-blue-600"
+            className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-blue-200 hover:text-blue-600"
           >
             <ArrowLeft className="h-4 w-4" />
             Back to admin
           </Link>
-          <span className="rounded-full bg-blue-50 px-4 py-2 text-xs font-black uppercase tracking-widest text-blue-700">
+          <span className="rounded-full bg-blue-50 px-4 py-2 text-xs font-medium uppercase tracking-widest text-blue-700">
             Section leaderboard
           </span>
         </div>
 
-        <header className="rounded-[2rem] border border-slate-200 bg-slate-900 p-8 text-white shadow-sm">
+        <header className="rounded-2xl border border-slate-200 bg-slate-900 p-8 text-white shadow-sm">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
             <div>
-              <p className="text-xs font-black uppercase tracking-[0.22em] text-blue-300">
+              <p className="text-xs font-medium uppercase tracking-[0.22em] text-blue-300">
                 Practice section
               </p>
               <h1 className="mt-2 text-4xl font-black tracking-tight">{sectionLabel}</h1>
-              <p className="mt-3 max-w-3xl text-sm font-bold leading-relaxed text-slate-300">
+              <p className="mt-3 max-w-3xl text-sm font-semibold leading-relaxed text-slate-300">
                 {sectionDescription}
               </p>
             </div>
             <div className="flex flex-col gap-3">
               <div className="rounded-2xl bg-white/10 px-5 py-4">
-                <p className="text-xs font-black uppercase tracking-widest text-slate-400">Participants</p>
-                <p className="mt-1 text-3xl font-black">{participants}</p>
+                <p className="text-xs font-medium uppercase tracking-widest text-slate-400">Participants</p>
+                <p className="mt-1 text-3xl font-black tabular-nums">{participants}</p>
               </div>
               <a
                 href={`/api/admin/results/sections/export?category=${encodeURIComponent(normalizedCategory.toLowerCase())}`}
-                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-5 py-3 text-sm font-black text-slate-900 transition hover:bg-blue-50 hover:text-blue-700"
+                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-5 py-3 text-sm font-semibold text-slate-900 transition hover:bg-blue-50 hover:text-blue-700"
               >
                 <Download className="h-4 w-4" />
                 Download CSV
@@ -159,22 +162,22 @@ export default async function AdminSectionResultsPage({
 
         <section className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {[
-            { label: "Participants", value: participants, icon: UserRound, tone: "bg-blue-50 text-blue-600" },
-            { label: "Tests solved", value: totalAttempts, icon: BookOpen, tone: "bg-emerald-50 text-emerald-600" },
-            { label: "Total score", value: totalScore, icon: BarChart3, tone: "bg-slate-100 text-slate-700" },
-            { label: "Best score", value: bestScore, icon: Award, tone: "bg-amber-50 text-amber-600" },
+            { label: "Participants", value: participants, icon: UserRound },
+            { label: "Tests solved", value: totalAttempts, icon: BookOpen },
+            { label: "Total score", value: totalScore, icon: BarChart3 },
+            { label: "Best score", value: bestScore, icon: Award },
           ].map((stat) => {
             const Icon = stat.icon;
 
             return (
-              <div key={stat.label} className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-                <div className={`mb-5 inline-flex rounded-2xl p-3 ${stat.tone}`}>
+              <div key={stat.label} className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                <div className="mb-5 inline-flex rounded-xl bg-blue-50 p-3 text-blue-600">
                   <Icon className="h-6 w-6" />
                 </div>
-                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                <p className="text-[10px] font-medium uppercase tracking-widest text-slate-400">
                   {stat.label}
                 </p>
-                <p className="mt-2 text-3xl font-black text-slate-900">{stat.value}</p>
+                <p className="mt-2 text-3xl font-black text-slate-900 tabular-nums">{stat.value}</p>
               </div>
             );
           })}
@@ -190,21 +193,21 @@ export default async function AdminSectionResultsPage({
                   key={entry.userId}
                   href={`/admin/users/${entry.userId}`}
                   prefetch={false}
-                  className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:border-blue-200 hover:shadow-xl"
+                  className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:border-blue-200 hover:shadow-lg"
                 >
                   <div className="mb-5 flex items-start justify-between gap-4">
                     <span className={`inline-flex h-12 w-12 items-center justify-center rounded-2xl ${getRankTone(rank)}`}>
                       {rank === 1 ? <Trophy className="h-6 w-6" /> : <Medal className="h-6 w-6" />}
                     </span>
-                    <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-black text-slate-500">
+                    <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-500">
                       #{rank}
                     </span>
                   </div>
-                  <h2 className="truncate text-xl font-black text-slate-900">
+                  <h2 className="truncate text-xl font-semibold text-slate-900">
                     {entry.name || entry.email}
                   </h2>
-                  <p className="mt-1 truncate text-sm font-bold text-slate-500">{entry.email}</p>
-                  <div className="mt-5 grid grid-cols-2 gap-2 text-xs font-black text-slate-600">
+                  <p className="mt-1 truncate text-sm font-semibold text-slate-500">{entry.email}</p>
+                  <div className="mt-5 grid grid-cols-2 gap-2 text-xs font-medium text-slate-600">
                     <span className="rounded-2xl bg-slate-50 px-3 py-2">{entry.totalScore} total</span>
                     <span className="rounded-2xl bg-slate-50 px-3 py-2">{entry.attempts} attempts</span>
                     <span className="rounded-2xl bg-slate-50 px-3 py-2">{entry.averageScore} avg</span>
@@ -216,27 +219,27 @@ export default async function AdminSectionResultsPage({
           </section>
         )}
 
-        <section className="mt-8 rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
+        <section className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
             <div>
-              <p className="text-[10px] font-black uppercase tracking-[0.22em] text-blue-600">
+              <p className="text-[10px] font-medium uppercase tracking-[0.22em] text-blue-600">
                 Ranked users
               </p>
-              <h2 className="mt-2 text-2xl font-black text-slate-900">Section results</h2>
+              <h2 className="mt-2 text-2xl font-semibold text-slate-900">Section results</h2>
               {participants > 0 && (
-                <p className="mt-1 text-xs font-bold text-slate-400">
+                <p className="mt-1 text-xs font-medium text-slate-400">
                   Showing {leaderboard.length ? skip + 1 : 0}&ndash;{skip + leaderboard.length} of {participants}
                 </p>
               )}
             </div>
-            <span className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-4 py-2 text-xs font-black uppercase tracking-widest text-slate-500">
+            <span className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-4 py-2 text-xs font-medium uppercase tracking-widest text-slate-500">
               <Clock className="h-4 w-4" />
               {formatResultTime(totalTimeSpent)}
             </span>
           </div>
 
           {leaderboard.length === 0 ? (
-            <div className="rounded-3xl border border-dashed border-slate-200 bg-slate-50 p-10 text-center text-sm font-bold text-slate-400">
+            <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-10 text-center text-sm font-semibold text-slate-400">
               {participants > 0
                 ? "No users on this page. Go back to the first page."
                 : "No users have completed tests in this section yet."}
@@ -253,19 +256,19 @@ export default async function AdminSectionResultsPage({
                     prefetch={false}
                     className="grid gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 transition hover:border-blue-200 hover:bg-white md:grid-cols-[auto_1fr_auto]"
                   >
-                    <div className={`flex h-12 w-12 items-center justify-center rounded-2xl text-sm font-black ${getRankTone(rank)}`}>
+                    <div className={`flex h-12 w-12 items-center justify-center rounded-2xl text-sm font-semibold ${getRankTone(rank)}`}>
                       #{rank}
                     </div>
                     <div className="min-w-0">
-                      <h3 className="truncate text-base font-black text-slate-900">
+                      <h3 className="truncate text-base font-semibold text-slate-900">
                         {entry.name || entry.email}
                       </h3>
-                      <p className="mt-1 truncate text-sm font-bold text-slate-500">{entry.email}</p>
-                      <p className="mt-2 text-xs font-bold text-slate-400">
+                      <p className="mt-1 truncate text-sm font-semibold text-slate-500">{entry.email}</p>
+                      <p className="mt-2 text-xs font-medium text-slate-400">
                         Last attempt: {formatDate(entry.latestAt)}
                       </p>
                     </div>
-                    <div className="grid gap-2 text-xs font-black text-slate-600 sm:grid-cols-5 md:min-w-[36rem]">
+                    <div className="grid gap-2 text-xs font-medium text-slate-600 sm:grid-cols-5 md:min-w-[36rem]">
                       <span className="rounded-2xl bg-white px-3 py-2">{entry.totalScore} total</span>
                       <span className="rounded-2xl bg-white px-3 py-2">{entry.attempts} attempts</span>
                       <span className="rounded-2xl bg-white px-3 py-2">{entry.uniqueTests} tests</span>
@@ -284,7 +287,7 @@ export default async function AdminSectionResultsPage({
                 <Link
                   href={currentPage - 1 === 1 ? categoryHref : `${categoryHref}?page=${currentPage - 1}`}
                   prefetch={false}
-                  className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-xs font-black text-slate-700 transition hover:border-blue-200 hover:text-blue-600"
+                  className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-xs font-medium text-slate-700 transition hover:border-blue-200 hover:text-blue-600"
                 >
                   <ChevronLeft className="h-4 w-4" />
                   Previous
@@ -292,14 +295,14 @@ export default async function AdminSectionResultsPage({
               ) : (
                 <span />
               )}
-              <span className="text-xs font-black uppercase tracking-widest text-slate-400">
+              <span className="text-xs font-medium uppercase tracking-widest text-slate-400">
                 Page {currentPage} of {totalPages}
               </span>
               {currentPage < totalPages ? (
                 <Link
                   href={`${categoryHref}?page=${currentPage + 1}`}
                   prefetch={false}
-                  className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-xs font-black text-slate-700 transition hover:border-blue-200 hover:text-blue-600"
+                  className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-xs font-medium text-slate-700 transition hover:border-blue-200 hover:text-blue-600"
                 >
                   Next
                   <ChevronRight className="h-4 w-4" />

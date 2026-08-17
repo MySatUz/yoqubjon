@@ -104,7 +104,7 @@ export default async function AdminUsersPage() {
       <div className="mx-auto max-w-6xl">
         <Link
           href="/admin"
-          className="mb-6 inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-700 shadow-sm transition hover:border-blue-200 hover:text-blue-600"
+          className="mb-6 inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-blue-200 hover:text-blue-600"
         >
           <ArrowLeft className="h-4 w-4" />
           Back to admin

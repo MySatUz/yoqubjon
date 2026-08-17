@@ -92,15 +92,15 @@ export default function TopNav({ testId, modules }: TopNavProps) {
     <>
       <header className="relative h-14 bg-white border-b border-slate-200 flex items-center justify-between gap-2 px-2 sm:px-4 sticky top-0 z-50 shrink-0">
         <div className="flex min-w-0 items-center gap-2 sm:gap-4">
-          <h1 className="hidden font-bold text-slate-900 tracking-tight sm:block">MYSATuz</h1>
+          <h1 className="hidden font-semibold text-slate-900 tracking-tight sm:block">MYSATuz</h1>
           {moduleCount > 1 && (
-            <span className="shrink-0 rounded-full bg-blue-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-widest text-blue-700 sm:px-3">
+            <span className="shrink-0 rounded-full bg-blue-50 px-2.5 py-1 text-[10px] font-medium uppercase tracking-widest text-blue-700 sm:px-3">
               <span className="sm:hidden">M {currentModuleIndex}/{moduleCount}</span>
               <span className="hidden sm:inline">Module {currentModuleIndex} of {moduleCount}</span>
             </span>
           )}
           {!isPaused && (
-            <span className="truncate text-xs font-bold text-slate-900 uppercase tracking-widest sm:text-sm">
+            <span className="truncate text-xs font-medium text-slate-900 uppercase tracking-widest sm:text-sm">
               <span className="sm:hidden">Q {currentQuestionIndex + 1}</span>
               <span className="hidden sm:inline">Question {currentQuestionIndex + 1}</span>
             </span>
@@ -108,7 +108,7 @@ export default function TopNav({ testId, modules }: TopNavProps) {
         </div>
 
         <div className="flex flex-col items-center sm:absolute sm:left-1/2 sm:-translate-x-1/2">
-          <span className={`rounded-full border px-3 py-1 text-base font-bold tabular-nums shadow-sm sm:px-4 sm:text-lg ${
+          <span className={`rounded-full border px-3 py-1 text-base font-semibold tabular-nums shadow-sm sm:px-4 sm:text-lg ${
             isPaused
               ? 'border-slate-200 bg-white text-slate-400'
               : 'border-slate-100 bg-slate-50 text-slate-900'
@@ -154,7 +154,7 @@ export default function TopNav({ testId, modules }: TopNavProps) {
               <button
                 onClick={handleEndModule}
                 disabled={isSubmitting}
-                className="rounded px-2 py-1.5 text-xs font-bold text-red-600 transition-colors hover:bg-red-50 disabled:opacity-50 sm:px-3 sm:text-sm"
+                className="rounded px-2 py-1.5 text-xs font-medium text-red-600 transition-colors hover:bg-red-50 disabled:opacity-50 sm:px-3 sm:text-sm"
               >
                 {isSubmitting ? 'Submitting...' : isLastModule ? (
                   <><span className="sm:hidden">End</span><span className="hidden sm:inline">End Section</span></>

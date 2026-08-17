@@ -58,7 +58,7 @@ function DecisionButton({
       type="submit"
       disabled={pending}
       aria-disabled={pending}
-      className={`inline-flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-black text-white transition disabled:cursor-not-allowed disabled:opacity-60 ${className}`}
+      className={`inline-flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-60 ${className}`}
     >
       {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Icon className="h-4 w-4" />}
       {pending ? pendingLabel : label}
@@ -75,7 +75,7 @@ function statusMeta(status: string) {
     return {
       icon: CheckCircle2,
       label: 'Approved',
-      className: 'bg-green-50 text-green-700 border-green-200',
+      className: 'bg-emerald-50 text-emerald-700 border-emerald-200',
     };
   }
 
@@ -140,24 +140,24 @@ export default function ManualPaymentRequests({ requests }: ManualPaymentRequest
   }
 
   return (
-    <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+    <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
       <div className="mb-6 flex items-start justify-between gap-4">
         <div>
-          <p className="mb-2 text-[10px] font-black uppercase tracking-[0.25em] text-blue-600">
+          <p className="mb-2 text-[10px] font-medium uppercase tracking-[0.25em] text-blue-600">
             Payments
           </p>
-          <h2 className="text-2xl font-black text-slate-900">Manual payment requests</h2>
+          <h2 className="text-2xl font-semibold text-slate-900">Manual payment requests</h2>
           <p className="mt-1 text-sm font-medium text-slate-500">
             Choose a month, scan request status, then open a user for receipt details.
           </p>
         </div>
-        <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-black text-slate-500">
+        <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-500">
           {requests.length}
         </span>
       </div>
 
       {requests.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-slate-200 p-8 text-center text-sm font-bold text-slate-400">
+        <div className="rounded-2xl border border-dashed border-slate-200 p-8 text-center text-sm font-semibold text-slate-400">
           No manual payment requests yet.
         </div>
       ) : (
@@ -174,12 +174,12 @@ export default function ManualPaymentRequests({ requests }: ManualPaymentRequest
                   onClick={() => chooseMonth(group.key)}
                   className={`shrink-0 rounded-2xl border px-4 py-3 text-left transition ${
                     isActive
-                      ? 'border-slate-900 bg-slate-900 text-white shadow-lg shadow-slate-200'
+                      ? 'border-slate-900 bg-slate-900 text-white shadow-lg'
                       : 'border-slate-200 bg-slate-50 text-slate-700 hover:border-blue-200 hover:bg-white'
                   }`}
                 >
-                  <span className="block text-sm font-black">{group.label}</span>
-                  <span className={`mt-1 block text-xs font-bold ${isActive ? 'text-slate-300' : 'text-slate-400'}`}>
+                  <span className="block text-sm font-semibold">{group.label}</span>
+                  <span className={`mt-1 block text-xs font-medium ${isActive ? 'text-slate-300' : 'text-slate-400'}`}>
                     {group.requests.length} requests{pending ? `, ${pending} pending` : ''}
                   </span>
                 </button>
@@ -206,40 +206,40 @@ export default function ManualPaymentRequests({ requests }: ManualPaymentRequest
                     }`}
                   >
                     <div className="mb-2 flex flex-wrap items-center gap-2">
-                      <span className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-black ${meta.className}`}>
+                      <span className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium ${meta.className}`}>
                         <Icon className="h-4 w-4" />
                         {meta.label}
                       </span>
-                      <span className="text-xs font-bold text-slate-400">
+                      <span className="text-xs font-medium text-slate-400">
                         {toDate(request.createdAt).toLocaleString()}
                       </span>
                     </div>
-                    <h3 className="truncate text-lg font-black text-slate-900">
+                    <h3 className="truncate text-lg font-semibold text-slate-900">
                       {request.user.name || request.payerName || 'User'} · {formatAmount(request.amount, request.currency)}
                     </h3>
-                    <p className="truncate text-sm font-bold text-slate-500">{request.user.email}</p>
+                    <p className="truncate text-sm font-semibold text-slate-500">{request.user.email}</p>
                   </button>
                 );
               })}
             </div>
 
             {selectedRequest && (
-              <article className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
+              <article className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
                 <div className="mb-5 flex flex-wrap items-start justify-between gap-4">
                   <div className="flex items-start gap-3">
                     <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white text-slate-500 shadow-sm">
                       <UserRound className="h-5 w-5" />
                     </span>
                     <div>
-                      <h3 className="text-xl font-black text-slate-900">
+                      <h3 className="text-xl font-semibold text-slate-900">
                         {selectedRequest.user.name || selectedRequest.payerName || 'User'}
                       </h3>
-                      <p className="text-sm font-bold text-slate-500">{selectedRequest.user.email}</p>
+                      <p className="text-sm font-semibold text-slate-500">{selectedRequest.user.email}</p>
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Amount</p>
-                    <p className="text-xl font-black text-slate-900">
+                    <p className="text-[10px] font-medium uppercase tracking-widest text-slate-400">Amount</p>
+                    <p className="text-xl font-semibold text-slate-900">
                       {formatAmount(selectedRequest.amount, selectedRequest.currency)}
                     </p>
                   </div>
@@ -247,17 +247,17 @@ export default function ManualPaymentRequests({ requests }: ManualPaymentRequest
 
                 <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
                   <div className="rounded-2xl bg-white p-4">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Contact</p>
-                    <p className="mt-1 font-bold text-slate-700">{selectedRequest.contact || 'Not provided'}</p>
+                    <p className="text-[10px] font-medium uppercase tracking-widest text-slate-400">Contact</p>
+                    <p className="mt-1 font-semibold text-slate-700">{selectedRequest.contact || 'Not provided'}</p>
                   </div>
                   <div className="rounded-2xl bg-white p-4">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Payment note</p>
-                    <p className="mt-1 font-bold text-slate-700">{selectedRequest.paymentReference || 'Not provided'}</p>
+                    <p className="text-[10px] font-medium uppercase tracking-widest text-slate-400">Payment note</p>
+                    <p className="mt-1 font-semibold text-slate-700">{selectedRequest.paymentReference || 'Not provided'}</p>
                   </div>
                 </div>
 
                 {selectedRequest.message && (
-                  <p className="mt-3 rounded-2xl bg-white p-4 text-sm font-bold text-slate-600">
+                  <p className="mt-3 rounded-2xl bg-white p-4 text-sm font-semibold text-slate-600">
                     {selectedRequest.message}
                   </p>
                 )}
@@ -268,45 +268,45 @@ export default function ManualPaymentRequests({ requests }: ManualPaymentRequest
                       href={`/api/admin/payments/${selectedRequest.id}/receipt`}
                       target="_blank"
                       rel="noreferrer"
-                      className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-black text-white transition hover:bg-blue-600"
+                      className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-600"
                     >
                       <ExternalLink className="h-4 w-4" />
                       Open receipt
                     </a>
                   ) : (
-                    <span className="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2 text-sm font-black text-slate-400">
+                    <span className="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2 text-sm font-semibold text-slate-400">
                       <FileText className="h-4 w-4" />
                       Receipt unavailable
                     </span>
                   )}
                   {selectedRequest.receiptFileName && (
-                    <span className="max-w-full truncate text-xs font-bold text-slate-400">
+                    <span className="max-w-full truncate text-xs font-medium text-slate-400">
                       {selectedRequest.receiptFileName}
                     </span>
                   )}
                 </div>
 
                 {selectedRequest.adminNote && (
-                  <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-4 text-sm font-bold text-slate-600">
+                  <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-4 text-sm font-semibold text-slate-600">
                     Admin note: {selectedRequest.adminNote}
                   </div>
                 )}
 
                 {selectedRequest.status === 'PENDING' && (
                   <div className="mt-5 grid grid-cols-1 gap-3 xl:grid-cols-2">
-                    <form action={approveManualPaymentRequest} className="space-y-3 rounded-2xl bg-green-50 p-4">
+                    <form action={approveManualPaymentRequest} className="space-y-3 rounded-2xl bg-emerald-50 p-4">
                       <input type="hidden" name="requestId" value={selectedRequest.id} />
                       <textarea
                         name="adminNote"
                         rows={2}
                         placeholder="Optional note"
-                        className="w-full resize-none rounded-xl border border-green-200 bg-white px-3 py-2 text-sm font-bold outline-none focus:border-green-500"
+                        className="w-full resize-none rounded-xl border border-emerald-200 bg-white px-3 py-2 text-sm font-semibold outline-none focus:border-emerald-500"
                       />
                       <DecisionButton
                         icon={CheckCircle2}
                         label="Approve and activate"
                         pendingLabel="Approving..."
-                        className="bg-green-600 hover:bg-green-500"
+                        className="bg-emerald-600 hover:bg-emerald-500"
                       />
                     </form>
 
@@ -316,7 +316,7 @@ export default function ManualPaymentRequests({ requests }: ManualPaymentRequest
                         name="adminNote"
                         rows={2}
                         placeholder="Reason for rejection"
-                        className="w-full resize-none rounded-xl border border-red-200 bg-white px-3 py-2 text-sm font-bold outline-none focus:border-red-500"
+                        className="w-full resize-none rounded-xl border border-red-200 bg-white px-3 py-2 text-sm font-semibold outline-none focus:border-red-500"
                       />
                       <DecisionButton
                         icon={XCircle}

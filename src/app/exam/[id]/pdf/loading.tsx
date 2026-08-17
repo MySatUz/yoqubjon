@@ -8,7 +8,7 @@
  */
 function QuestionCardSkeleton() {
   return (
-    <section className="rounded-[1.5rem] border border-slate-200 bg-white p-6 shadow-sm">
+    <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
       <div className="mb-5 flex items-center gap-3">
         <div className="h-10 w-10 shrink-0 animate-pulse rounded-2xl bg-slate-200" />
         <div className="h-3 w-28 animate-pulse rounded-full bg-blue-100" />
@@ -43,7 +43,7 @@ export default function Loading() {
           <div className="h-[50px] w-44 animate-pulse rounded-2xl bg-slate-200" />
         </div>
 
-        <article className="overflow-hidden rounded-[2rem] bg-white shadow-sm">
+        <article className="overflow-hidden rounded-2xl bg-white shadow-sm">
           <header className="border-b border-slate-200 bg-slate-900 p-8">
             <div className="mb-5 h-9 w-64 animate-pulse rounded-full bg-white/10" />
             <div className="h-10 w-3/5 animate-pulse rounded-xl bg-white/15" />

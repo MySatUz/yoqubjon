@@ -95,7 +95,7 @@ export default async function AdminTestsPage({
       <div className="mx-auto max-w-6xl">
         <Link
           href="/admin"
-          className="mb-6 inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-700 shadow-sm transition hover:border-blue-200 hover:text-blue-600"
+          className="mb-6 inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-blue-200 hover:text-blue-600"
         >
           <ArrowLeft className="h-4 w-4" />
           Back to admin
@@ -105,7 +105,7 @@ export default async function AdminTestsPage({
           <AdminForm collections={collections} />
           <div className="space-y-4">
             {testCount > 0 && (
-              <p className="text-xs font-black uppercase tracking-widest text-slate-400">
+              <p className="text-xs font-medium uppercase tracking-widest text-slate-400">
                 Showing {tests.length ? skip + 1 : 0}&ndash;{skip + tests.length} of {testCount} tests
               </p>
             )}
@@ -118,7 +118,7 @@ export default async function AdminTestsPage({
                   <Link
                     href={currentPage - 1 === 1 ? '/admin/tests' : `/admin/tests?page=${currentPage - 1}`}
                     prefetch={false}
-                    className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-xs font-black text-slate-700 transition hover:border-blue-200 hover:text-blue-600"
+                    className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-xs font-medium text-slate-700 transition hover:border-blue-200 hover:text-blue-600"
                   >
                     <ChevronLeft className="h-4 w-4" />
                     Previous
@@ -126,14 +126,14 @@ export default async function AdminTestsPage({
                 ) : (
                   <span />
                 )}
-                <span className="text-xs font-black uppercase tracking-widest text-slate-400">
+                <span className="text-xs font-medium uppercase tracking-widest text-slate-400">
                   Page {currentPage} of {totalPages}
                 </span>
                 {currentPage < totalPages ? (
                   <Link
                     href={`/admin/tests?page=${currentPage + 1}`}
                     prefetch={false}
-                    className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-xs font-black text-slate-700 transition hover:border-blue-200 hover:text-blue-600"
+                    className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-xs font-medium text-slate-700 transition hover:border-blue-200 hover:text-blue-600"
                   >
                     Next
                     <ChevronRight className="h-4 w-4" />

@@ -99,18 +99,18 @@ const SectionPicker = memo(function SectionPicker({
             aria-pressed={isSelected}
             className={`group flex min-h-28 items-center justify-between gap-4 rounded-2xl border p-5 text-left transition ${
               isSelected
-                ? 'border-emerald-500 bg-emerald-600 text-white shadow-lg shadow-emerald-100'
+                ? 'border-emerald-500 bg-emerald-600 text-white shadow-lg'
                 : 'border-slate-200 bg-slate-50 text-slate-900 hover:border-emerald-200 hover:bg-white'
             }`}
           >
             <span className="min-w-0">
-              <span className={`block text-[10px] font-black uppercase tracking-widest ${
+              <span className={`block text-[10px] font-medium uppercase tracking-widest ${
                 isSelected ? 'text-emerald-100' : 'text-emerald-600'
               }`}>
                 {sectionActiveCount} active access
               </span>
-              <span className="mt-2 block truncate text-base font-black">{collection.label}</span>
-              <span className={`mt-1 block line-clamp-2 text-xs font-bold leading-relaxed ${
+              <span className="mt-2 block truncate text-base font-semibold">{collection.label}</span>
+              <span className={`mt-1 block line-clamp-2 text-xs font-medium leading-relaxed ${
                 isSelected ? 'text-emerald-100' : 'text-slate-400'
               }`}>
                 {collection.description}
@@ -223,19 +223,19 @@ const GrantForm = memo(function GrantForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="mb-8 rounded-3xl border border-emerald-100 bg-emerald-50/60 p-5">
+    <form onSubmit={handleSubmit} className="mb-8 rounded-2xl border border-emerald-100 bg-emerald-50/60 p-5">
       <input type="hidden" name="category" value={category} />
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-emerald-600 text-xs font-black text-white">
+          <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-emerald-600 text-xs font-medium text-white">
             2
           </span>
           <div>
-            <p className="text-sm font-black text-slate-900">Grant access to {collectionLabel}</p>
-            <p className="text-xs font-bold text-slate-400">Only this section will be granted.</p>
+            <p className="text-sm font-semibold text-slate-900">Grant access to {collectionLabel}</p>
+            <p className="text-xs font-medium text-slate-400">Only this section will be granted.</p>
           </div>
         </div>
-        <span className="rounded-full bg-white px-3 py-1.5 text-xs font-black text-emerald-700 shadow-sm">
+        <span className="rounded-full bg-white px-3 py-1.5 text-xs font-medium text-emerald-700 shadow-sm">
           {activeCount} active
         </span>
       </div>
@@ -270,14 +270,14 @@ const GrantForm = memo(function GrantForm({
                 ? `section-access-user-${suggestedUsers[highlightedUserIndex].id}`
                 : undefined
             }
-            className="w-full rounded-2xl border border-slate-200 bg-white py-3 pl-11 pr-4 text-sm font-black text-slate-900 outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100"
+            className="w-full rounded-2xl border border-slate-200 bg-white py-3 pl-11 pr-4 text-sm font-semibold text-slate-900 outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100"
           />
 
           {isSuggestionListOpen && (
             <div
               id="section-access-user-results"
               role="listbox"
-              className="absolute left-0 right-0 top-[calc(100%+0.5rem)] max-h-80 overflow-y-auto rounded-2xl border border-slate-200 bg-white p-2 shadow-2xl shadow-slate-300/70"
+              className="absolute left-0 right-0 top-[calc(100%+0.5rem)] max-h-80 overflow-y-auto rounded-2xl border border-slate-200 bg-white p-2 shadow-2xl"
             >
               {suggestedUsers.map((user, index) => {
                 const alreadyHasAccess = activeGrantEmails.has(user.email.toLowerCase());
@@ -306,14 +306,14 @@ const GrantForm = memo(function GrantForm({
                         <UserRound className="h-4 w-4" />
                       </span>
                       <span className="min-w-0">
-                        <span className="block truncate text-sm font-black text-slate-900">
+                        <span className="block truncate text-sm font-semibold text-slate-900">
                           {user.name || user.email}
                         </span>
-                        <span className="block truncate text-xs font-bold text-slate-500">{user.email}</span>
+                        <span className="block truncate text-xs font-medium text-slate-500">{user.email}</span>
                       </span>
                     </span>
                     {alreadyHasAccess && (
-                      <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-1 text-[10px] font-black uppercase text-emerald-700">
+                      <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-1 text-[10px] font-medium uppercase text-emerald-700">
                         <CheckCircle2 className="h-3 w-3" />
                         Has access
                       </span>
@@ -324,8 +324,8 @@ const GrantForm = memo(function GrantForm({
 
               {suggestedUsers.length === 0 && (
                 <div className="px-4 py-5 text-center">
-                  <p className="text-sm font-black text-slate-600">No registered user found</p>
-                  <p className="mt-1 text-xs font-bold text-slate-400">
+                  <p className="text-sm font-semibold text-slate-600">No registered user found</p>
+                  <p className="mt-1 text-xs font-medium text-slate-400">
                     You can still grant access to the email you entered.
                   </p>
                 </div>
@@ -338,7 +338,7 @@ const GrantForm = memo(function GrantForm({
           type="date"
           min={todayInputValue()}
           title="Optional expiration date"
-          className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-900 outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100"
+          className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-900 outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100"
         />
         <input
           name="note"
@@ -349,7 +349,7 @@ const GrantForm = memo(function GrantForm({
         <button
           type="submit"
           disabled={isGranting}
-          className="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-emerald-100 transition hover:bg-emerald-700 disabled:cursor-wait disabled:opacity-60"
+          className="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-5 py-3 text-sm font-semibold text-white shadow-lg transition hover:bg-emerald-700 disabled:cursor-wait disabled:opacity-60"
         >
           {isGranting ? <Loader2 className="h-5 w-5 animate-spin" /> : <KeyRound className="h-5 w-5" />}
           Grant
@@ -404,11 +404,11 @@ const GrantList = memo(function GrantList({
     <>
       <div className="mb-4 flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
         <div>
-          <p className="text-[10px] font-black uppercase tracking-[0.22em] text-emerald-600">
+          <p className="text-[10px] font-medium uppercase tracking-[0.22em] text-emerald-600">
             {collectionLabel}
           </p>
-          <h4 className="mt-1 text-xl font-black text-slate-900">Access list</h4>
-          <p className="mt-1 text-xs font-bold text-slate-400">
+          <h4 className="mt-1 text-xl font-semibold text-slate-900">Access list</h4>
+          <p className="mt-1 text-xs font-medium text-slate-400">
             {filteredGrants.length} shown / {showHistory ? expiredGrants.length : activeGrants.length} in this view
           </p>
         </div>
@@ -418,7 +418,7 @@ const GrantList = memo(function GrantList({
             <button
               type="button"
               onClick={() => setShowHistory(false)}
-              className={`inline-flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-xs font-black transition ${
+              className={`inline-flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-xs font-medium transition ${
                 !showHistory ? 'bg-white text-emerald-700 shadow-sm' : 'text-slate-500 hover:text-slate-900'
               }`}
             >
@@ -428,7 +428,7 @@ const GrantList = memo(function GrantList({
             <button
               type="button"
               onClick={() => setShowHistory(true)}
-              className={`inline-flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-xs font-black transition ${
+              className={`inline-flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-xs font-medium transition ${
                 showHistory ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-900'
               }`}
             >
@@ -443,7 +443,7 @@ const GrantList = memo(function GrantList({
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder={`Search in ${collectionLabel}`}
-              className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3 pl-11 pr-4 text-sm font-bold text-slate-900 outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100"
+              className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3 pl-11 pr-4 text-sm font-semibold text-slate-900 outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100"
             />
           </div>
         </div>
@@ -465,20 +465,20 @@ const GrantList = memo(function GrantList({
               <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
                 <div className="min-w-0">
                   <div className="mb-2 flex flex-wrap items-center gap-2">
-                    <span className="rounded-full bg-white px-3 py-1 text-[10px] font-black uppercase tracking-widest text-emerald-700">
+                    <span className="rounded-full bg-white px-3 py-1 text-[10px] font-medium uppercase tracking-widest text-emerald-700">
                       {collectionLabel}
                     </span>
-                    <span className={`rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-widest ${
+                    <span className={`rounded-full px-3 py-1 text-[10px] font-medium uppercase tracking-widest ${
                       isExpired ? 'bg-slate-200 text-slate-500' : 'bg-emerald-600 text-white'
                     }`}>
                       {isExpired ? 'Expired' : 'Active'}
                     </span>
                   </div>
-                  <p className="flex min-w-0 items-center gap-2 text-sm font-black text-slate-900">
+                  <p className="flex min-w-0 items-center gap-2 text-sm font-semibold text-slate-900">
                     <Mail className="h-4 w-4 shrink-0 text-slate-400" />
                     <span className="truncate">{grant.email}</span>
                   </p>
-                  <p className="mt-1 flex min-w-0 items-center gap-2 text-xs font-bold text-slate-500">
+                  <p className="mt-1 flex min-w-0 items-center gap-2 text-xs font-medium text-slate-500">
                     <UserRound className="h-4 w-4 shrink-0 text-slate-400" />
                     <span className="truncate">
                       {grant.user?.name || grant.user?.email || 'Not registered yet'}
@@ -486,7 +486,7 @@ const GrantList = memo(function GrantList({
                   </p>
                 </div>
 
-                <div className="grid gap-2 text-xs font-bold text-slate-500 sm:grid-cols-2 xl:min-w-[28rem]">
+                <div className="grid gap-2 text-xs font-medium text-slate-500 sm:grid-cols-2 xl:min-w-[28rem]">
                   <span className="inline-flex items-center gap-2 rounded-xl bg-white px-3 py-2">
                     <CalendarClock className="h-4 w-4 text-slate-400" />
                     {grant.expiresAt ? `Until ${formatDate(grant.expiresAt)}` : 'No expiration'}
@@ -503,7 +503,7 @@ const GrantList = memo(function GrantList({
                   type="button"
                   onClick={() => handleRevoke(grant)}
                   disabled={revokingId === grant.id}
-                  className="inline-flex items-center justify-center gap-2 rounded-2xl border border-red-100 bg-white px-4 py-3 text-xs font-black text-red-600 transition hover:bg-red-50 disabled:cursor-wait disabled:opacity-50"
+                  className="inline-flex items-center justify-center gap-2 rounded-2xl border border-red-100 bg-white px-4 py-3 text-xs font-medium text-red-600 transition hover:bg-red-50 disabled:cursor-wait disabled:opacity-50"
                 >
                   {revokingId === grant.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
                   Revoke
@@ -514,7 +514,7 @@ const GrantList = memo(function GrantList({
         })}
 
         {filteredGrants.length === 0 && (
-          <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-8 text-center text-sm font-bold text-slate-400">
+          <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-8 text-center text-sm font-semibold text-slate-400">
             {normalizedQuery
               ? 'No access records match this search.'
               : showHistory
@@ -593,19 +593,19 @@ export default function SectionAccessManager({ collections, grants, users, nowMs
   }, []);
 
   return (
-    <section className="rounded-3xl border border-slate-200 bg-white p-8 shadow-xl">
+    <section className="rounded-2xl border border-slate-200 bg-white p-8 shadow-lg">
       <div className="mb-8 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
-          <div className="mb-2 flex items-center gap-2 text-xs font-black uppercase tracking-widest text-emerald-600">
+          <div className="mb-2 flex items-center gap-2 text-xs font-medium uppercase tracking-widest text-emerald-600">
             <KeyRound className="h-4 w-4" />
             Course access
           </div>
-          <h3 className="text-2xl font-black tracking-tight text-slate-900">Section access by email</h3>
-          <p className="mt-2 max-w-2xl text-sm font-bold leading-relaxed text-slate-500">
+          <h3 className="text-2xl font-semibold tracking-tight text-slate-900">Section access by email</h3>
+          <p className="mt-2 max-w-2xl text-sm font-semibold leading-relaxed text-slate-500">
             Grant a student access to every paid test in a section. New tests added to that section are included automatically.
           </p>
         </div>
-        <span className="inline-flex w-fit items-center gap-2 rounded-full bg-emerald-50 px-4 py-2 text-xs font-black uppercase tracking-widest text-emerald-700">
+        <span className="inline-flex w-fit items-center gap-2 rounded-full bg-emerald-50 px-4 py-2 text-xs font-medium uppercase tracking-widest text-emerald-700">
           <FolderKanban className="h-4 w-4" />
           {collections.length} sections
         </span>
@@ -613,12 +613,12 @@ export default function SectionAccessManager({ collections, grants, users, nowMs
 
       <div className="mb-8">
         <div className="mb-4 flex items-center gap-3">
-          <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-slate-900 text-xs font-black text-white">
+          <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-slate-900 text-xs font-medium text-white">
             1
           </span>
           <div>
-            <p className="text-sm font-black text-slate-900">Choose a section</p>
-            <p className="text-xs font-bold text-slate-400">The grant form and access list will open for that section only.</p>
+            <p className="text-sm font-semibold text-slate-900">Choose a section</p>
+            <p className="text-xs font-medium text-slate-400">The grant form and access list will open for that section only.</p>
           </div>
         </div>
 
@@ -654,24 +654,24 @@ export default function SectionAccessManager({ collections, grants, users, nowMs
           />
 
           {result?.success && (
-            <div className="mt-5 flex items-center gap-2 rounded-2xl border border-green-100 bg-green-50 p-4 text-sm font-bold text-green-700">
+            <div className="mt-5 flex items-center gap-2 rounded-2xl border border-emerald-100 bg-emerald-50 p-4 text-sm font-semibold text-emerald-700">
               <CheckCircle2 className="h-5 w-5" />
               {result.message || 'Section access updated.'}
             </div>
           )}
 
           {result?.error && (
-            <div className="mt-5 flex items-center gap-2 rounded-2xl border border-red-100 bg-red-50 p-4 text-sm font-bold text-red-700">
+            <div className="mt-5 flex items-center gap-2 rounded-2xl border border-red-100 bg-red-50 p-4 text-sm font-semibold text-red-700">
               <AlertCircle className="h-5 w-5" />
               {result.error}
             </div>
           )}
         </>
       ) : (
-        <div className="rounded-3xl border border-dashed border-slate-200 bg-slate-50 px-6 py-12 text-center">
+        <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-6 py-12 text-center">
           <FolderKanban className="mx-auto h-8 w-8 text-slate-300" />
-          <p className="mt-3 text-sm font-black text-slate-600">Choose a section to manage access</p>
-          <p className="mt-1 text-xs font-bold text-slate-400">Access records from different sections will no longer be mixed.</p>
+          <p className="mt-3 text-sm font-semibold text-slate-600">Choose a section to manage access</p>
+          <p className="mt-1 text-xs font-medium text-slate-400">Access records from different sections will no longer be mixed.</p>
         </div>
       )}
     </section>

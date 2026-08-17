@@ -34,10 +34,10 @@ export default function RegisterPage() {
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white py-8 px-4 shadow-xl shadow-slate-200/50 sm:rounded-2xl sm:px-10 border border-slate-100">
+        <div className="bg-white py-8 px-4 shadow-lg sm:rounded-2xl sm:px-10 border border-slate-100">
           <form className="space-y-6" onSubmit={handleSubmit}>
             <div>
-              <label htmlFor="name" className="block text-sm font-bold text-slate-700">
+              <label htmlFor="name" className="block text-sm font-semibold text-slate-700">
                 Full Name
               </label>
               <div className="mt-1">
@@ -53,7 +53,7 @@ export default function RegisterPage() {
             </div>
 
             <div>
-              <label htmlFor="email" className="block text-sm font-bold text-slate-700">
+              <label htmlFor="email" className="block text-sm font-semibold text-slate-700">
                 Email address
               </label>
               <div className="mt-1">
@@ -70,7 +70,7 @@ export default function RegisterPage() {
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-bold text-slate-700">
+              <label htmlFor="password" className="block text-sm font-semibold text-slate-700">
                 Password
               </label>
               <div className="mt-1">
@@ -95,7 +95,7 @@ export default function RegisterPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full flex justify-center py-3 px-4 border border-transparent rounded-xl shadow-sm text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all disabled:opacity-50"
+                className="w-full flex justify-center py-3 px-4 border border-transparent rounded-xl shadow-sm text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all disabled:opacity-50"
               >
                 {loading ? 'Creating account...' : 'Create account'}
               </button>
@@ -117,7 +117,7 @@ export default function RegisterPage() {
             <div className="mt-6">
               <Link
                 href="/login"
-                className="w-full flex justify-center py-3 px-4 border border-slate-200 rounded-xl shadow-sm text-sm font-bold text-slate-700 bg-white hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all"
+                className="w-full flex justify-center py-3 px-4 border border-slate-200 rounded-xl shadow-sm text-sm font-semibold text-slate-700 bg-white hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all"
               >
                 Sign in instead
               </Link>

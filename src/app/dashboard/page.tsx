@@ -43,7 +43,7 @@ export default async function DashboardPage(props: {
   return (
     <div className="py-10 px-4 sm:px-6 lg:px-8">
       {isSuccess && (
-        <div className="mb-8 p-4 bg-green-500 text-white rounded-2xl font-black flex items-center justify-between shadow-lg shadow-green-200">
+        <div className="mb-8 p-4 bg-emerald-500 text-white rounded-2xl font-semibold flex items-center justify-between shadow-lg">
           <div className="flex items-center gap-3">
             <CheckCircle2 className="w-6 h-6" />
             <span>Welcome to Premium! Your account has been upgraded.</span>
@@ -52,7 +52,7 @@ export default async function DashboardPage(props: {
         </div>
       )}
       {attemptLimitReached && (
-        <div className="mb-8 rounded-2xl border border-amber-200 bg-amber-50 p-4 font-black text-amber-800">
+        <div className="mb-8 rounded-2xl border border-amber-200 bg-amber-50 p-4 font-semibold text-amber-800">
           The attempt limit for this test has been reached.
         </div>
       )}
@@ -67,7 +67,7 @@ export default async function DashboardPage(props: {
 
           {/* Right Sidebar: Recent Activity */}
           <div className="lg:col-span-1">
-            <h2 className="text-xl font-black text-slate-900 mb-6 flex items-center gap-2">
+            <h2 className="text-xl font-semibold text-slate-900 mb-6 flex items-center gap-2">
               <History className="w-5 h-5 text-blue-600" />
               Recent Activity
             </h2>
@@ -78,20 +78,19 @@ export default async function DashboardPage(props: {
               </Suspense>
             </div>
 
-            <div className="mt-8 p-6 bg-slate-900 rounded-2xl text-white overflow-hidden relative">
-              <div className="relative z-10">
-                <h3 className="font-black text-lg mb-2">Target Score: 800</h3>
+            <div className="mt-8 p-6 bg-slate-900 rounded-2xl text-white">
+              <div>
+                <h3 className="font-semibold text-lg mb-2">Target Score: 800</h3>
                 <p className="text-slate-400 text-xs font-medium leading-relaxed mb-4">
                   Keep working through timed practice sets and review your latest attempts to reach your goal.
                 </p>
                 <Link
                   href="/dashboard/profile"
-                  className="text-xs font-black text-blue-400 hover:text-blue-300 transition-colors uppercase tracking-widest"
+                  className="text-xs font-medium text-blue-400 hover:text-blue-300 transition-colors uppercase tracking-widest"
                 >
                   View Progress →
                 </Link>
               </div>
-              <div className="absolute -bottom-4 -right-4 w-24 h-24 bg-blue-600/20 rounded-full blur-2xl"></div>
             </div>
           </div>
         </div>
@@ -220,17 +219,17 @@ async function RecentActivity({ userId }: { userId: string }) {
         <Link
           key={res.id}
           href={`/dashboard/results/${res.id}`}
-          className="block bg-white p-5 rounded-2xl border border-slate-200 shadow-sm hover:border-blue-300 hover:shadow-md transition-all group"
+          className="block bg-white p-5 rounded-2xl border border-slate-200 shadow-sm hover:border-blue-300 hover:shadow-sm transition-all group"
         >
           <div className="flex justify-between items-start mb-3">
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+            <span className="text-[10px] font-medium text-slate-400 uppercase tracking-widest">
               {new Date(res.createdAt).toLocaleDateString()}
             </span>
-            <span className="text-lg font-black text-blue-600 group-hover:scale-110 transition-transform">
+            <span className="text-lg font-semibold text-blue-600 group-hover:scale-110 transition-transform">
               {res.score}
             </span>
           </div>
-          <h4 className="text-sm font-black text-slate-900 mb-1 group-hover:text-blue-600 transition-colors">
+          <h4 className="text-sm font-semibold text-slate-900 mb-1 group-hover:text-blue-600 transition-colors">
             {res.test.title}
           </h4>
           <div className="flex items-center gap-2 mt-3">
@@ -240,7 +239,7 @@ async function RecentActivity({ userId }: { userId: string }) {
                 style={{ width: `${(res.score / 800) * 100}%` }}
               ></div>
             </div>
-            <CheckCircle2 className="w-4 h-4 text-green-500" />
+            <CheckCircle2 className="w-4 h-4 text-emerald-500" />
           </div>
         </Link>
       ))}
@@ -262,7 +261,7 @@ function CatalogFallback() {
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
         {[0, 1, 2].map((i) => (
-          <div key={i} className="h-80 animate-pulse rounded-[2rem] border border-slate-200 bg-white" />
+          <div key={i} className="h-80 animate-pulse rounded-2xl border border-slate-200 bg-white" />
         ))}
       </div>
     </div>
