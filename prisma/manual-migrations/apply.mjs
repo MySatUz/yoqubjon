@@ -19,17 +19,36 @@ if (!file) {
   process.exit(1);
 }
 
-const url = process.env.DATABASE_URL;
-if (!url) {
+const rawUrl = process.env.DATABASE_URL;
+if (!rawUrl) {
   console.error('DATABASE_URL is not set. Run with: node --env-file=.env ...');
   process.exit(1);
 }
+
+// Prisma reads pool settings straight out of the URL, but they are not Postgres
+// GUCs. The raw driver forwards unknown query params as startup options, and the
+// server answers with FATAL 42704, so they have to come off first.
+const PRISMA_ONLY_PARAMS = ['connection_limit', 'pool_timeout', 'pgbouncer', 'socket_timeout', 'schema'];
+
+function stripPrismaParams(value) {
+  const parsed = new URL(value);
+  const removed = PRISMA_ONLY_PARAMS.filter((p) => parsed.searchParams.has(p));
+  for (const p of removed) parsed.searchParams.delete(p);
+  if (removed.length > 0) console.log(`Ignoring Prisma-only URL params: ${removed.join(', ')}\n`);
+  return parsed.toString();
+}
+
+const url = stripPrismaParams(rawUrl);
 
 // Statement splitting: block comments, then line comments, then `;`.
 // The rejected-index SQL in this file is commented out, so stripping comments
 // is what keeps it from running.
 function readStatements(path) {
-  const raw = readFileSync(path, 'utf8');
+  // CRLF must go first. `.` does not match `\r` in JavaScript, so on a
+  // Windows-checkout file `--.*$` matches nothing and every comment survives
+  // into the statement list — including the rejected DDL kept commented out
+  // below. Silent, and dangerous on a production database.
+  const raw = readFileSync(path, 'utf8').replace(/\r\n?/g, '\n');
   const withoutComments = raw
     .replace(/\/\*[\s\S]*?\*\//g, '')
     .split('\n')
