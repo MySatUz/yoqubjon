@@ -73,6 +73,38 @@ function formatDuration(seconds: number) {
   return `${minutes} min`;
 }
 
+/**
+ * Opening a test is the point of this page, so the click must not wait on a
+ * server round trip — /exam/[id] is the heaviest route in the app and it
+ * renders every formula on the server.
+ *
+ * Prefetching the full route for every visible card is not an option either:
+ * one card's payload is roughly half a megabyte, and a collection can hold
+ * twenty of them. So the full route is pulled only once the user shows intent.
+ * Until then `prefetch={null}` keeps the cheap default — the shell up to
+ * exam/[id]/loading.tsx. Pattern comes from the Next 16 prefetching guide.
+ *
+ * `onPointerDown` is what covers touch: hover never fires there, and firing at
+ * press start buys the prefetch a head start before the tap completes.
+ */
+function StartPracticeLink({ testId }: { testId: string }) {
+  const [intent, setIntent] = useState(false);
+  const showIntent = () => setIntent(true);
+
+  return (
+    <Link
+      href={`/exam/${testId}`}
+      prefetch={intent ? true : null}
+      onMouseEnter={showIntent}
+      onFocus={showIntent}
+      onPointerDown={showIntent}
+      className="inline-flex items-center justify-center w-full py-4 px-6 rounded-2xl text-sm font-black text-white bg-slate-900 hover:bg-blue-600 transition-[background-color,transform] duration-200 active:scale-95 shadow-xl shadow-slate-200"
+    >
+      Start Practice Module
+    </Link>
+  );
+}
+
 export default function PracticeCatalog({
   initialCategory,
   tests,
@@ -266,16 +298,7 @@ export default function PracticeCatalog({
                           Attempt limit reached
                         </button>
                       ) : (
-                        // Default prefetch ("auto"): /exam/[id] is dynamic, so only
-                        // the shell up to exam/[id]/loading.tsx is fetched. An
-                        // explicit `prefetch` would pull the full RSC payload —
-                        // every question of the test — for every card in view.
-                        <Link
-                          href={`/exam/${test.id}`}
-                          className="inline-flex items-center justify-center w-full py-4 px-6 rounded-2xl text-sm font-black text-white bg-slate-900 hover:bg-blue-600 transition-[background-color,transform] duration-200 active:scale-95 shadow-xl shadow-slate-200"
-                        >
-                          Start Practice Module
-                        </Link>
+                        <StartPracticeLink testId={test.id} />
                       )}
                       {canDownloadPdf && (
                         <Link
