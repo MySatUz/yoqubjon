@@ -8,6 +8,17 @@ const nextConfig: NextConfig = {
       bodySizeLimit: "25mb",
     },
     proxyClientMaxBodySize: "25mb",
+    // Next 15 changed the dynamic client-cache default to 0, so every return to
+    // an already-visited section refetched from the server. That is expensive
+    // here: functions run in iad1 while users are in Central Asia, so each
+    // navigation pays a transcontinental round trip before any work starts.
+    // Caching a segment for 30 s makes moving back and forth through the
+    // sidebar instant. Admin mutations call refresh(), which busts this cache,
+    // so a stale list cannot survive an edit.
+    staleTimes: {
+      dynamic: 30,
+      static: 180,
+    },
   },
   images: {
     // Single format on purpose. The optimizer picks the FIRST entry the
