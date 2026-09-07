@@ -21,6 +21,21 @@ const nextConfig: NextConfig = {
     },
   },
   images: {
+    // 31 days. The default is 4 hours, which was throwing the optimizer's work
+    // away before it could pay for itself: 2.1k transformations a month against
+    // 268 stored images, roughly eight rebuilds of each, while cache writes
+    // (2.7k) outnumbered cache reads (1.2k).
+    //
+    // A month is safe here because a question image is immutable. Its path
+    // carries the test's id, nothing is written over it, and deleting a test now
+    // deletes its folder. The upstream `Cache-Control` cannot help — Supabase
+    // serves these objects as `no-cache` — so this value alone decides the TTL.
+    //
+    // The cost is that Next has no way to invalidate the image cache. Re-uploading
+    // a test under the SAME id with the same file names would keep serving the old
+    // picture for up to a month; a normal re-upload mints a new id, and so a new
+    // path.
+    minimumCacheTTL: 2678400,
     // Single format on purpose. The optimizer picks the FIRST entry the
     // browser's `Accept` header matches, so the previous
     // ["image/webp", "image/avif"] never produced a single AVIF response —
