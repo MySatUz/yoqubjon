@@ -32,6 +32,8 @@ const MAX_TEX_FILE_SIZE = 2 * 1024 * 1024;
 const MAX_MODULE_QUESTION_COUNT = 200;
 const MAX_IMAGE_FILE_SIZE = 5 * 1024 * 1024;
 const ALLOWED_IMAGE_TYPES = new Set(['image/png', 'image/jpeg', 'image/jpg', 'image/webp']);
+const QUESTION_IMAGE_BUCKET = 'questions';
+const STORAGE_LIST_PAGE_SIZE = 1000;
 const MIN_DURATION_MINUTES = Math.ceil(MIN_EXAM_DURATION_SECONDS / 60);
 const MAX_DURATION_MINUTES = Math.floor(MAX_EXAM_DURATION_SECONDS / 60);
 
@@ -190,7 +192,7 @@ export async function uploadTest(formData: FormData) {
       const filePath = `${testId}/${sanitizeFileName(image.name)}`;
 
       const { error } = await supabase.storage
-        .from('questions')
+        .from(QUESTION_IMAGE_BUCKET)
         .upload(filePath, image, {
           upsert: true,
           contentType: image.type
@@ -201,7 +203,7 @@ export async function uploadTest(formData: FormData) {
       }
 
       const { data: { publicUrl } } = supabase.storage
-        .from('questions')
+        .from(QUESTION_IMAGE_BUCKET)
         .getPublicUrl(filePath);
       
       imageMap[image.name] = publicUrl;
@@ -255,6 +257,52 @@ export async function uploadTest(formData: FormData) {
   }
 }
 
+/**
+ * Removes every image a test uploaded. They live under `${testId}/`, and
+ * Supabase Storage has no "delete folder" call, so the prefix is listed and its
+ * objects are removed by path.
+ *
+ * A storage failure must not fail the delete itself: the rows are already gone
+ * by the time this runs, and reporting an error for a test that no longer
+ * exists would only confuse the admin. Leftovers are logged instead.
+ */
+async function removeTestImages(testId: string) {
+  const supabase = getSupabaseAdmin();
+  const paths: string[] = [];
+  let offset = 0;
+
+  for (;;) {
+    const { data, error } = await supabase.storage
+      .from(QUESTION_IMAGE_BUCKET)
+      .list(testId, { limit: STORAGE_LIST_PAGE_SIZE, offset });
+
+    if (error) {
+      console.warn(`Could not list images of test ${testId}: ${error.message}`);
+      return;
+    }
+
+    if (!data || data.length === 0) break;
+
+    // Nested folders come back with a null `metadata`; a test only stores files.
+    paths.push(
+      ...data
+        .filter((entry) => entry.metadata)
+        .map((entry) => `${testId}/${entry.name}`)
+    );
+
+    if (data.length < STORAGE_LIST_PAGE_SIZE) break;
+    offset += STORAGE_LIST_PAGE_SIZE;
+  }
+
+  if (paths.length === 0) return;
+
+  const { error } = await supabase.storage.from(QUESTION_IMAGE_BUCKET).remove(paths);
+
+  if (error) {
+    console.warn(`Could not remove ${paths.length} images of test ${testId}: ${error.message}`);
+  }
+}
+
 export async function deleteTest(testId: string) {
   try {
     await requireAdmin();
@@ -264,6 +312,10 @@ export async function deleteTest(testId: string) {
       await tx.question.deleteMany({ where: { testId } });
       await tx.test.delete({ where: { id: testId } });
     });
+
+    // Deliberately after the rows: a failure here only orphans the images, while
+    // the reverse order would leave a live test pointing at deleted files.
+    await removeTestImages(testId);
 
     revalidateTag(examQuestionsCacheTag(testId), { expire: 0 });
     refresh();
