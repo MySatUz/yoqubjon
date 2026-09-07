@@ -1,8 +1,9 @@
 import AdminForm from '@/components/admin/AdminForm';
+import SectionPicker from '@/components/admin/SectionPicker';
 import TestList from '@/components/admin/TestList';
 import { requireAdminPage } from '@/lib/admin';
 import { prisma } from '@/lib/prisma';
-import { getTestCollections, sortCatalogTests } from '@/lib/testCatalog';
+import { getTestCategory, getTestCollections, sortCatalogTests } from '@/lib/testCatalog';
 import { getCollectionVisibilityRows } from '@/lib/testCollections';
 import { ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
@@ -19,10 +20,22 @@ function parsePage(value: string | string[] | undefined) {
   return Number.isFinite(parsed) && parsed > 1 ? Math.floor(parsed) : 1;
 }
 
+function readParam(value: string | string[] | undefined) {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+/** Keeps the section across pagination links. */
+function buildTestsHref(category: string, page: number) {
+  const params = new URLSearchParams({ category });
+  if (page > 1) params.set('page', String(page));
+
+  return `/admin/tests?${params}`;
+}
+
 export default async function AdminTestsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string | string[] }>;
+  searchParams: Promise<{ page?: string | string[]; category?: string | string[] }>;
 }) {
   const resolvedSearchParams = await searchParams;
   // Kept here on purpose: access must not depend on the segment layout.
@@ -53,8 +66,26 @@ export default async function AdminTestsPage({
     getCollectionVisibilityRows(),
   ]);
 
-  const testCount = orderingRows.length;
-  const pageIds = sortCatalogTests(orderingRows)
+  const collections = getTestCollections(collectionRows);
+
+  // Every test belongs to a section, so the admin always works inside one rather
+  // than in a single mixed list. An unknown or missing `?category=` falls back to
+  // the first section by position, which is what the page shows on a plain visit.
+  const requestedCategory = readParam(resolvedSearchParams?.category);
+  const selectedCategory =
+    collections.find((option) => option.value === requestedCategory)?.value ??
+    collections[0]?.value;
+
+  const countsByCategory = new Map<string, number>();
+  for (const test of orderingRows) {
+    const category = getTestCategory(test);
+    if (category) countsByCategory.set(category, (countsByCategory.get(category) ?? 0) + 1);
+  }
+
+  const sectionRows = orderingRows.filter((test) => getTestCategory(test) === selectedCategory);
+
+  const testCount = sectionRows.length;
+  const pageIds = sortCatalogTests(sectionRows)
     .slice(skip, skip + TESTS_PAGE_SIZE)
     .map((test) => test.id);
 
@@ -70,6 +101,8 @@ export default async function AdminTestsPage({
           durationSeconds: true,
           moduleDurations: true,
           maxAttempts: true,
+        olympiadStartsAt: true,
+        olympiadEndsAt: true,
           isFree: true,
           visible: true,
           createdAt: true,
@@ -87,7 +120,6 @@ export default async function AdminTestsPage({
     .map((id) => rowsById.get(id))
     .filter((test): test is (typeof pageRows)[number] => test !== undefined);
 
-  const collections = getTestCollections(collectionRows);
   const totalPages = Math.max(1, Math.ceil(testCount / TESTS_PAGE_SIZE));
 
   return (
@@ -101,12 +133,24 @@ export default async function AdminTestsPage({
           Back to admin
         </Link>
 
+        <SectionPicker
+          collections={collections}
+          selected={selectedCategory}
+          counts={Object.fromEntries(countsByCategory)}
+        />
+
         <div className="space-y-10">
-          <AdminForm collections={collections} />
+          {/* Remounted per section: the form keeps the chosen section and its
+              attempt limit in state, which would otherwise survive the switch. */}
+          <AdminForm
+            key={selectedCategory}
+            collections={collections}
+            defaultCategory={selectedCategory}
+          />
           <div className="space-y-4">
             {testCount > 0 && (
               <p className="text-xs font-medium uppercase tracking-widest text-slate-400">
-                Showing {tests.length ? skip + 1 : 0}&ndash;{skip + tests.length} of {testCount} tests
+                Showing {tests.length ? skip + 1 : 0}&ndash;{skip + tests.length} of {testCount} tests in this section
               </p>
             )}
             {/* TestList still receives one sorted array, so its props are unchanged. */}
@@ -116,7 +160,7 @@ export default async function AdminTestsPage({
               <div className="flex flex-wrap items-center justify-between gap-3">
                 {currentPage > 1 ? (
                   <Link
-                    href={currentPage - 1 === 1 ? '/admin/tests' : `/admin/tests?page=${currentPage - 1}`}
+                    href={buildTestsHref(selectedCategory, currentPage - 1)}
                     prefetch={false}
                     className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-xs font-medium text-slate-700 transition hover:border-blue-200 hover:text-blue-600"
                   >
@@ -131,7 +175,7 @@ export default async function AdminTestsPage({
                 </span>
                 {currentPage < totalPages ? (
                   <Link
-                    href={`/admin/tests?page=${currentPage + 1}`}
+                    href={buildTestsHref(selectedCategory, currentPage + 1)}
                     prefetch={false}
                     className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-xs font-medium text-slate-700 transition hover:border-blue-200 hover:text-blue-600"
                   >

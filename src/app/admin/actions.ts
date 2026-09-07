@@ -21,6 +21,7 @@ import {
   normalizeCategoryId,
 } from '@/lib/testCatalog';
 import { normalizeTestMaxAttempts } from '@/lib/testAttempts';
+import { parseOlympiadMoment } from '@/lib/olympiad';
 import {
   MAX_MODULE_COUNT,
   MIN_MODULE_COUNT,
@@ -34,6 +35,7 @@ const MAX_IMAGE_FILE_SIZE = 5 * 1024 * 1024;
 const ALLOWED_IMAGE_TYPES = new Set(['image/png', 'image/jpeg', 'image/jpg', 'image/webp']);
 const QUESTION_IMAGE_BUCKET = 'questions';
 const STORAGE_LIST_PAGE_SIZE = 1000;
+const TEST_ID_PATTERN = /^[0-9a-f-]{36}$/i;
 const MIN_DURATION_MINUTES = Math.ceil(MIN_EXAM_DURATION_SECONDS / 60);
 const MAX_DURATION_MINUTES = Math.floor(MAX_EXAM_DURATION_SECONDS / 60);
 
@@ -122,7 +124,39 @@ function readUploadedImages(value: FormDataEntryValue | null) {
   });
 }
 
+/**
+ * Drops the images an upload left behind after it failed.
+ *
+ * The admin form uploads images first, under a freshly minted test id, and only
+ * then asks the server to create the test. When that second step throws — an
+ * unparsable `.tex`, a missing image, a rejected window — the files are already
+ * in the bucket with no row that will ever reference them. One such folder was
+ * found in production before this existed.
+ *
+ * The existence check is the important part: `testId` can arrive from the form,
+ * and if it names a test that is already stored, these images belong to it and
+ * must not be touched.
+ */
+async function discardFailedUpload(testId: string) {
+  try {
+    const existing = await prisma.test.findUnique({
+      where: { id: testId },
+      select: { id: true },
+    });
+
+    if (existing) return;
+
+    await removeTestImages(testId);
+  } catch (error) {
+    console.warn(`Could not clean up the failed upload of test ${testId}:`, error);
+  }
+}
+
 export async function uploadTest(formData: FormData) {
+  // Read inside the try, but needed by the catch: without it a failure cannot
+  // tell which folder the images went to.
+  let uploadedTestId: string | null = null;
+
   try {
     await requireAdmin();
 
@@ -142,6 +176,13 @@ export async function uploadTest(formData: FormData) {
     const imageFiles = formData.getAll('images') as File[];
     const uploadedImages = readUploadedImages(formData.get('uploadedImages'));
     const requestedTestId = formData.get('testId');
+
+    // Remembered before anything can throw: the images were uploaded under this
+    // id by the form, so every failure below leaves them orphaned. Recording it
+    // only once the .tex parses would miss the most common failure of all.
+    if (typeof requestedTestId === 'string' && TEST_ID_PATTERN.test(requestedTestId)) {
+      uploadedTestId = requestedTestId;
+    }
 
     if (!texFile || !(texFile instanceof File) || texFile.size === 0 || !title) {
       throw new Error('Title and .tex file are required');
@@ -172,9 +213,9 @@ export async function uploadTest(formData: FormData) {
       format: examFormat,
     });
 
-    const testId = typeof requestedTestId === 'string' && /^[0-9a-f-]{36}$/i.test(requestedTestId)
-      ? requestedTestId
-      : crypto.randomUUID();
+    const olympiadWindow = normalizeOlympiadWindow(formData, examModules.durationSeconds);
+
+    const testId = uploadedTestId ?? crypto.randomUUID();
 
     const supabase = getSupabaseAdmin();
     const imageMap: Record<string, string> = {};
@@ -224,6 +265,7 @@ export async function uploadTest(formData: FormData) {
         durationSeconds: examModules.durationSeconds,
         moduleDurations: examModules.moduleDurations,
         maxAttempts,
+        ...olympiadWindow,
         collectionCategory: testCategory,
         questions: {
           createMany: {
@@ -253,6 +295,11 @@ export async function uploadTest(formData: FormData) {
 
   } catch (error: unknown) {
     console.error('Upload error:', error);
+
+    if (uploadedTestId) {
+      await discardFailedUpload(uploadedTestId);
+    }
+
     return { success: false, error: error instanceof Error ? error.message : 'Upload failed' };
   }
 }
@@ -371,6 +418,41 @@ function normalizeExamFormat(formData: FormData): ExamFormatInput {
     moduleDurations,
     moduleQuestionCounts: formData.getAll('moduleQuestions').map(normalizeModuleQuestionCount),
   };
+}
+
+/**
+ * Reads the olympiad window off the form. Both fields or neither: a window with
+ * only one end would read as "not an olympiad" to `readOlympiadWindow`, so the
+ * admin would have set a competition that silently behaves like a normal test.
+ *
+ * The window also has to be at least one test long. A shorter one accepts nobody
+ * — the entrance closes a full test length before the end — and there is no
+ * point storing a competition that cannot be entered.
+ */
+function normalizeOlympiadWindow(formData: FormData, totalDurationSeconds: number) {
+  const startsAt = parseOlympiadMoment(formData.get('olympiadStartsAt'));
+  const endsAt = parseOlympiadMoment(formData.get('olympiadEndsAt'));
+
+  if (!startsAt && !endsAt) {
+    return { olympiadStartsAt: null, olympiadEndsAt: null };
+  }
+
+  if (!startsAt || !endsAt) {
+    throw new Error('Set both the start and the end of the olympiad, or leave both empty');
+  }
+
+  if (endsAt <= startsAt) {
+    throw new Error('The olympiad must end after it starts');
+  }
+
+  const windowSeconds = (endsAt.getTime() - startsAt.getTime()) / 1000;
+  if (windowSeconds < totalDurationSeconds) {
+    throw new Error(
+      `The olympiad window is shorter than the test itself (${Math.round(totalDurationSeconds / 60)} minutes), so nobody could finish in time`
+    );
+  }
+
+  return { olympiadStartsAt: startsAt, olympiadEndsAt: endsAt };
 }
 
 function normalizeDurationSeconds(value: FormDataEntryValue | null) {
@@ -645,6 +727,7 @@ export async function updateTestDetails(testId: string, formData: FormData) {
         durationSeconds,
         moduleDurations,
         maxAttempts,
+        ...normalizeOlympiadWindow(formData, durationSeconds),
         collectionCategory: testCategory,
         description: encodeTestDescription(testCategory, cleanTestDescription(existingTest.description)),
       },

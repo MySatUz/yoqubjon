@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { ArrowLeft, ArrowRight, Atom, FileDown, FolderKanban, Layers3, LayoutDashboard, Lock, Repeat2, Sparkles } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Atom, FileDown, FolderKanban, Layers3, LayoutDashboard, Lock, Repeat2, Sparkles, Trophy } from 'lucide-react';
 import {
   findCategoryByQuery,
   getCategoryQueryValue,
@@ -12,6 +12,7 @@ import {
 } from '@/lib/testCatalog';
 import { useEffect, useMemo, useState, useTransition } from 'react';
 import { formatModuleBadge } from '@/lib/examModules';
+import { getOlympiadStatus, readOlympiadWindow, type OlympiadStatus } from '@/lib/olympiad';
 
 type CatalogTest = {
   id: string;
@@ -25,6 +26,26 @@ type CatalogTest = {
   isFree: boolean;
   visible: boolean;
   createdAt: string;
+  /** ISO strings: dates do not survive the server-to-client boundary as Date. */
+  olympiadStartsAt: string | null;
+  olympiadEndsAt: string | null;
+};
+
+/**
+ * The window of a catalog row, or null for an ordinary test. The dates arrive as
+ * ISO strings, so they are revived before the shared helpers see them.
+ */
+function readCatalogOlympiad(test: CatalogTest) {
+  return readOlympiadWindow({
+    olympiadStartsAt: test.olympiadStartsAt ? new Date(test.olympiadStartsAt) : null,
+    olympiadEndsAt: test.olympiadEndsAt ? new Date(test.olympiadEndsAt) : null,
+  });
+}
+
+const OLYMPIAD_BADGE: Record<OlympiadStatus, string> = {
+  upcoming: 'Upcoming',
+  running: 'Live now',
+  finished: 'Finished',
 };
 
 type PracticeCatalogProps = {
@@ -264,6 +285,24 @@ export default function PracticeCatalog({
                           {formatModuleBadge(test)}
                         </span>
                       )}
+                      {(() => {
+                        const window = readCatalogOlympiad(test);
+                        if (!window) return null;
+                        const status = getOlympiadStatus(window);
+
+                        return (
+                          <span className={`inline-flex items-center gap-1 rounded-full border px-3 py-1 text-[10px] font-medium uppercase tracking-widest ${
+                            status === 'upcoming'
+                              ? 'border-amber-200 bg-amber-50 text-amber-700'
+                              : status === 'running'
+                                ? 'border-blue-200 bg-blue-50 text-blue-700'
+                                : 'border-slate-200 bg-white text-slate-500'
+                          }`}>
+                            <Trophy className="h-3 w-3" />
+                            {OLYMPIAD_BADGE[status]}
+                          </span>
+                        );
+                      })()}
                       <span className={`inline-flex items-center gap-1 rounded-full border px-3 py-1 text-[10px] font-medium uppercase tracking-widest ${
                         attemptLimitReached
                           ? 'border-amber-200 bg-amber-100 text-amber-700'
@@ -290,6 +329,18 @@ export default function PracticeCatalog({
                         >
                           Attempt limit reached
                         </button>
+                      ) : readCatalogOlympiad(test) ? (
+                        // An olympiad always goes through its own page first: the
+                        // rules, the window and the ranking live there, and the
+                        // test itself is closed outside the window anyway.
+                        <Link
+                          href={`/olympiad/${test.id}`}
+                          className="inline-flex w-full items-center justify-center rounded-2xl bg-slate-900 px-6 py-4 text-sm font-semibold text-white shadow-lg transition-[background-color,transform] duration-200 hover:bg-blue-600 active:scale-95"
+                        >
+                          {getOlympiadStatus(readCatalogOlympiad(test)!) === 'finished'
+                            ? 'View results'
+                            : 'View olympiad'}
+                        </Link>
                       ) : (
                         <StartPracticeLink testId={test.id} />
                       )}

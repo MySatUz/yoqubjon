@@ -39,6 +39,11 @@ model Test {
   // that runs on durationSeconds alone.
   moduleDurations    Int[]                     @default([])
   maxAttempts        Int                       @default(10)
+  // A competition window. Both set means the test runs as an olympiad: it can
+  // only be opened between these two instants, and the ranking counts only the
+  // attempts started inside them. Either one null means an ordinary test.
+  olympiadStartsAt   DateTime?
+  olympiadEndsAt     DateTime?
   collectionCategory String?
   createdAt          DateTime                  @default(now())
   updatedAt          DateTime                  @updatedAt
@@ -111,6 +116,11 @@ model Result {
   userId      String
   testId      String
   score       Int
+  // How many questions were answered correctly. `score` cannot stand in for it:
+  // it is a SAT-scale estimate rounded through a 44-question reference, so on a
+  // test of any other length two different counts can land on the same score.
+  // Null on rows written before the column existed and never backfilled.
+  correctCount Int?
   timeSpent   Int      // Time spent in seconds
   answers     Json     // User's selected answers
   createdAt   DateTime @default(now())

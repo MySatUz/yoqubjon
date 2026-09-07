@@ -2,7 +2,8 @@ import { prisma } from '@/lib/prisma';
 import ExamRunner from '@/components/exam/ExamRunner';
 import { notFound, redirect } from 'next/navigation';
 import { auth } from '@/auth';
-import { buildExamModules } from '@/lib/examModules';
+import { buildExamModules, getTotalDurationSeconds } from '@/lib/examModules';
+import { canStartOlympiadAttempt, readOlympiadWindow } from '@/lib/olympiad';
 import { isAdminUser } from '@/lib/admin';
 import { userHasActiveSectionAccess } from '@/lib/sectionAccess';
 import { getExamQuestionsHtml } from '@/lib/examQuestions';
@@ -39,6 +40,8 @@ export default async function DynamicExamPage({ params }: { params: Promise<{ id
         collectionCategory: true,
         durationSeconds: true,
         moduleDurations: true,
+        olympiadStartsAt: true,
+        olympiadEndsAt: true,
       },
     }),
     isAdminUser(userId),
@@ -65,6 +68,20 @@ export default async function DynamicExamPage({ params }: { params: Promise<{ id
 
   if (!test.visible && !isAdmin) {
     notFound();
+  }
+
+  // A competition test only opens inside its window, and closes one full test
+  // length before the end so nobody works an attempt that would not be counted.
+  // The olympiad page explains which of those two it is; admins bypass it so a
+  // test can still be checked before the window opens.
+  const olympiadWindow = readOlympiadWindow(test);
+
+  if (
+    olympiadWindow &&
+    !isAdmin &&
+    !canStartOlympiadAttempt(olympiadWindow, getTotalDurationSeconds(test))
+  ) {
+    redirect(`/olympiad/${id}`);
   }
 
   if (!isAdmin && attemptsUsed >= test.maxAttempts) {

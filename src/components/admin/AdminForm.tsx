@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { uploadTest } from '@/app/admin/actions';
-import { FileText, Image as ImageIcon, Upload, CheckCircle2, AlertCircle, Atom, Clock3, Eye, Loader2, Layers3, Plus, Repeat2, Sparkles, Timer, X } from 'lucide-react';
+import { FileText, Image as ImageIcon, Upload, CheckCircle2, AlertCircle, Clock3, Eye, Loader2, Plus, Repeat2, Timer, Trophy, X } from 'lucide-react';
 import type { TestCollectionOption } from '@/lib/testCatalog';
 import {
   DEFAULT_TEST_MAX_ATTEMPTS,
@@ -26,6 +26,8 @@ type PreparedUpload = {
 
 type AdminFormProps = {
   collections: TestCollectionOption[];
+  /** Section chosen above the form; a new test lands in it by default. */
+  defaultCategory?: string;
 };
 
 type ExamFormat = 'modular' | 'single';
@@ -76,16 +78,15 @@ function describeFailedUploads(failed: string[], total: number) {
   }. Fix them and upload the test again.`;
 }
 
-export default function AdminForm({ collections }: AdminFormProps) {
+export default function AdminForm({ collections, defaultCategory: preselected }: AdminFormProps) {
   const [loading, setLoading] = useState(false);
   const [statusText, setStatusText] = useState('Processing LaTeX...');
   const [result, setResult] = useState<{ success?: boolean; error?: string; testId?: string } | null>(null);
-  const defaultCategory = collections.some((option) => option.value === 'STANDARD')
-    ? 'STANDARD'
-    : collections[0]?.value;
+  const defaultCategory =
+    collections.find((option) => option.value === preselected)?.value ??
+    (collections.some((option) => option.value === 'STANDARD') ? 'STANDARD' : collections[0]?.value);
   const sectionAttempts = (category: string | undefined) =>
     collections.find((option) => option.value === category)?.maxAttempts ?? DEFAULT_TEST_MAX_ATTEMPTS;
-  const [selectedCategory, setSelectedCategory] = useState(defaultCategory);
   const [maxAttempts, setMaxAttempts] = useState(() => String(sectionAttempts(defaultCategory)));
   const [examFormat, setExamFormat] = useState<ExamFormat>('modular');
   const [modules, setModules] = useState<ModuleDraft[]>(() => createModuleDrafts(DEFAULT_MODULE_COUNT));
@@ -128,6 +129,8 @@ export default function AdminForm({ collections }: AdminFormProps) {
       const testCategory = formData.get('testCategory');
       const durationMinutes = formData.get('durationMinutes');
       const maxAttempts = formData.get('maxAttempts');
+      const olympiadStartsAt = formData.get('olympiadStartsAt');
+      const olympiadEndsAt = formData.get('olympiadEndsAt');
       const texFile = formData.get('texFile');
       const imageFiles = formData.getAll('images').filter(
         (file): file is File => file instanceof File && file.size > 0
@@ -223,6 +226,9 @@ export default function AdminForm({ collections }: AdminFormProps) {
         serverFormData.set('durationMinutes', durationMinutes);
       }
       if (typeof maxAttempts === 'string') serverFormData.set('maxAttempts', maxAttempts);
+      // Sent even when blank: the server reads "both empty" as "not an olympiad".
+      if (typeof olympiadStartsAt === 'string') serverFormData.set('olympiadStartsAt', olympiadStartsAt);
+      if (typeof olympiadEndsAt === 'string') serverFormData.set('olympiadEndsAt', olympiadEndsAt);
       if (texFile instanceof File) serverFormData.set('texFile', texFile);
       if (testId) serverFormData.set('testId', testId);
       serverFormData.set('uploadedImages', JSON.stringify(uploadedImages));
@@ -232,7 +238,6 @@ export default function AdminForm({ collections }: AdminFormProps) {
       setResult(response);
       if (response.success) {
         form.reset();
-        setSelectedCategory(defaultCategory);
         setMaxAttempts(String(sectionAttempts(defaultCategory)));
         setExamFormat('modular');
         setModules(createModuleDrafts(DEFAULT_MODULE_COUNT));
@@ -265,43 +270,9 @@ export default function AdminForm({ collections }: AdminFormProps) {
           />
         </div>
 
-        <div>
-          <label className="block text-xs font-medium text-slate-400 uppercase tracking-widest mb-3">Test Collection</label>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {collections.map((option) => {
-              const Icon = option.value === 'PLANCK'
-                ? Atom
-                : option.value === 'ADVANCED'
-                  ? Sparkles
-                  : Layers3;
-
-              return (
-                <label key={option.value} className="group relative cursor-pointer">
-                  <input
-                    type="radio"
-                    name="testCategory"
-                    value={option.value}
-                    checked={option.value === selectedCategory}
-                    onChange={() => {
-                      setSelectedCategory(option.value);
-                      setMaxAttempts(String(option.maxAttempts));
-                    }}
-                    className="peer sr-only"
-                  />
-                  <div className="h-full rounded-2xl border border-slate-200 bg-slate-50 p-4 transition-all peer-checked:border-blue-500 peer-checked:bg-blue-50 peer-checked:ring-4 peer-checked:ring-blue-100 group-hover:border-blue-200">
-                    <div className="mb-3 flex items-center gap-3">
-                      <span className="rounded-xl bg-white p-2 text-blue-600 shadow-sm">
-                        <Icon className="h-5 w-5" />
-                      </span>
-                      <span className="text-sm font-semibold text-slate-900">{option.label}</span>
-                    </div>
-                    <p className="text-xs font-medium leading-relaxed text-slate-500">{option.description}</p>
-                  </div>
-                </label>
-              );
-            })}
-          </div>
-        </div>
+        {/* The section is picked once, above the form; this only carries it to
+            the action so the picker does not exist in two places. */}
+        <input type="hidden" name="testCategory" value={defaultCategory ?? ''} />
 
         <div className="rounded-2xl border border-slate-100 bg-slate-50 p-5">
           <span className="mb-3 flex items-center gap-2 text-xs font-medium uppercase tracking-widest text-slate-400">
@@ -430,6 +401,41 @@ export default function AdminForm({ collections }: AdminFormProps) {
           )}
         </div>
 
+        <div className="rounded-2xl border border-slate-100 bg-slate-50 p-5">
+          <span className="mb-1 flex items-center gap-2 text-xs font-medium uppercase tracking-widest text-slate-400">
+            <Trophy className="h-4 w-4" />
+            Olympiad window
+          </span>
+          <p className="mb-4 text-xs font-medium leading-relaxed text-slate-500">
+            Leave both empty for an ordinary test. With a window set, the test opens only inside
+            it, entry closes one test length before the end, and a ranking by solved questions
+            then time appears once it is over. Times are Tashkent time.
+          </p>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="block">
+              <span className="mb-2 block text-[11px] font-medium uppercase tracking-wide text-slate-400">
+                Opens
+              </span>
+              <input
+                name="olympiadStartsAt"
+                type="datetime-local"
+                className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-900 outline-none focus:border-blue-400"
+              />
+            </label>
+            <label className="block">
+              <span className="mb-2 block text-[11px] font-medium uppercase tracking-wide text-slate-400">
+                Closes
+              </span>
+              <input
+                name="olympiadEndsAt"
+                type="datetime-local"
+                className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-900 outline-none focus:border-blue-400"
+              />
+            </label>
+          </div>
+        </div>
+
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="block">
             <span className="mb-2 flex items-center gap-2 text-xs font-medium uppercase tracking-widest text-slate-400">
@@ -451,7 +457,7 @@ export default function AdminForm({ collections }: AdminFormProps) {
               <span className="text-sm font-semibold text-slate-500">attempts</span>
             </div>
             <span className="mt-2 block text-xs font-medium text-slate-400">
-              Section rule: {sectionAttempts(selectedCategory)}. Change it here to override this test only.
+              Section rule: {sectionAttempts(defaultCategory)}. Change it here to override this test only.
             </span>
           </label>
         </div>

@@ -3,7 +3,8 @@
 import React, { memo, useCallback, useMemo, useOptimistic, useState, useTransition } from 'react';
 import Link from 'next/link';
 import { deleteTest, updateQuestion, updateTestDetails, updateTestVisibility } from '@/app/admin/actions';
-import { ChevronDown, Clock3, Edit3, Eye, EyeOff, FileDown, ImageIcon, Layers, Loader2, Plus, Repeat2, Save, Settings2, Trash2, Video, X } from 'lucide-react';
+import { toOlympiadInputValue } from '@/lib/olympiad';
+import { ChevronDown, Clock3, Edit3, Eye, EyeOff, FileDown, ImageIcon, Layers, Loader2, Plus, Repeat2, Save, Settings2, Trash2, Trophy, Video, X } from 'lucide-react';
 import { getCategoryLabel, getTestCategory, type TestCollectionOption } from '@/lib/testCatalog';
 import { MAX_TEST_MAX_ATTEMPTS, MIN_TEST_MAX_ATTEMPTS } from '@/lib/testAttempts';
 import { formatModuleBadge, readModuleDurations, secondsToMinutes } from '@/lib/examModules';
@@ -27,6 +28,8 @@ type AdminTest = {
   durationSeconds: number;
   moduleDurations: number[];
   maxAttempts: number;
+  olympiadStartsAt: Date | null;
+  olympiadEndsAt: Date | null;
   isFree: boolean;
   visible: boolean;
   createdAt: Date;
@@ -210,6 +213,32 @@ function TestSettingsEditor({
               <span className="text-xs font-medium text-slate-400">min</span>
             </div>
           )}
+        </label>
+
+        <label className="block sm:col-span-2">
+          <span className="mb-2 flex items-center gap-2 text-xs font-medium uppercase tracking-widest text-slate-400">
+            <Trophy className="h-4 w-4" />
+            Olympiad window
+            <span className="normal-case tracking-normal text-slate-400">
+              — empty for an ordinary test, Tashkent time
+            </span>
+          </span>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <input
+              name="olympiadStartsAt"
+              type="datetime-local"
+              aria-label="Olympiad opens"
+              defaultValue={toOlympiadInputValue(test.olympiadStartsAt)}
+              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-900 outline-none focus:border-blue-400"
+            />
+            <input
+              name="olympiadEndsAt"
+              type="datetime-local"
+              aria-label="Olympiad closes"
+              defaultValue={toOlympiadInputValue(test.olympiadEndsAt)}
+              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-900 outline-none focus:border-blue-400"
+            />
+          </div>
         </label>
 
         <div className="flex flex-col justify-end gap-3">

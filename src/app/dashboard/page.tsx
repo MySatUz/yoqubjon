@@ -126,6 +126,8 @@ async function PracticeCatalogSection({
         isFree: true,
         visible: true,
         createdAt: true,
+        olympiadStartsAt: true,
+        olympiadEndsAt: true,
       },
     }),
     prisma.subscription.findFirst({
@@ -168,6 +170,8 @@ async function PracticeCatalogSection({
         ...test,
         attemptsUsed: attemptsUsedByTest.get(test.id) ?? 0,
         createdAt: test.createdAt.toISOString(),
+        olympiadStartsAt: test.olympiadStartsAt?.toISOString() ?? null,
+        olympiadEndsAt: test.olympiadEndsAt?.toISOString() ?? null,
       }))}
       collections={dashboardCollections}
       isPremium={isPremium}
