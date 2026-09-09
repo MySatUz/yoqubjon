@@ -184,9 +184,14 @@ export function rankOlympiadAttempts(attempts: RankableAttempt[]): OlympiadStand
   const best = new Map<string, OlympiadStanding>();
 
   for (const attempt of attempts) {
-    // A row written before `correctCount` existed cannot be ranked honestly, and
-    // counting it as zero would place that person below people who scored zero
-    // in more time. Skipping is the lesser wrong, and no such row exists today.
+    // A row without `correctCount` cannot be ranked honestly, and counting it
+    // as zero would place that person below people who scored zero in more
+    // time. Skipping is the lesser wrong.
+    //
+    // Two kinds of row are missing it: those written before the column existed
+    // and left out of its backfill, and those written between that migration
+    // and the fix that finally made `createExamResult` store the value it had
+    // already computed.
     if (attempt.correctCount === null) continue;
 
     const current = best.get(attempt.userId);

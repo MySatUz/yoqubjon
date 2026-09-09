@@ -1,6 +1,6 @@
 "use client";
 
-import React, { memo, useCallback, useEffect, useRef, useState } from 'react';
+import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useExamStore } from '@/store/useExamStore';
 // KaTeX's stylesheet is still needed - only its JS is gone from this bundle.
 import 'katex/dist/katex.min.css';
@@ -16,6 +16,7 @@ interface Question {
   id: string;
   contentHtml: string;
   optionsHtml: string[];
+  multiSelect: boolean;
   imageUrl?: string | null;
 }
 
@@ -33,6 +34,7 @@ interface AnswerChoiceProps {
   letter: string;
   optionHtml: string;
   isSelected: boolean;
+  isMultiSelect: boolean;
   isCompact: boolean;
   onSelect: (letter: string) => void;
 }
@@ -40,16 +42,23 @@ interface AnswerChoiceProps {
 /**
  * Memoized so picking an answer only re-renders the two choices whose
  * selection state actually changed.
+ *
+ * A multi-select choice keeps every other treatment and only squares off its
+ * letter box - `rounded-lg` against `rounded-xl` - which is the same
+ * checkbox-against-radio cue the rest of the app uses, without inventing a
+ * shape or a colour for it.
  */
 const AnswerChoice = memo(function AnswerChoice({
   letter,
   optionHtml,
   isSelected,
+  isMultiSelect,
   isCompact,
   onSelect,
 }: AnswerChoiceProps) {
   return (
     <button
+      aria-pressed={isSelected}
       onClick={() => onSelect(letter)}
       className={`group flex items-center gap-4 p-5 rounded-2xl border-2 transition text-left ${
         isSelected
@@ -57,7 +66,9 @@ const AnswerChoice = memo(function AnswerChoice({
           : 'border-slate-200 bg-white hover:border-emerald-300 hover:bg-slate-50 shadow-sm'
       }`}
     >
-      <span className={`flex-shrink-0 w-10 h-10 rounded-xl border-2 flex items-center justify-center font-semibold transition ${
+      <span className={`flex-shrink-0 w-10 h-10 border-2 flex items-center justify-center font-semibold transition ${
+        isMultiSelect ? 'rounded-lg' : 'rounded-xl'
+      } ${
         isSelected
           ? 'bg-emerald-600 border-emerald-600 text-white rotate-3'
           : 'border-slate-200 text-slate-400 group-hover:border-emerald-300 group-hover:text-emerald-600'
@@ -175,6 +186,7 @@ function GridInAnswer({ questionId }: { questionId: string }) {
 export default function SplitScreen({ questions }: { questions: Question[] }) {
   const currentQuestionIndex = useExamStore((state) => state.currentQuestionIndex);
   const setAnswer = useExamStore((state) => state.setAnswer);
+  const toggleAnswerChoice = useExamStore((state) => state.toggleAnswerChoice);
   const isCalculatorOpen = useExamStore((state) => state.isCalculatorOpen);
 
   const hasQuestions = Boolean(questions && questions.length > 0);
@@ -184,6 +196,7 @@ export default function SplitScreen({ questions }: { questions: Question[] }) {
   // Determine type: no options means GRID_IN
   const questionOptions = question?.optionsHtml;
   const isMultipleChoice = Boolean(questionOptions && questionOptions.length > 0);
+  const isMultiSelect = isMultipleChoice && Boolean(question?.multiSelect);
 
   // Grid-in answers live in `GridInAnswer`, so only the choice highlighting
   // needs the stored answer here.
@@ -191,12 +204,21 @@ export default function SplitScreen({ questions }: { questions: Question[] }) {
     isMultipleChoice && question ? state.answers[question.id] ?? '' : ''
   );
 
+  // One code path for both kinds of choice: a single-choice answer is just a
+  // set of one, so the highlighting below never has to branch.
+  const selectedLetters = useMemo(
+    () => new Set(currentAnswer.split(',').map((letter) => letter.trim()).filter(Boolean)),
+    [currentAnswer]
+  );
+
   const questionId = question?.id;
   const handleSelectChoice = useCallback(
     (letter: string) => {
-      if (questionId) setAnswer(questionId, letter);
+      if (!questionId) return;
+      if (isMultiSelect) toggleAnswerChoice(questionId, letter);
+      else setAnswer(questionId, letter);
     },
-    [questionId, setAnswer]
+    [isMultiSelect, questionId, setAnswer, toggleAnswerChoice]
   );
 
   // Desmos is expensive to boot and keeps the student's graphs in its own
@@ -249,20 +271,28 @@ export default function SplitScreen({ questions }: { questions: Question[] }) {
           {/* Options / Answer Input */}
           <div className="mt-auto pt-8 border-t border-slate-200/60">
             {isMultipleChoice ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-4xl mx-auto">
-                {question.optionsHtml.map((optionHtml: string, idx: number) => {
-                  const letter = String.fromCharCode(65 + idx);
-                  return (
-                    <AnswerChoice
-                      key={idx}
-                      letter={letter}
-                      optionHtml={optionHtml}
-                      isSelected={currentAnswer === letter}
-                      isCompact={isCalculatorOpen}
-                      onSelect={handleSelectChoice}
-                    />
-                  );
-                })}
+              <div className="max-w-4xl mx-auto">
+                {isMultiSelect && (
+                  <p className="mb-4 text-center text-[10px] font-medium uppercase tracking-[0.2em] text-blue-600">
+                    Select all that apply
+                  </p>
+                )}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {question.optionsHtml.map((optionHtml: string, idx: number) => {
+                    const letter = String.fromCharCode(65 + idx);
+                    return (
+                      <AnswerChoice
+                        key={idx}
+                        letter={letter}
+                        optionHtml={optionHtml}
+                        isSelected={selectedLetters.has(letter)}
+                        isMultiSelect={isMultiSelect}
+                        isCompact={isCalculatorOpen}
+                        onSelect={handleSelectChoice}
+                      />
+                    );
+                  })}
+                </div>
               </div>
             ) : (
               <div className="mx-auto max-w-sm rounded-2xl border border-blue-100 bg-blue-50 p-5 shadow-sm">

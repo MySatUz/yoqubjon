@@ -5,6 +5,7 @@ import { requireAdminPage } from '@/lib/admin';
 import { prisma } from '@/lib/prisma';
 import { renderMathText } from '@/lib/renderMathText';
 import { buildExamModules } from '@/lib/examModules';
+import { isMultiSelectKey } from '@/lib/resultAnswers';
 import { ArrowLeft, FileText } from 'lucide-react';
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
@@ -13,6 +14,8 @@ type QuestionForPdf = {
   id: string;
   content: string;
   options: unknown;
+  /** Read only to mark the question as multi-select; never printed. */
+  correctAnswer: string;
   imageUrl: string | null;
   order: number;
   moduleIndex: number;
@@ -52,6 +55,12 @@ function QuestionPdfCard({ question, number }: { question: QuestionForPdf; numbe
             className="mx-auto max-h-[360px] w-full object-contain print:max-h-[260px]"
           />
         </div>
+      )}
+
+      {options.length > 0 && isMultiSelectKey(question.correctAnswer) && (
+        <p className="mt-6 text-[10px] font-medium uppercase tracking-[0.24em] text-blue-600">
+          Select all that apply
+        </p>
       )}
 
       {options.length > 0 ? (
@@ -101,6 +110,7 @@ export default async function ExamPdfPage({ params }: { params: Promise<{ id: st
           id: true,
           content: true,
           options: true,
+          correctAnswer: true,
           imageUrl: true,
           order: true,
           moduleIndex: true,

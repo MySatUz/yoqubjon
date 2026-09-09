@@ -8,6 +8,7 @@ import { refresh, revalidateTag } from 'next/cache';
 import { requireAdmin } from '@/lib/admin';
 import { TEST_COLLECTIONS_CACHE_TAG } from '@/lib/testCollections';
 import { examQuestionsCacheTag } from '@/lib/examQuestions';
+import { formatAnswerLetters, parseAnswerLetters } from '@/lib/resultAnswers';
 import {
   EXAM_DURATION_SECONDS,
   MAX_EXAM_DURATION_SECONDS,
@@ -79,14 +80,35 @@ function normalizeQuestionOptions(values: FormDataEntryValue[]) {
   return options;
 }
 
-function validateQuestionAnswer(options: string[], correctAnswer: string) {
-  const answerLetter = correctAnswer.trim().toUpperCase();
-  if (!/^[A-H]$/.test(answerLetter) || options.length === 0) return;
+/**
+ * Checks the answer key against the options and returns the form to store.
+ *
+ * Two or more letters make the question multi-select, exactly as `\answer{B, C}`
+ * does in a `.tex` file, and the stored key is sorted and de-spaced so `C, B`
+ * and `B,C` are the same key. Anything that is not a list of option letters is
+ * a grid-in value and passes through untouched - `1,000` stays a number.
+ */
+function normalizeQuestionAnswer(options: string[], correctAnswer: string) {
+  const letters = parseAnswerLetters(correctAnswer);
+  const isMultiSelect = letters !== null && letters.length > 1;
 
-  const answerIndex = answerLetter.charCodeAt(0) - 65;
-  if (answerIndex >= options.length) {
-    throw new Error(`Correct answer is ${answerLetter}, but only ${options.length} options are present`);
+  if (isMultiSelect && options.length === 0) {
+    throw new Error('Several correct answers need options to choose from. Use one value for a grid-in answer.');
   }
+
+  if (!letters || options.length === 0) return correctAnswer;
+
+  if (new Set(letters).size !== letters.length) {
+    throw new Error('The correct answer repeats an option letter');
+  }
+
+  for (const letter of letters) {
+    if (letter.charCodeAt(0) - 65 >= options.length) {
+      throw new Error(`Correct answer is ${letter}, but only ${options.length} options are present`);
+    }
+  }
+
+  return isMultiSelect ? formatAnswerLetters(letters) : correctAnswer;
 }
 
 function sanitizeFileName(fileName: string) {
@@ -781,7 +803,7 @@ export async function updateQuestion(questionId: string, formData: FormData) {
     const imageUrl = normalizeNullableText(formData.get('imageUrl'));
     const videoUrl = normalizeNullableText(formData.get('videoUrl'));
 
-    validateQuestionAnswer(options, correctAnswer);
+    const storedAnswer = normalizeQuestionAnswer(options, correctAnswer);
 
     const existingQuestion = await prisma.question.findUnique({
       where: { id: questionId },
@@ -797,7 +819,7 @@ export async function updateQuestion(questionId: string, formData: FormData) {
       data: {
         content,
         options,
-        correctAnswer,
+        correctAnswer: storedAnswer,
         explanation,
         imageUrl,
         videoUrl,

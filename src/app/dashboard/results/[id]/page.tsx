@@ -1,13 +1,16 @@
 import { prisma } from '@/lib/prisma';
 import { notFound, redirect } from 'next/navigation';
 import Link from 'next/link';
-import { CheckCircle2, XCircle, Clock, Award, ArrowLeft } from 'lucide-react';
+import { CheckCircle2, CircleDot, XCircle, Clock, Award, ArrowLeft } from 'lucide-react';
 import 'katex/dist/katex.min.css';
 import { auth } from '@/auth';
-import { normalizeStoredAnswer } from '@/lib/resultAnswers';
+import { formatCreditTotal, normalizeStoredAnswer } from '@/lib/resultAnswers';
 import Image from 'next/image';
 import { renderMathText } from '@/lib/renderMathText';
 import { buildExamModules } from '@/lib/examModules';
+
+const sumCredit = (answers: Array<{ credit: number }>) =>
+  answers.reduce((total, answer) => total + answer.credit, 0);
 
 export default async function ResultPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -72,9 +75,11 @@ export default async function ResultPage({ params }: { params: Promise<{ id: str
   }));
 
   const detailedAnswers = moduleReviews.flatMap((module) => module.answers);
-  const correctCount = detailedAnswers.filter(a => a.isCorrect).length;
   const totalCount = detailedAnswers.length;
-  const accuracy = totalCount > 0 ? Math.round((correctCount / totalCount) * 100) : 0;
+  // Credit, not a count of right answers: a multi-select question can be partly
+  // right, and the two tiles below have to keep adding up to the total.
+  const earnedCredit = sumCredit(detailedAnswers);
+  const accuracy = totalCount > 0 ? Math.round((earnedCredit / totalCount) * 100) : 0;
   
   const formatTime = (seconds: number) => {
     const m = Math.floor(seconds / 60);
@@ -123,7 +128,7 @@ export default async function ResultPage({ params }: { params: Promise<{ id: str
               </div>
               <div>
                 <h3 className="text-sm font-medium text-slate-500 uppercase">Correct</h3>
-                <p className="text-2xl font-semibold text-slate-900">{correctCount} <span className="text-slate-300 font-medium">/ {totalCount}</span></p>
+                <p className="text-2xl font-semibold text-slate-900 tabular-nums">{formatCreditTotal(earnedCredit)} <span className="text-slate-300 font-medium">/ {totalCount}</span></p>
               </div>
             </div>
           </div>
@@ -135,7 +140,7 @@ export default async function ResultPage({ params }: { params: Promise<{ id: str
               </div>
               <div>
                 <h3 className="text-sm font-medium text-slate-500 uppercase">Incorrect</h3>
-                <p className="text-2xl font-semibold text-slate-900">{totalCount - correctCount}</p>
+                <p className="text-2xl font-semibold text-slate-900 tabular-nums">{formatCreditTotal(totalCount - earnedCredit)}</p>
               </div>
             </div>
           </div>
@@ -168,21 +173,36 @@ export default async function ResultPage({ params }: { params: Promise<{ id: str
                   Module {module.index}
                 </span>
                 <span className="text-xs font-medium uppercase tracking-widest text-slate-400">
-                  {module.answers.filter((answer) => answer.isCorrect).length} / {module.answers.length} correct
+                  {formatCreditTotal(sumCredit(module.answers))} / {module.answers.length} correct
                   {' | '}
                   {Math.round(module.durationSeconds / 60)} min
                 </span>
               </div>
             )}
-            {module.answers.map((data, index) => (
+            {module.answers.map((data, index) => {
+              // Three states, not two: a multi-select question can be partly
+              // right. Partial stays inside the emerald family a step down
+              // rather than borrowing amber, which this design system keeps for
+              // pending and expiring things alone.
+              const isPartial = data.credit > 0 && data.credit < 1;
+
+              return (
               <div key={data.id} className={`p-6 rounded-xl border bg-white shadow-sm transition-all hover:shadow-sm ${
-                data.isCorrect ? 'border-l-4 border-l-emerald-500' : 'border-l-4 border-l-red-500'
+                data.isCorrect
+                  ? 'border-l-4 border-l-emerald-500'
+                  : isPartial
+                    ? 'border-l-4 border-l-emerald-300'
+                    : 'border-l-4 border-l-red-500'
               }`}>
                 <div className="flex items-start justify-between mb-6">
                   <span className="text-xs font-medium text-slate-400 uppercase tracking-widest">Question {index + 1}</span>
                   {data.isCorrect ? (
                     <span className="flex items-center text-xs font-medium text-emerald-600 bg-emerald-50 px-2 py-1 rounded">
                       <CheckCircle2 className="w-3 h-3 mr-1" /> Correct
+                    </span>
+                  ) : isPartial ? (
+                    <span className="flex items-center text-xs font-medium text-emerald-700 bg-emerald-50 px-2 py-1 rounded tabular-nums">
+                      <CircleDot className="w-3 h-3 mr-1" /> Partial credit {formatCreditTotal(data.credit)}
                     </span>
                   ) : (
                     <span className="flex items-center text-xs font-medium text-red-600 bg-red-50 px-2 py-1 rounded">
@@ -216,7 +236,7 @@ export default async function ResultPage({ params }: { params: Promise<{ id: str
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 border-t border-slate-50 pt-6">
                     <div className="space-y-2">
                       <p className="text-xs font-medium text-slate-500 uppercase">Your Answer</p>
-                      <p className={`text-lg font-semibold ${data.isCorrect ? 'text-emerald-700' : 'text-red-700'}`}>
+                      <p className={`text-lg font-semibold ${data.credit > 0 ? 'text-emerald-700' : 'text-red-700'}`}>
                         {renderMathText(data.userAnswer) || 'Not answered'}
                       </p>
                     </div>
@@ -229,7 +249,8 @@ export default async function ResultPage({ params }: { params: Promise<{ id: str
                   </div>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
           ))}
         </div>

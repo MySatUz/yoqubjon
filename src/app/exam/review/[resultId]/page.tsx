@@ -3,7 +3,7 @@ import { Suspense } from 'react';
 import VideoClient from '@/components/exam/VideoClient';
 import { auth } from '@/auth';
 import { notFound, redirect } from 'next/navigation';
-import { normalizeStoredAnswer } from '@/lib/resultAnswers';
+import { formatCreditTotal, normalizeStoredAnswer } from '@/lib/resultAnswers';
 import { buildExamModules } from '@/lib/examModules';
 
 export default async function ReviewPage({ params }: { params: Promise<{ resultId: string }> }) {
@@ -83,17 +83,25 @@ export default async function ReviewPage({ params }: { params: Promise<{ resultI
               </h3>
             )}
             {module.questions.map((q, i) => {
-              const { userAnswer, correctAnswer, isCorrect } = normalizeStoredAnswer(
+              const { userAnswer, correctAnswer, isCorrect, credit } = normalizeStoredAnswer(
                 storedAnswers[q.id] ?? storedAnswers[(q.order - 1).toString()],
                 q.correctAnswer
               );
+              // Only a multi-select question can land here: it earns part of
+              // the mark, so it is neither the emerald of a right answer nor
+              // the red of a wrong one.
+              const isPartial = credit > 0 && credit < 1;
 
               return (
                 <div key={q.id} className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                   <div className={`p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 ${q.videoUrl ? 'border-b border-slate-100' : ''}`}>
                     <div className="flex items-center gap-4">
                       <div className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold shrink-0 ${
-                        isCorrect ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'
+                        isCorrect
+                          ? 'bg-emerald-100 text-emerald-700'
+                          : isPartial
+                            ? 'border-2 border-emerald-600 bg-white text-emerald-700'
+                            : 'bg-red-100 text-red-700'
                       }`}>
                         {i + 1}
                       </div>
@@ -101,6 +109,11 @@ export default async function ReviewPage({ params }: { params: Promise<{ resultI
                         <p className="font-medium text-slate-900">Your Answer: <span className="font-semibold">{userAnswer || 'Omitted'}</span></p>
                         {!isCorrect && (
                           <p className="text-sm text-slate-500 mt-1">Correct Answer: {correctAnswer}</p>
+                        )}
+                        {isPartial && (
+                          <p className="mt-1 text-sm font-medium text-emerald-700 tabular-nums">
+                            Partial credit {formatCreditTotal(credit)}
+                          </p>
                         )}
                       </div>
                     </div>

@@ -8,6 +8,7 @@ import { ChevronDown, Clock3, Edit3, Eye, EyeOff, FileDown, ImageIcon, Layers, L
 import { getCategoryLabel, getTestCategory, type TestCollectionOption } from '@/lib/testCatalog';
 import { MAX_TEST_MAX_ATTEMPTS, MIN_TEST_MAX_ATTEMPTS } from '@/lib/testAttempts';
 import { formatModuleBadge, readModuleDurations, secondsToMinutes } from '@/lib/examModules';
+import { isMultiSelectKey } from '@/lib/resultAnswers';
 
 type AdminQuestion = {
   id: string;
@@ -403,6 +404,11 @@ function QuestionEditor({ question }: { question: AdminQuestion }) {
                 Grid-in
               </span>
             )}
+            {isMultiSelectKey(question.correctAnswer) && (
+              <span className="rounded-full bg-blue-100 px-2.5 py-1 text-[10px] font-medium uppercase tracking-wide text-blue-700">
+                Multi-select
+              </span>
+            )}
           </div>
           <p className="line-clamp-2 text-sm font-semibold leading-relaxed text-slate-800">
             {question.content}
@@ -443,6 +449,10 @@ function QuestionEditor({ question }: { question: AdminQuestion }) {
                 defaultValue={question.correctAnswer}
                 className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-900 outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
               />
+              <span className="mt-2 block text-[11px] font-medium text-slate-400">
+                One option letter, a value for a grid-in, or several letters such as
+                {' '}<code className="font-semibold text-slate-500">B, C</code> to make the question multi-select.
+              </span>
             </label>
 
             <label className="block">

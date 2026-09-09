@@ -23,7 +23,9 @@ Each question must use a `question` environment:
 ## Required tags
 
 - `\content{...}`: required. Main question text.
-- `\answer{...}`: required. For multiple choice use `A`, `B`, `C`, `D` or the final displayed answer value.
+- `\answer{...}`: required. For multiple choice use `A`, `B`, `C`, `D`, several
+  letters separated by commas for a multi-select question, or the final
+  displayed answer value for a grid-in.
 
 ## Optional tags
 
@@ -138,6 +140,57 @@ Rules:
 - Without markers, the file stays a single-module test, or the upload form
   splits the questions by the counts entered per module (default 22 + 22).
 
+## Multiple correct answers
+
+List the letters in `\answer{...}`, separated by commas. Nothing else changes —
+the same `\options{...}` block, the same everything:
+
+```tex
+\begin{question}
+  \content{Select all values of \( x \) that satisfy \( x^2 - 5x + 6 = 0 \).}
+  \options{
+    A: 1
+    B: 2
+    C: 3
+    D: 4
+  }
+  \answer{B, C}
+\end{question}
+```
+
+The student sees square choice markers instead of round ones, a "Select all that
+apply" caption, and can tick as many options as they like. The number of correct
+answers is never shown.
+
+Rules:
+
+- Two or more letters make the question multi-select. One letter is an ordinary
+  single-choice question.
+- Order and spacing do not matter: `\answer{C, B}` and `\answer{B,C}` are the
+  same key. The importer stores it sorted.
+- Every letter must name an existing option, and no letter may repeat.
+- A letter list needs `\options{...}`. Without it the upload fails rather than
+  quietly storing `B, C` as a grid-in value.
+- A grid-in value that contains a comma is unaffected: `\answer{1,000}` is a
+  number, not options A and C.
+
+### Partial credit
+
+A multi-select question is not all-or-nothing. Each right option earns a share
+of the mark and each wrong one gives that share back:
+
+```
+credit = (chosen right − chosen wrong) / (number of right options)
+```
+
+clamped to the range 0…1. With `\answer{B, C}` out of four options: `B, C`
+earns 1, `B` alone earns 0.5, `B, C, D` earns 0.5, and ticking all four earns 0
+— which is the point of subtracting the wrong picks.
+
+Only a fully correct answer counts as correct in the review view; everything
+between is shown as partial credit. Scores and the olympiad ranking add up the
+credit, so a result can read `17.5 / 22`.
+
 ## Grid-in questions
 
 For open numeric answers, omit `\options{...}`:
@@ -172,6 +225,8 @@ Before saving the test, it checks:
 
 - every question has content and an answer;
 - multiple-choice answers point to an existing option;
+- a multi-select answer names each option at most once;
+- a list of answer letters belongs to a question that has options;
 - option blocks contain at least two options;
 - math delimiters are closed;
 - formulas are valid KaTeX.

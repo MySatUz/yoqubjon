@@ -1,5 +1,6 @@
 import katex from 'katex';
 import { MAX_MODULE_COUNT } from '@/lib/examModules';
+import { formatAnswerLetters, parseAnswerLetters } from '@/lib/resultAnswers';
 
 export interface ParsedQuestion {
   order: number;
@@ -199,11 +200,35 @@ function validateQuestion(question: ParsedQuestion) {
     throw new TexParseError(`Question ${question.order} has only one option. Use at least two options or remove \\options{...} for grid-in answers.`);
   }
 
-  const answerLetter = question.correctAnswer.trim().toUpperCase();
-  if (/^[A-H]$/.test(answerLetter) && question.options.length > 0) {
-    const answerIndex = answerLetter.charCodeAt(0) - 65;
-    if (answerIndex >= question.options.length) {
-      throw new TexParseError(`Question ${question.order} answer is ${answerLetter}, but only ${question.options.length} options were found.`);
+  const answerLetters = parseAnswerLetters(question.correctAnswer);
+  const isMultiSelect = answerLetters !== null && answerLetters.length > 1;
+
+  // `\answer{B, C}` is the only thing that makes a question multi-select, so a
+  // letter list with nothing to select from is always a mistake rather than a
+  // grid-in value that happens to look like one.
+  if (isMultiSelect && question.options.length === 0) {
+    throw new TexParseError(
+      `Question ${question.order} answer lists several options (${answerLetters.join(', ')}) but the question has no \\options{...}.`
+    );
+  }
+
+  if (answerLetters && question.options.length > 0) {
+    if (new Set(answerLetters).size !== answerLetters.length) {
+      throw new TexParseError(`Question ${question.order} answer repeats an option letter.`);
+    }
+
+    for (const letter of answerLetters) {
+      if (letter.charCodeAt(0) - 65 >= question.options.length) {
+        throw new TexParseError(`Question ${question.order} answer is ${letter}, but only ${question.options.length} options were found.`);
+      }
+    }
+
+    // Stored sorted and without spaces, so `B, C` and `C,B` are one key and the
+    // grader never has to care which order the author wrote. A single letter is
+    // left exactly as written: rewriting it would also rewrite grid-in-style
+    // keys such as `\(C\)` that already round-trip through `answersMatch`.
+    if (isMultiSelect) {
+      question.correctAnswer = formatAnswerLetters(answerLetters);
     }
   }
 

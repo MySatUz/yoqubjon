@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/prisma';
-import { answersMatch } from '@/lib/resultAnswers';
+import { gradeAnswer } from '@/lib/resultAnswers';
 import { EXAM_TIME_GRACE_SECONDS, MAX_EXAM_DURATION_SECONDS } from '@/lib/examConfig';
 import { estimateSatMathScore } from '@/lib/satScoring';
 import { isAdminSessionUser } from '@/lib/admin';
@@ -172,11 +172,12 @@ export async function createExamResult(
     }
   }
 
-  let correctCount = 0;
+  let earnedCredit = 0;
   const processedAnswers: Record<string, {
     userAnswer: string;
     correctAnswer: string;
     isCorrect: boolean;
+    credit: number;
     moduleIndex: number;
   }> = {};
 
@@ -185,26 +186,33 @@ export async function createExamResult(
       submission.answers[question.id] ??
       submission.answers[index.toString()] ??
       '';
-    const isCorrect = answersMatch(userAnswer, question.correctAnswer);
+    const { isCorrect, credit } = gradeAnswer(userAnswer, question.correctAnswer);
 
-    if (isCorrect) {
-      correctCount++;
-    }
+    earnedCredit += credit;
 
     processedAnswers[question.id] = {
       userAnswer,
       correctAnswer: question.correctAnswer,
       isCorrect,
+      credit,
       moduleIndex: question.moduleIndex,
     };
   });
 
+  // Fractional once a multi-select question is only partly right. Rounded to
+  // two decimals so the stored total is the number the review pages show and
+  // not the sum of a dozen binary fractions.
+  const correctCount = Math.round(earnedCredit * 100) / 100;
   const score = estimateSatMathScore(correctCount, test.questions.length);
 
   const resultData = {
     userId,
     testId: test.id,
     score,
+    // Written on every submission. It used to be computed here and dropped, so
+    // every row since the column was added stored NULL and the olympiad
+    // ranking - which cannot rank a NULL - skipped the attempt entirely.
+    correctCount,
     timeSpent: submission.timeSpent,
     answers: processedAnswers,
   };

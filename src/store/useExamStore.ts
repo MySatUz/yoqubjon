@@ -31,6 +31,7 @@ interface ExamState {
   startCurrentModule: () => void;
   finishCurrentModule: () => void;
   setAnswer: (questionId: string, answer: string) => void;
+  toggleAnswerChoice: (questionId: string, letter: string) => void;
   toggleMarkForReview: (questionId: string) => void;
   setCurrentQuestionIndex: (index: number) => void;
   syncTimeLeft: () => void;
@@ -225,6 +226,26 @@ export const useExamStore = create<ExamState>()(
         set((state) => ({
           answers: { ...state.answers, [questionId]: answer }
         })),
+
+      /**
+       * Adds or removes one choice on a multi-select question. The selection
+       * stays a plain string - sorted letters joined by commas, the same form
+       * the answer key uses - so a saved attempt from before multi-select
+       * still rehydrates and the submit payload keeps its shape.
+       */
+      toggleAnswerChoice: (questionId, letter) =>
+        set((state) => {
+          const selected = new Set(
+            (state.answers[questionId] ?? '').split(',').map((part) => part.trim()).filter(Boolean)
+          );
+
+          if (selected.has(letter)) selected.delete(letter);
+          else selected.add(letter);
+
+          return {
+            answers: { ...state.answers, [questionId]: [...selected].sort().join(',') },
+          };
+        }),
 
       toggleMarkForReview: (questionId) =>
         set((state) => ({

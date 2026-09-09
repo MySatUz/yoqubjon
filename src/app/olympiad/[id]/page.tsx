@@ -11,6 +11,7 @@ import {
   type OlympiadStatus,
 } from '@/lib/olympiad';
 import { getOlympiadResults, getOlympiadTest } from '@/lib/olympiadQueries';
+import { formatCreditTotal } from '@/lib/resultAnswers';
 
 const STATUS_BADGE: Record<OlympiadStatus, { label: string; className: string }> = {
   // Amber is the pending colour in this design system, which is exactly what an
@@ -190,7 +191,7 @@ export default async function OlympiadPage({ params }: { params: Promise<{ id: s
                             )}
                           </td>
                           <td className="px-6 py-4 font-semibold tabular-nums text-slate-900">
-                            {standing.correctCount}
+                            {formatCreditTotal(standing.correctCount)}
                             <span className="font-normal text-slate-400"> / {results.totalQuestions}</span>
                           </td>
                           <td className="px-6 py-4 tabular-nums text-slate-600">

@@ -120,7 +120,12 @@ model Result {
   // it is a SAT-scale estimate rounded through a 44-question reference, so on a
   // test of any other length two different counts can land on the same score.
   // Null on rows written before the column existed and never backfilled.
-  correctCount Int?
+  //
+  // Fractional, because a multi-select question is graded for partial credit: a
+  // student who picks one of two correct options and nothing wrong has answered
+  // half a question, and rounding that to an integer would either hand them a
+  // whole one or take it all away.
+  correctCount Float?
   timeSpent   Int      // Time spent in seconds
   answers     Json     // User's selected answers
   createdAt   DateTime @default(now())

@@ -20,6 +20,8 @@ export type ExamRunnerQuestion = {
   contentHtml: string;
   /** Empty for grid-in questions. */
   optionsHtml: string[];
+  /** Several choices are correct, so the student picks a set. */
+  multiSelect: boolean;
   imageUrl: string | null;
 };
 
