@@ -1,16 +1,24 @@
 import { prisma } from '@/lib/prisma';
 import { notFound, redirect } from 'next/navigation';
 import Link from 'next/link';
-import { CheckCircle2, CircleDot, XCircle, Clock, Award, ArrowLeft } from 'lucide-react';
-import 'katex/dist/katex.min.css';
+import { CheckCircle2, XCircle, Clock, Award, ArrowLeft, ShieldCheck } from 'lucide-react';
 import { auth } from '@/auth';
 import { formatCreditTotal, normalizeStoredAnswer } from '@/lib/resultAnswers';
-import Image from 'next/image';
-import { renderMathText } from '@/lib/renderMathText';
 import { buildExamModules } from '@/lib/examModules';
+import ResultReview, {
+  type ReviewModule,
+  type ReviewStatus,
+} from '@/components/dashboard/ResultReview';
 
 const sumCredit = (answers: Array<{ credit: number }>) =>
   answers.reduce((total, answer) => total + answer.credit, 0);
+
+function toStatus(isCorrect: boolean, credit: number): ReviewStatus {
+  if (isCorrect) return 'correct';
+  // Only a multi-select question can land here: it earned part of the mark, so
+  // it is neither fully right nor fully wrong.
+  return credit > 0 ? 'partial' : 'incorrect';
+}
 
 export default async function ResultPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -19,8 +27,12 @@ export default async function ResultPage({ params }: { params: Promise<{ id: str
   if (!session?.user?.id) {
     redirect('/login');
   }
-  
-  // `select`, not `include`: the review only needs five columns per question.
+
+  // Question `content` and `imageUrl` are deliberately NOT selected. This page
+  // renders no question text at all: the review below opens one question at a
+  // time through `revealResultQuestion`, so the HTML a student receives never
+  // contains a printable copy of the test.
+  //
   // `moduleIndex` (question) and `durationSeconds`/`moduleDurations` (test) are
   // load-bearing — buildExamModules collapses every module into one without them.
   const result = await prisma.result.findFirst({
@@ -42,8 +54,7 @@ export default async function ResultPage({ params }: { params: Promise<{ id: str
             orderBy: { order: 'asc' },
             select: {
               id: true,
-              content: true,
-              imageUrl: true,
+              order: true,
               correctAnswer: true,
               moduleIndex: true,
             },
@@ -59,19 +70,31 @@ export default async function ResultPage({ params }: { params: Promise<{ id: str
   const modules = buildExamModules(result.test, result.test.questions);
   const isModular = modules.length > 1;
 
+  // Grading happens here, on the server, and only the verdict crosses to the
+  // client — never the answer key it was graded against.
   const moduleReviews = modules.map((module) => ({
     index: module.index,
     durationSeconds: module.durationSeconds,
-    answers: module.questions.map(q => {
-      const answer = normalizeStoredAnswer(userAnswers[q.id], q.correctAnswer);
+    // Numbered inside the module, the way the exam screen numbers them.
+    answers: module.questions.map((q, index) => {
+      const answer = normalizeStoredAnswer(
+        userAnswers[q.id] ?? userAnswers[(q.order - 1).toString()],
+        q.correctAnswer
+      );
 
       return {
         id: q.id,
-        content: q.content,
-        imageUrl: q.imageUrl,
-        ...answer,
+        number: index + 1,
+        moduleIndex: module.index,
+        status: toStatus(answer.isCorrect, answer.credit),
+        credit: answer.credit,
       };
     }),
+  }));
+
+  const reviewModules: ReviewModule[] = moduleReviews.map((module) => ({
+    index: module.index,
+    questions: module.answers,
   }));
 
   const detailedAnswers = moduleReviews.flatMap((module) => module.answers);
@@ -80,7 +103,7 @@ export default async function ResultPage({ params }: { params: Promise<{ id: str
   // right, and the two tiles below have to keep adding up to the total.
   const earnedCredit = sumCredit(detailedAnswers);
   const accuracy = totalCount > 0 ? Math.round((earnedCredit / totalCount) * 100) : 0;
-  
+
   const formatTime = (seconds: number) => {
     const m = Math.floor(seconds / 60);
     const s = seconds % 60;
@@ -96,13 +119,13 @@ export default async function ResultPage({ params }: { params: Promise<{ id: str
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Dashboard
           </Link>
-          
+
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-8">
             <div>
               <h1 className="text-4xl font-black tracking-tight mb-2">{result.test.title} Analysis</h1>
               <p className="text-slate-400 text-lg">Completed on {new Date(result.createdAt).toLocaleDateString()}</p>
             </div>
-            
+
             <div className="bg-slate-800 border border-slate-700 rounded-2xl p-6 flex items-center gap-6">
               <div className="text-center">
                 <span className="block text-slate-400 text-xs font-medium uppercase tracking-widest mb-1">Estimated Score</span>
@@ -132,7 +155,7 @@ export default async function ResultPage({ params }: { params: Promise<{ id: str
               </div>
             </div>
           </div>
-          
+
           <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
             <div className="flex items-center gap-4 mb-4">
               <div className="p-3 bg-red-50 rounded-lg">
@@ -159,100 +182,32 @@ export default async function ResultPage({ params }: { params: Promise<{ id: str
         </div>
 
         {/* Detailed Review */}
-        <div className="mt-12 space-y-8">
-          <h2 className="text-2xl font-semibold text-slate-900 mb-6 flex items-center gap-2">
-            <Award className="w-6 h-6 text-blue-600" />
-            Detailed Review
-          </h2>
-          
-          {moduleReviews.map((module) => (
-          <div key={module.index} className="space-y-4">
-            {isModular && (
-              <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-5 py-4 shadow-sm">
-                <span className="text-sm font-medium uppercase tracking-widest text-slate-900">
-                  Module {module.index}
-                </span>
-                <span className="text-xs font-medium uppercase tracking-widest text-slate-400">
-                  {formatCreditTotal(sumCredit(module.answers))} / {module.answers.length} correct
-                  {' | '}
-                  {Math.round(module.durationSeconds / 60)} min
-                </span>
-              </div>
-            )}
-            {module.answers.map((data, index) => {
-              // Three states, not two: a multi-select question can be partly
-              // right. Partial stays inside the emerald family a step down
-              // rather than borrowing amber, which this design system keeps for
-              // pending and expiring things alone.
-              const isPartial = data.credit > 0 && data.credit < 1;
-
-              return (
-              <div key={data.id} className={`p-6 rounded-xl border bg-white shadow-sm transition-all hover:shadow-sm ${
-                data.isCorrect
-                  ? 'border-l-4 border-l-emerald-500'
-                  : isPartial
-                    ? 'border-l-4 border-l-emerald-300'
-                    : 'border-l-4 border-l-red-500'
-              }`}>
-                <div className="flex items-start justify-between mb-6">
-                  <span className="text-xs font-medium text-slate-400 uppercase tracking-widest">Question {index + 1}</span>
-                  {data.isCorrect ? (
-                    <span className="flex items-center text-xs font-medium text-emerald-600 bg-emerald-50 px-2 py-1 rounded">
-                      <CheckCircle2 className="w-3 h-3 mr-1" /> Correct
-                    </span>
-                  ) : isPartial ? (
-                    <span className="flex items-center text-xs font-medium text-emerald-700 bg-emerald-50 px-2 py-1 rounded tabular-nums">
-                      <CircleDot className="w-3 h-3 mr-1" /> Partial credit {formatCreditTotal(data.credit)}
-                    </span>
-                  ) : (
-                    <span className="flex items-center text-xs font-medium text-red-600 bg-red-50 px-2 py-1 rounded">
-                      <XCircle className="w-3 h-3 mr-1" /> Incorrect
-                    </span>
-                  )}
-                </div>
-
-                <div className="flex flex-col gap-6">
-                  <div className="space-y-4">
-                    <div className="text-sm font-medium text-slate-700 leading-relaxed">
-                      {renderMathText(data.content)}
-                    </div>
-                    {data.imageUrl && (
-                      <div className="mt-4 p-2 bg-slate-50 rounded-xl border border-slate-100 inline-block">
-                        {/* Rendered box is capped at max-h-48 (~192 px tall), so
-                            without `sizes` the browser would fetch the 828/1920 w
-                            variants for every question on the page. */}
-                        <Image
-                          src={data.imageUrl}
-                          alt="Question"
-                          width={800}
-                          height={480}
-                          sizes="(min-width: 640px) 320px, 60vw"
-                          className="max-h-48 w-auto rounded-lg"
-                        />
-                      </div>
-                    )}
-                  </div>
-                  
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 border-t border-slate-50 pt-6">
-                    <div className="space-y-2">
-                      <p className="text-xs font-medium text-slate-500 uppercase">Your Answer</p>
-                      <p className={`text-lg font-semibold ${data.credit > 0 ? 'text-emerald-700' : 'text-red-700'}`}>
-                        {renderMathText(data.userAnswer) || 'Not answered'}
-                      </p>
-                    </div>
-                    {!data.isCorrect && (
-                      <div className="space-y-2">
-                        <p className="text-xs font-medium text-slate-500 uppercase">Correct Answer</p>
-                        <p className="text-lg font-semibold text-slate-900">{renderMathText(data.correctAnswer)}</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-              );
-            })}
+        <div className="mt-12 space-y-6">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <h2 className="text-2xl font-semibold text-slate-900 flex items-center gap-2">
+              <Award className="w-6 h-6 text-blue-600" />
+              Detailed Review
+            </h2>
+            <p className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-xs font-medium text-slate-500 border border-slate-200">
+              <ShieldCheck className="h-4 w-4 text-slate-400" />
+              Questions open one at a time
+            </p>
           </div>
-          ))}
+
+          {isModular && (
+            <p className="text-xs font-medium text-slate-400">
+              {modules.length} modules, {totalCount} questions in total.
+            </p>
+          )}
+
+          <ResultReview resultId={id} modules={reviewModules} />
+
+          {/* The only thing a printed copy of this page says about the
+              questions. The review itself is never in the print output because
+              it is never fully in the page to begin with. */}
+          <p className="hidden print:block text-sm font-medium text-slate-500">
+            The question-by-question review is only available on screen.
+          </p>
         </div>
       </div>
     </div>

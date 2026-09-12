@@ -132,12 +132,17 @@ function ResultSkeleton() {
         </div>
 
         <div className="mt-12">
-          <div className="mb-6 h-8 w-56 animate-pulse rounded-full bg-slate-200" />
-          <div className="space-y-4">
-            {[0, 1, 2].map((i) => (
-              <div key={i} className={`h-56 rounded-xl ${block}`} />
+          <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
+            <div className="h-8 w-56 animate-pulse rounded-full bg-slate-200" />
+            <div className="h-9 w-60 max-w-full animate-pulse rounded-full bg-slate-200" />
+          </div>
+          {/* The review is a grid of question chips, one 2.75rem square each. */}
+          <div className="flex flex-wrap gap-2">
+            {Array.from({ length: 22 }, (_, i) => (
+              <div key={i} className="h-11 w-11 animate-pulse rounded-xl bg-slate-200" />
             ))}
           </div>
+          <div className={`mt-6 h-16 rounded-2xl ${block}`} />
         </div>
       </div>
     </div>
