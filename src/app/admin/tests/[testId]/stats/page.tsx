@@ -4,8 +4,10 @@ import { buildExamModules } from '@/lib/examModules';
 import { formatCreditTotal, isMultiSelectKey } from '@/lib/resultAnswers';
 import { formatResultTime } from '@/lib/resultSections';
 import {
+  TEST_ROSTER_PAGE_SIZE,
   fetchQuestionStats,
   fetchTestParticipation,
+  fetchTestRoster,
   questionExcerpt,
   readQuestionStat,
 } from '@/lib/testStats';
@@ -15,6 +17,8 @@ import {
   ArrowLeft,
   BarChart3,
   CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
   Clock,
   Edit3,
   ImageIcon,
@@ -35,14 +39,36 @@ function formatPercent(value: number) {
   return `${Math.round(value * 100)}%`;
 }
 
+function formatDate(value: Date | string | null) {
+  if (!value) return 'No attempts';
+
+  return new Date(value).toLocaleDateString(undefined, {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  });
+}
+
+function parsePage(value: string | string[] | undefined) {
+  const raw = Array.isArray(value) ? value[0] : value;
+  const parsed = Number(raw);
+
+  return Number.isFinite(parsed) && parsed > 1 ? Math.floor(parsed) : 1;
+}
+
 export default async function AdminTestStatsPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ testId: string }>;
+  searchParams: Promise<{ page?: string | string[] }>;
 }) {
-  const { testId } = await params;
+  const [{ testId }, resolvedSearchParams] = await Promise.all([params, searchParams]);
   // Kept here on purpose: access must not depend on the segment layout.
   await requireAdminPage();
+
+  const currentPage = parsePage(resolvedSearchParams?.page);
+  const skip = (currentPage - 1) * TEST_ROSTER_PAGE_SIZE;
 
   const test = await prisma.test.findUnique({
     where: { id: testId },
@@ -70,9 +96,10 @@ export default async function AdminTestStatsPage({
     notFound();
   }
 
-  const [collectionRows, participation, questionStats, totals] = await Promise.all([
+  const [collectionRows, participation, roster, questionStats, totals] = await Promise.all([
     getCollectionVisibilityRows(),
     fetchTestParticipation(test.id),
+    fetchTestRoster(test.id, { take: TEST_ROSTER_PAGE_SIZE, skip }),
     fetchQuestionStats(test.id),
     prisma.result.aggregate({
       where: { testId: test.id },
@@ -93,6 +120,9 @@ export default async function AdminTestStatsPage({
   const averageSolved = totals._avg.correctCount ?? 0;
   const averageTime = Math.round(totals._avg.timeSpent ?? 0);
   const averageAccuracy = questionCount > 0 ? averageSolved / questionCount : 0;
+
+  const totalPages = Math.max(1, Math.ceil(participation.students / TEST_ROSTER_PAGE_SIZE));
+  const statsHref = `/admin/tests/${test.id}/stats`;
 
   const stats = [
     { label: 'Students', value: String(participation.students), icon: Users },
@@ -150,6 +180,131 @@ export default async function AdminTestStatsPage({
               </div>
             );
           })}
+        </section>
+
+        <section className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="mb-6">
+            <p className="text-[10px] font-medium uppercase tracking-[0.22em] text-blue-600">
+              Student by student
+            </p>
+            <h2 className="mt-2 text-2xl font-semibold text-slate-900">
+              Who took it, and how many each solved
+            </h2>
+            <p className="mt-1 text-xs font-medium text-slate-400">
+              {participation.students > 0
+                ? `Showing ${roster.length ? skip + 1 : 0}-${skip + roster.length} of ${participation.students}. `
+                : ''}
+              A student who retook the test is ranked on their best attempt, and the
+              score and time beside a solved count come from that same attempt.
+            </p>
+          </div>
+
+          {roster.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-10 text-center text-sm font-semibold text-slate-400">
+              {participation.students > 0
+                ? 'No students on this page. Go back to the first page.'
+                : 'Nobody has taken this test yet.'}
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {roster.map((student, index) => {
+                const rank = skip + index + 1;
+                const accuracy = questionCount > 0 ? student.bestCorrect / questionCount : 0;
+
+                return (
+                  <Link
+                    key={student.userId}
+                    href={`/admin/users/${student.userId}`}
+                    prefetch={false}
+                    className="grid gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 transition hover:border-blue-200 hover:bg-white md:grid-cols-[auto_1fr_18rem]"
+                  >
+                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-sm font-semibold text-slate-500 tabular-nums">
+                      #{rank}
+                    </div>
+
+                    <div className="min-w-0">
+                      <h3 className="truncate text-base font-semibold text-slate-900">
+                        {student.name || student.email}
+                      </h3>
+                      <p className="mt-1 truncate text-sm font-semibold text-slate-500">
+                        {student.email}
+                      </p>
+                      <div className="mt-2 flex flex-wrap items-center gap-2 text-[10px] font-medium uppercase tracking-wide text-slate-500">
+                        <span className="rounded-full bg-white px-2 py-0.5 tabular-nums">
+                          {student.attempts} {student.attempts === 1 ? 'attempt' : 'attempts'}
+                        </span>
+                        <span className="rounded-full bg-white px-2 py-0.5">
+                          {formatResultTime(student.bestTimeSpent)}
+                        </span>
+                        <span className="rounded-full bg-white px-2 py-0.5">
+                          Last {formatDate(student.latestAt)}
+                        </span>
+                        {student.attempts > 1 && (
+                          <span className="rounded-full bg-white px-2 py-0.5 tabular-nums">
+                            Each attempt {student.correctCounts.map(formatCreditTotal).join(' / ')}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col justify-center gap-2">
+                      <div className="flex items-baseline justify-between gap-2">
+                        <span className="inline-flex items-center gap-1 text-sm font-semibold text-slate-900 tabular-nums">
+                          <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                          {formatCreditTotal(student.bestCorrect)}
+                          <span className="font-medium text-slate-400">/ {questionCount} solved</span>
+                        </span>
+                        <span className="text-sm font-semibold text-slate-900 tabular-nums">
+                          {student.bestScore}
+                          <span className="ml-1 text-[10px] font-medium uppercase tracking-wide text-slate-400">
+                            score
+                          </span>
+                        </span>
+                      </div>
+                      <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200">
+                        <div
+                          className="h-2 rounded-full bg-emerald-600"
+                          style={{ width: `${Math.round(accuracy * 100)}%` }}
+                        />
+                      </div>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          )}
+
+          {totalPages > 1 && (
+            <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
+              {currentPage > 1 ? (
+                <Link
+                  href={currentPage - 1 === 1 ? statsHref : `${statsHref}?page=${currentPage - 1}`}
+                  prefetch={false}
+                  className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-xs font-medium text-slate-700 transition hover:border-blue-200 hover:text-blue-600"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  Previous
+                </Link>
+              ) : (
+                <span />
+              )}
+              <span className="text-xs font-medium uppercase tracking-widest text-slate-400">
+                Page {currentPage} of {totalPages}
+              </span>
+              {currentPage < totalPages ? (
+                <Link
+                  href={`${statsHref}?page=${currentPage + 1}`}
+                  prefetch={false}
+                  className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-xs font-medium text-slate-700 transition hover:border-blue-200 hover:text-blue-600"
+                >
+                  Next
+                  <ChevronRight className="h-4 w-4" />
+                </Link>
+              ) : (
+                <span />
+              )}
+            </div>
+          )}
         </section>
 
         <section className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
