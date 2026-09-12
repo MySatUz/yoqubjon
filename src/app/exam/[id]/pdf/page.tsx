@@ -41,14 +41,9 @@ function QuestionPdfCard({ question, number }: { question: QuestionForPdf; numbe
         </p>
       </div>
 
-      <div className="prose prose-slate max-w-none">
-        <div className="text-lg font-semibold leading-relaxed text-slate-900 print:text-[12pt]">
-          {renderMathText(question.content)}
-        </div>
-      </div>
-
+      {/* Diagram first, stem second - the same order the exam screen uses. */}
       {question.imageUrl && (
-        <div className="my-5 overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 p-3 print:rounded-lg">
+        <div className="mb-5 overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 p-3 print:rounded-lg">
           <img
             src={question.imageUrl}
             alt={`Question ${question.order} diagram`}
@@ -56,6 +51,12 @@ function QuestionPdfCard({ question, number }: { question: QuestionForPdf; numbe
           />
         </div>
       )}
+
+      <div className="prose prose-slate max-w-none">
+        <div className="text-lg font-semibold leading-relaxed text-slate-900 print:text-[12pt]">
+          {renderMathText(question.content)}
+        </div>
+      </div>
 
       {options.length > 0 && isMultiSelectKey(question.correctAnswer) && (
         <p className="mt-6 text-[10px] font-medium uppercase tracking-[0.24em] text-blue-600">

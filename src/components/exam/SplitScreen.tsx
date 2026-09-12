@@ -240,17 +240,13 @@ export default function SplitScreen({ questions }: { questions: Question[] }) {
       {/* Question & Options Column */}
       <div className={`flex-1 overflow-y-auto px-4 py-6 md:px-10 md:py-10 transition-[width,background-color,border-color] duration-500 ${isCalculatorOpen ? 'w-full md:w-[46%] border-b md:border-b-0 md:border-r border-slate-100 bg-slate-50/30' : 'w-full'}`}>
         <div className={`${isCalculatorOpen ? 'max-w-2xl' : 'max-w-4xl'} mx-auto w-full flex flex-col min-h-full`}>
-          {/* Question Content */}
+          {/* Question Content - the diagram leads, the stem follows it. The
+              stem is the part a student re-reads while working, so it belongs
+              next to the answer choices rather than above a figure that pushes
+              it off screen. */}
           <div className="mb-10 flex-grow">
-            <div className="prose prose-slate max-w-none">
-              <div
-                className={`${isCalculatorOpen ? 'text-base md:text-xl' : 'text-lg md:text-2xl'} font-medium text-slate-800 leading-relaxed mb-6 transition-[font-size] duration-500`}
-                dangerouslySetInnerHTML={{ __html: question.contentHtml }}
-              />
-            </div>
-
             {question.imageUrl && (
-              <div className={`my-6 rounded-2xl overflow-hidden border border-slate-200 bg-white p-3 shadow-sm mx-auto ${isCalculatorOpen ? 'max-w-md' : 'max-w-xl'}`}>
+              <div className={`mb-6 rounded-2xl overflow-hidden border border-slate-200 bg-white p-3 shadow-sm mx-auto ${isCalculatorOpen ? 'max-w-md' : 'max-w-xl'}`}>
                 {/* The diagram is on screen the moment the question is, so the
                     default `loading="lazy"` only ever delays it. In Next 16
                     `priority` is deprecated in favour of these two props. */}
@@ -266,6 +262,13 @@ export default function SplitScreen({ questions }: { questions: Question[] }) {
                 />
               </div>
             )}
+
+            <div className="prose prose-slate max-w-none">
+              <div
+                className={`${isCalculatorOpen ? 'text-base md:text-xl' : 'text-lg md:text-2xl'} font-medium text-slate-800 leading-relaxed transition-[font-size] duration-500`}
+                dangerouslySetInnerHTML={{ __html: question.contentHtml }}
+              />
+            </div>
           </div>
 
           {/* Options / Answer Input */}
