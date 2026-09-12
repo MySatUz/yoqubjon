@@ -4,7 +4,7 @@ import React, { memo, useCallback, useMemo, useOptimistic, useState, useTransiti
 import Link from 'next/link';
 import { deleteTest, updateQuestion, updateTestDetails, updateTestVisibility } from '@/app/admin/actions';
 import { toOlympiadInputValue } from '@/lib/olympiad';
-import { ChevronDown, Clock3, Edit3, Eye, EyeOff, FileDown, ImageIcon, Layers, Loader2, Plus, Repeat2, Save, Settings2, Trash2, Trophy, Video, X } from 'lucide-react';
+import { BarChart3, ChevronDown, Clock3, Edit3, Eye, EyeOff, FileDown, ImageIcon, Layers, Loader2, Plus, Repeat2, Save, Settings2, Trash2, Trophy, Video, X } from 'lucide-react';
 import { getCategoryLabel, getTestCategory, type TestCollectionOption } from '@/lib/testCatalog';
 import { MAX_TEST_MAX_ATTEMPTS, MIN_TEST_MAX_ATTEMPTS } from '@/lib/testAttempts';
 import { formatModuleBadge, readModuleDurations, secondsToMinutes } from '@/lib/examModules';
@@ -617,6 +617,15 @@ const TestRow = memo(function TestRow({
             )}
             {test.visible ? 'Hide' : 'Show'}
           </button>
+
+          <Link
+            href={`/admin/tests/${test.id}/stats`}
+            prefetch={false}
+            className="inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold text-slate-500 transition-all hover:bg-blue-50 hover:text-blue-600"
+          >
+            <BarChart3 className="h-5 w-5" />
+            Stats
+          </Link>
 
           <Link
             href={`/exam/${test.id}/pdf`}
