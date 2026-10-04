@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { uploadTest } from '@/app/admin/actions';
+import AccessCodeField from '@/components/admin/AccessCodeField';
 import { FileText, Image as ImageIcon, Upload, CheckCircle2, AlertCircle, Clock3, Eye, Loader2, Plus, Repeat2, Timer, Trophy, X } from 'lucide-react';
 import type { TestCollectionOption } from '@/lib/testCatalog';
 import {
@@ -90,6 +91,9 @@ export default function AdminForm({ collections, defaultCategory: preselected }:
   const [maxAttempts, setMaxAttempts] = useState(() => String(sectionAttempts(defaultCategory)));
   const [examFormat, setExamFormat] = useState<ExamFormat>('modular');
   const [modules, setModules] = useState<ModuleDraft[]>(() => createModuleDrafts(DEFAULT_MODULE_COUNT));
+  // The code field keeps its value in state, which `form.reset()` cannot reach;
+  // a new key remounts it empty after a successful upload.
+  const [accessCodeFieldKey, setAccessCodeFieldKey] = useState(0);
 
   const updateModule = (id: string, patch: Partial<ModuleDraft>) => {
     setModules((current) => current.map((module) => (
@@ -131,6 +135,7 @@ export default function AdminForm({ collections, defaultCategory: preselected }:
       const maxAttempts = formData.get('maxAttempts');
       const olympiadStartsAt = formData.get('olympiadStartsAt');
       const olympiadEndsAt = formData.get('olympiadEndsAt');
+      const accessCode = formData.get('accessCode');
       const texFile = formData.get('texFile');
       const imageFiles = formData.getAll('images').filter(
         (file): file is File => file instanceof File && file.size > 0
@@ -229,6 +234,7 @@ export default function AdminForm({ collections, defaultCategory: preselected }:
       // Sent even when blank: the server reads "both empty" as "not an olympiad".
       if (typeof olympiadStartsAt === 'string') serverFormData.set('olympiadStartsAt', olympiadStartsAt);
       if (typeof olympiadEndsAt === 'string') serverFormData.set('olympiadEndsAt', olympiadEndsAt);
+      if (typeof accessCode === 'string') serverFormData.set('accessCode', accessCode);
       if (texFile instanceof File) serverFormData.set('texFile', texFile);
       if (testId) serverFormData.set('testId', testId);
       serverFormData.set('uploadedImages', JSON.stringify(uploadedImages));
@@ -241,6 +247,7 @@ export default function AdminForm({ collections, defaultCategory: preselected }:
         setMaxAttempts(String(sectionAttempts(defaultCategory)));
         setExamFormat('modular');
         setModules(createModuleDrafts(DEFAULT_MODULE_COUNT));
+        setAccessCodeFieldKey((key) => key + 1);
       }
     } catch (error) {
       setResult({
@@ -460,6 +467,11 @@ export default function AdminForm({ collections, defaultCategory: preselected }:
               Section rule: {sectionAttempts(defaultCategory)}. Change it here to override this test only.
             </span>
           </label>
+
+          <AccessCodeField
+            key={accessCodeFieldKey}
+            hint="Students enter it once before the test opens. You can still add, change or remove it later."
+          />
         </div>
         
         <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-2xl border border-slate-100">

@@ -207,6 +207,10 @@ export async function uploadTest(formData: FormData) {
       uploadedTestId = requestedTestId;
     }
 
+    // Empty means no code. Only read once the id above is known, so a rejected
+    // code still lets the catch clear away the images uploaded for this test.
+    const accessCode = normalizeAccessCode(formData.get('accessCode'));
+
     if (!texFile || !(texFile instanceof File) || texFile.size === 0 || !title) {
       throw new Error('Title and .tex file are required');
     }
@@ -288,6 +292,7 @@ export async function uploadTest(formData: FormData) {
         durationSeconds: examModules.durationSeconds,
         moduleDurations: examModules.moduleDurations,
         maxAttempts,
+        accessCode,
         ...olympiadWindow,
         collectionCategory: testCategory,
         questions: {
