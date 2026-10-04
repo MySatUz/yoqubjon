@@ -1,14 +1,15 @@
 'use client';
 
-import React, { memo, useCallback, useMemo, useOptimistic, useState, useTransition } from 'react';
+import React, { memo, useCallback, useId, useMemo, useOptimistic, useState, useTransition } from 'react';
 import Link from 'next/link';
 import { deleteTest, updateQuestion, updateTestDetails, updateTestVisibility } from '@/app/admin/actions';
 import { toOlympiadInputValue } from '@/lib/olympiad';
-import { BarChart3, ChevronDown, Clock3, Edit3, Eye, EyeOff, FileDown, ImageIcon, Layers, Loader2, Plus, Repeat2, Save, Settings2, Trash2, Trophy, Video, X } from 'lucide-react';
+import { BarChart3, ChevronDown, Clock3, Edit3, Eye, EyeOff, FileDown, ImageIcon, KeyRound, Layers, Loader2, Plus, Repeat2, Save, Settings2, Trash2, Trophy, Video, X } from 'lucide-react';
 import { getCategoryLabel, getTestCategory, type TestCollectionOption } from '@/lib/testCatalog';
 import { MAX_TEST_MAX_ATTEMPTS, MIN_TEST_MAX_ATTEMPTS } from '@/lib/testAttempts';
 import { formatModuleBadge, readModuleDurations, secondsToMinutes } from '@/lib/examModules';
 import { isMultiSelectKey } from '@/lib/resultAnswers';
+import { ACCESS_CODE_LENGTH, generateAccessCode } from '@/lib/accessCodeFormat';
 
 type AdminQuestion = {
   id: string;
@@ -31,6 +32,7 @@ type AdminTest = {
   maxAttempts: number;
   olympiadStartsAt: Date | null;
   olympiadEndsAt: Date | null;
+  accessCode: string | null;
   isFree: boolean;
   visible: boolean;
   createdAt: Date;
@@ -82,6 +84,66 @@ function formatDuration(seconds: number) {
   }
 
   return `${minutes} min`;
+}
+
+/**
+ * The optional start code. Controlled, unlike the fields around it, because
+ * "Generate" and "Remove" have to write into the input.
+ */
+function AccessCodeField({ initialCode }: { initialCode: string | null }) {
+  const [code, setCode] = useState(initialCode ?? '');
+  // Several tests can be open in the list at once, so the id cannot be fixed.
+  const inputId = useId();
+
+  return (
+    <div className="block sm:col-span-2">
+      <label
+        htmlFor={inputId}
+        className="mb-2 flex items-center gap-2 text-xs font-medium uppercase tracking-widest text-slate-400"
+      >
+        <KeyRound className="h-4 w-4" />
+        Start code
+        <span className="normal-case tracking-normal text-slate-400">
+          — {ACCESS_CODE_LENGTH} digits, empty for no code
+        </span>
+      </label>
+      <div className="flex flex-wrap items-center gap-2">
+        <input
+          id={inputId}
+          name="accessCode"
+          value={code}
+          onChange={(event) =>
+            setCode(event.target.value.replace(/\D/g, '').slice(0, ACCESS_CODE_LENGTH))
+          }
+          inputMode="numeric"
+          autoComplete="off"
+          pattern={`\\d{${ACCESS_CODE_LENGTH}}`}
+          title={`Exactly ${ACCESS_CODE_LENGTH} digits`}
+          placeholder="No code"
+          className="w-36 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold tabular-nums tracking-widest text-slate-900 outline-none transition placeholder:font-medium placeholder:tracking-normal placeholder:text-slate-400 focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+        />
+        <button
+          type="button"
+          onClick={() => setCode(generateAccessCode())}
+          className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-xs font-semibold text-slate-700 transition hover:border-blue-200 hover:text-blue-600"
+        >
+          Generate
+        </button>
+        {code && (
+          <button
+            type="button"
+            onClick={() => setCode('')}
+            className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-xs font-semibold text-slate-700 transition hover:border-red-200 hover:text-red-600"
+          >
+            Remove
+          </button>
+        )}
+      </div>
+      <p className="mt-2 text-xs text-slate-500">
+        Students enter it once before the test opens. Saving a new code asks everyone again.
+      </p>
+    </div>
+  );
 }
 
 function TestSettingsEditor({
@@ -241,6 +303,8 @@ function TestSettingsEditor({
             />
           </div>
         </label>
+
+        <AccessCodeField initialCode={test.accessCode} />
 
         <div className="flex flex-col justify-end gap-3">
           <label className="flex min-h-11 items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
@@ -590,6 +654,12 @@ const TestRow = memo(function TestRow({
                 <Repeat2 className="h-3 w-3" />
                 {test.maxAttempts} attempts
               </span>
+              {test.accessCode && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium uppercase tabular-nums text-slate-600">
+                  <KeyRound className="h-3 w-3" />
+                  Code {test.accessCode}
+                </span>
+              )}
             </span>
             <span className="mt-1 block text-xs font-medium text-slate-400">
               {test._count.questions} questions | Uploaded {UPLOADED_DATE_FORMAT.format(new Date(test.createdAt))}

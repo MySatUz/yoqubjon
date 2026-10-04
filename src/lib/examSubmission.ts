@@ -4,6 +4,7 @@ import { EXAM_TIME_GRACE_SECONDS, MAX_EXAM_DURATION_SECONDS } from '@/lib/examCo
 import { estimateSatMathScore } from '@/lib/satScoring';
 import { isAdminSessionUser } from '@/lib/admin';
 import { userHasActiveSectionAccess } from '@/lib/sectionAccess';
+import { userEverUnlockedTest } from '@/lib/testAccessCode';
 
 /**
  * The session strategy is `jwt`, so a token stays valid after its user row is
@@ -170,6 +171,10 @@ export async function createExamResult(
     if (!subscription && !hasSectionAccess && !isAdmin) {
       throw new ExamSubmissionError('Subscription required', 403);
     }
+  }
+
+  if (test.accessCode && !isAdmin && !await userEverUnlockedTest(userId, test.id)) {
+    throw new ExamSubmissionError('Access code required', 403);
   }
 
   let earnedCredit = 0;

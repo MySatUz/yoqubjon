@@ -103,6 +103,7 @@ export default async function AdminTestsPage({
           maxAttempts: true,
         olympiadStartsAt: true,
         olympiadEndsAt: true,
+          accessCode: true,
           isFree: true,
           visible: true,
           createdAt: true,

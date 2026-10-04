@@ -7,6 +7,8 @@ import { canStartOlympiadAttempt, readOlympiadWindow } from '@/lib/olympiad';
 import { isAdminUser } from '@/lib/admin';
 import { userHasActiveSectionAccess } from '@/lib/sectionAccess';
 import { getExamQuestionsHtml } from '@/lib/examQuestions';
+import { userHasUnlockedTest } from '@/lib/testAccessCode';
+import AccessCodeGate from '@/components/exam/AccessCodeGate';
 
 export default async function DynamicExamPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -34,6 +36,7 @@ export default async function DynamicExamPage({ params }: { params: Promise<{ id
       where: { id },
       select: {
         id: true,
+        title: true,
         isFree: true,
         visible: true,
         maxAttempts: true,
@@ -42,6 +45,7 @@ export default async function DynamicExamPage({ params }: { params: Promise<{ id
         moduleDurations: true,
         olympiadStartsAt: true,
         olympiadEndsAt: true,
+        accessCode: true,
       },
     }),
     isAdminUser(userId),
@@ -99,6 +103,18 @@ export default async function DynamicExamPage({ params }: { params: Promise<{ id
     if (!subscription && !hasSectionAccess && !isAdmin) {
       redirect('/dashboard/subscription');
     }
+  }
+
+  // Last gate, on top of everything above: a code-protected test shows the code
+  // screen instead of the exam until this student has entered the current code.
+  // Nothing about the questions reaches the browser before that. Admins skip
+  // it, like every other gate on this page.
+  if (
+    test.accessCode &&
+    !isAdmin &&
+    !await userHasUnlockedTest(userId, id, test.accessCode)
+  ) {
+    return <AccessCodeGate testId={id} title={test.title} />;
   }
 
   const modules = buildExamModules(test, questions);
