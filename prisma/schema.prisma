@@ -26,6 +26,7 @@ model User {
   payments      Payment[]
   manualPaymentRequests ManualPaymentRequest[]
   sectionAccesses SectionAccess[]
+  testCodeUnlocks TestCodeUnlock[]
 }
 
 model Test {
@@ -44,6 +45,9 @@ model Test {
   // attempts started inside them. Either one null means an ordinary test.
   olympiadStartsAt   DateTime?
   olympiadEndsAt     DateTime?
+  // Six digits a student must enter once before the test opens, on top of the
+  // usual subscription / section access. Null means the test needs no code.
+  accessCode         String?
   collectionCategory String?
   createdAt          DateTime                  @default(now())
   updatedAt          DateTime                  @updatedAt
@@ -51,6 +55,7 @@ model Test {
   collection  TestCollectionVisibility? @relation(fields: [collectionCategory], references: [category], onDelete: SetNull)
   questions   Question[]
   results     Result[]
+  codeUnlocks TestCodeUnlock[]
 
   @@index([createdAt])
   @@index([collectionCategory])
@@ -89,6 +94,28 @@ model SectionAccess {
   @@index([userId])
   @@index([category])
   @@index([expiresAt])
+}
+
+// One row per student per code-protected test. It remembers which code the
+// student entered, and counts wrong guesses so six digits cannot be brute-forced.
+model TestCodeUnlock {
+  id             String    @id @default(uuid())
+  userId         String
+  testId         String
+  // The code that was accepted. The test is unlocked only while this still
+  // equals Test.accessCode, so changing the code locks everyone out again.
+  // Null until the first correct entry.
+  code           String?
+  failedAttempts Int       @default(0)
+  lastFailedAt   DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  test           Test      @relation(fields: [testId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, testId])
+  @@index([testId])
 }
 
 model Question {

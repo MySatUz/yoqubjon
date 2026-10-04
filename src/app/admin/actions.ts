@@ -23,6 +23,7 @@ import {
 } from '@/lib/testCatalog';
 import { normalizeTestMaxAttempts } from '@/lib/testAttempts';
 import { parseOlympiadMoment } from '@/lib/olympiad';
+import { normalizeAccessCode } from '@/lib/testAccessCode';
 import {
   MAX_MODULE_COUNT,
   MIN_MODULE_COUNT,
@@ -712,6 +713,9 @@ export async function updateTestDetails(testId: string, formData: FormData) {
       collection.maxAttempts
     );
     const isFree = formData.get('isFree') === 'true';
+    // Empty clears the code. A changed code asks every student again, because an
+    // unlock only counts while it matches the code on the test.
+    const accessCode = normalizeAccessCode(formData.get('accessCode'));
 
     if (!existingTest) {
       throw new Error('Test not found');
@@ -749,6 +753,7 @@ export async function updateTestDetails(testId: string, formData: FormData) {
         durationSeconds,
         moduleDurations,
         maxAttempts,
+        accessCode,
         ...normalizeOlympiadWindow(formData, durationSeconds),
         collectionCategory: testCategory,
         description: encodeTestDescription(testCategory, cleanTestDescription(existingTest.description)),
