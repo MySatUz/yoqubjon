@@ -1,6 +1,7 @@
 import { cache } from 'react';
 import { auth } from '@/auth';
 import { isAdminUser } from '@/lib/admin';
+import { getStudentView } from '@/lib/studentView';
 
 /**
  * Request-scoped memoization for the shell islands. The shell renders the user
@@ -14,4 +15,9 @@ export const getShellSession = cache(async () => auth());
 export const getShellCanManageTests = cache(async () => {
   const session = await getShellSession();
   return isAdminUser(session?.user?.id);
+});
+
+export const getShellStudentView = cache(async () => {
+  const session = await getShellSession();
+  return getStudentView(session?.user?.id);
 });

@@ -1,4 +1,5 @@
 import AdminSectionHub from '@/components/admin/AdminSectionHub';
+import StudentViewLauncher from '@/components/admin/StudentViewLauncher';
 import SubscriptionAvailabilityControl from '@/components/admin/SubscriptionAvailabilityControl';
 import { isOwnerSessionUser, OWNER_ADMIN_EMAIL, requireAdminPage } from '@/lib/admin';
 import { prisma } from '@/lib/prisma';
@@ -76,6 +77,8 @@ export default async function AdminPage() {
           visibleTestCount={visibleTestCount}
           testCount={testCount}
         />
+
+        <StudentViewLauncher />
       </div>
     </div>
   );

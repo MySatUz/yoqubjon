@@ -11,7 +11,7 @@ import {
 } from '@/lib/testCatalog';
 import { getCollectionVisibilityRows } from '@/lib/testCollections';
 import PracticeCatalog from '@/components/dashboard/PracticeCatalog';
-import { isAdminUser } from '@/lib/admin';
+import { getViewerAccess } from '@/lib/studentView';
 import { getActiveSectionAccessCategories } from '@/lib/sectionAccess';
 
 /**
@@ -107,7 +107,7 @@ async function PracticeCatalogSection({
   userEmail?: string | null;
   requestedSet: string | string[] | undefined;
 }) {
-  const [attemptCounts, tests, subscription, canDownloadPdf, visibilityRows, sectionAccessCategories] = await Promise.all([
+  const [attemptCounts, tests, subscription, viewer, visibilityRows, sectionAccessCategories] = await Promise.all([
     prisma.result.groupBy({
       by: ['testId'],
       where: { userId },
@@ -137,12 +137,15 @@ async function PracticeCatalogSection({
         expiresAt: { gt: new Date() }
       }
     }),
-    isAdminUser(userId),
+    getViewerAccess(userId),
     getCollectionVisibilityRows(),
     getActiveSectionAccessCategories(userId, userEmail),
   ]);
 
-  const isPremium = !!subscription;
+  // An admin in student view gets the student's catalog: no hidden tests or
+  // sections, no PDF button, the usual attempt counts.
+  const canDownloadPdf = viewer.isAdmin;
+  const isPremium = !!subscription || viewer.simulatesSubscription;
   const attemptsUsedByTest = new Map(
     attemptCounts.map((attempt) => [attempt.testId, attempt._count._all])
   );

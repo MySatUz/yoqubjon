@@ -4,7 +4,7 @@ import { notFound, redirect } from 'next/navigation';
 import { auth } from '@/auth';
 import { buildExamModules, getTotalDurationSeconds } from '@/lib/examModules';
 import { canStartOlympiadAttempt, readOlympiadWindow } from '@/lib/olympiad';
-import { isAdminUser } from '@/lib/admin';
+import { getViewerAccess } from '@/lib/studentView';
 import { userHasActiveSectionAccess } from '@/lib/sectionAccess';
 import { getExamQuestionsHtml } from '@/lib/examQuestions';
 import { userHasUnlockedTest } from '@/lib/testAccessCode';
@@ -31,7 +31,7 @@ export default async function DynamicExamPage({ params }: { params: Promise<{ id
   // rendered to HTML, so the exam bundle no longer ships KaTeX. The test row
   // itself stays uncached: `visible` and `maxAttempts` gate access and have to
   // be read fresh.
-  const [test, isAdmin, attemptsUsed, subscription, questions] = await Promise.all([
+  const [test, viewer, attemptsUsed, subscription, questions] = await Promise.all([
     prisma.test.findUnique({
       where: { id },
       select: {
@@ -48,7 +48,7 @@ export default async function DynamicExamPage({ params }: { params: Promise<{ id
         accessCode: true,
       },
     }),
-    isAdminUser(userId),
+    getViewerAccess(userId),
     prisma.result.count({
       where: {
         userId,
@@ -65,6 +65,10 @@ export default async function DynamicExamPage({ params }: { params: Promise<{ id
     }),
     getExamQuestionsHtml(id),
   ]);
+
+  // An admin in student view is not an admin here: every gate below applies to
+  // them as it would to a student.
+  const isAdmin = viewer.isAdmin;
 
   if (!test) {
     notFound();
@@ -100,7 +104,7 @@ export default async function DynamicExamPage({ params }: { params: Promise<{ id
       test.collectionCategory
     );
 
-    if (!subscription && !hasSectionAccess && !isAdmin) {
+    if (!subscription && !viewer.simulatesSubscription && !hasSectionAccess && !isAdmin) {
       redirect('/dashboard/subscription');
     }
   }

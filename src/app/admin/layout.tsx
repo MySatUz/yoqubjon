@@ -1,6 +1,7 @@
 import React, { Suspense } from 'react';
 import AppShellFrame from '@/components/layout/AppShellFrame';
 import ShellAdminNav from '@/components/layout/ShellAdminNav';
+import StudentViewBanner from '@/components/layout/StudentViewBanner';
 import {
   ShellUserAvatar,
   ShellUserAvatarSkeleton,
@@ -51,6 +52,11 @@ export default function AdminLayout({
       mobileAdminNav={
         <Suspense fallback={null}>
           <ShellAdminNav variant="mobile" />
+        </Suspense>
+      }
+      banner={
+        <Suspense fallback={null}>
+          <StudentViewBanner />
         </Suspense>
       }
     >

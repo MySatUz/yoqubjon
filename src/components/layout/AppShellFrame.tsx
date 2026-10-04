@@ -14,6 +14,8 @@ type AppShellFrameProps = {
   desktopAdminNav?: React.ReactNode;
   /** "Admin Panel" entry for the mobile bottom bar. */
   mobileAdminNav?: React.ReactNode;
+  /** Bar above the page content — the student-view notice. */
+  banner?: React.ReactNode;
 };
 
 /**
@@ -28,6 +30,7 @@ export default function AppShellFrame({
   userCard,
   desktopAdminNav,
   mobileAdminNav,
+  banner,
 }: AppShellFrameProps) {
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row">
@@ -67,6 +70,7 @@ export default function AppShellFrame({
       </aside>
 
       <main className="flex-1 overflow-y-auto pb-24 md:pb-0">
+        {banner}
         {children}
       </main>
 
