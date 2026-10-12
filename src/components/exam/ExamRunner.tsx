@@ -28,9 +28,11 @@ export type ExamRunnerQuestion = {
 interface ExamRunnerProps {
   testId: string;
   modules: ExamModule<ExamRunnerQuestion>[];
+  /** An admin, outside student view: gets the whiteboard for running a lesson. */
+  canDraw?: boolean;
 }
 
-export default function ExamRunner({ testId, modules }: ExamRunnerProps) {
+export default function ExamRunner({ testId, modules, canDraw = false }: ExamRunnerProps) {
   const specs = useMemo(() => toExamModuleSpecs(modules), [modules]);
   const initializeExam = useExamStore((state) => state.initializeExam);
   const syncTimeLeft = useExamStore((state) => state.syncTimeLeft);
@@ -90,8 +92,11 @@ export default function ExamRunner({ testId, modules }: ExamRunnerProps) {
         />
       ) : (
         <>
-          <SplitScreen questions={activeModule.questions} />
-          <BottomNav testId={testId} modules={specs} />
+          {/* Not before the saved attempt is in: until then the screen shows
+              module 1, question 1 whatever the attempt is really on, and the
+              board has no attempt to file its drawings under. */}
+          <SplitScreen questions={activeModule.questions} canDraw={canDraw && isReady} />
+          <BottomNav testId={testId} modules={specs} canDraw={canDraw} />
         </>
       )}
     </main>

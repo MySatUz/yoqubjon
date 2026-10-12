@@ -127,5 +127,7 @@ export default async function DynamicExamPage({ params }: { params: Promise<{ id
     notFound();
   }
 
-  return <ExamRunner testId={id} modules={modules} />;
+  // The whiteboard is for running a lesson on this screen. An admin in student
+  // view does not get it, since that view is meant to look like a student's.
+  return <ExamRunner testId={id} modules={modules} canDraw={isAdmin} />;
 }

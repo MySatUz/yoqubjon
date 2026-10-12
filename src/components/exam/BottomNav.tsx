@@ -1,7 +1,7 @@
 "use client";
 
 import React, { memo, useCallback } from 'react';
-import { Check, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, Loader2, PenLine } from 'lucide-react';
 import { useExamStore } from '@/store/useExamStore';
 import { flushPendingAnswer } from '@/components/exam/pendingAnswer';
 import { useExamSubmit } from '@/components/exam/useExamSubmit';
@@ -10,6 +10,8 @@ import type { ExamModuleSpec } from '@/lib/examModules';
 interface BottomNavProps {
   testId: string;
   modules: ExamModuleSpec[];
+  /** Shows the whiteboard switch - admins only, see `/exam/[id]`. */
+  canDraw?: boolean;
 }
 
 interface PaletteButtonProps {
@@ -50,7 +52,7 @@ const PaletteButton = memo(function PaletteButton({
   );
 });
 
-export default function BottomNav({ testId, modules }: BottomNavProps) {
+export default function BottomNav({ testId, modules, canDraw = false }: BottomNavProps) {
   // No subscription to the clock here: the palette must not repaint every second.
   const currentQuestionIndex = useExamStore((state) => state.currentQuestionIndex);
   const currentModuleIndex = useExamStore((state) => state.currentModuleIndex);
@@ -60,6 +62,8 @@ export default function BottomNav({ testId, modules }: BottomNavProps) {
   const setCurrentQuestionIndex = useExamStore((state) => state.setCurrentQuestionIndex);
   const toggleMarkForReview = useExamStore((state) => state.toggleMarkForReview);
   const finishCurrentModule = useExamStore((state) => state.finishCurrentModule);
+  const isWhiteboardOpen = useExamStore((state) => state.isWhiteboardOpen);
+  const setWhiteboardOpen = useExamStore((state) => state.setWhiteboardOpen);
   const { isSubmitting, submitExam } = useExamSubmit(testId);
 
   const moduleCount = modules.length;
@@ -114,6 +118,27 @@ export default function BottomNav({ testId, modules }: BottomNavProps) {
       </div>
 
       <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+        {/* Here rather than in the header: the header's centred clock leaves
+            no room for a fourth tool on a 1024px screen, while this bar gives
+            way by narrowing the palette, which scrolls. It also sits right
+            under the toolbar it opens. */}
+        {canDraw && (
+          <button
+            type="button"
+            onClick={() => setWhiteboardOpen(!isWhiteboardOpen)}
+            aria-pressed={isWhiteboardOpen}
+            aria-label={isWhiteboardOpen ? 'Close the whiteboard' : 'Whiteboard'}
+            title={isWhiteboardOpen ? 'Close the whiteboard. The drawing stays on the question.' : 'Draw over the question'}
+            className={`flex items-center gap-2 rounded-xl border px-2 py-2 transition-colors sm:px-2.5 ${
+              isWhiteboardOpen
+                ? 'border-blue-600 bg-blue-50 text-blue-700'
+                : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:text-slate-900'
+            }`}
+          >
+            <PenLine className="h-4 w-4" />
+            <span className="hidden text-sm font-semibold xl:inline-block">Whiteboard</span>
+          </button>
+        )}
         <label className="flex items-center gap-2 cursor-pointer group rounded-xl border border-slate-200 bg-white px-2 py-2 transition-colors hover:border-slate-300 sm:px-2.5">
           <input
             type="checkbox"

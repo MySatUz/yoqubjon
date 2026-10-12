@@ -5,7 +5,14 @@ import { useExamStore } from '@/store/useExamStore';
 // KaTeX's stylesheet is still needed - only its JS is gone from this bundle.
 import 'katex/dist/katex.min.css';
 import Image from 'next/image';
+import dynamic from 'next/dynamic';
 import { clearPendingAnswerFlush, setPendingAnswerFlush } from '@/components/exam/pendingAnswer';
+
+/**
+ * Admin-only, so it is split out of the exam bundle: a student's exam never
+ * fetches it. Client-only because all of it is canvas and pointer.
+ */
+const Whiteboard = dynamic(() => import('@/components/exam/whiteboard/Whiteboard'), { ssr: false });
 
 /**
  * `contentHtml` / `optionsHtml` are rendered on the server by
@@ -183,7 +190,13 @@ function GridInAnswer({ questionId }: { questionId: string }) {
   );
 }
 
-export default function SplitScreen({ questions }: { questions: Question[] }) {
+export default function SplitScreen({
+  questions,
+  canDraw = false,
+}: {
+  questions: Question[];
+  canDraw?: boolean;
+}) {
   const currentQuestionIndex = useExamStore((state) => state.currentQuestionIndex);
   const setAnswer = useExamStore((state) => state.setAnswer);
   const toggleAnswerChoice = useExamStore((state) => state.toggleAnswerChoice);
@@ -238,81 +251,88 @@ export default function SplitScreen({ questions }: { questions: Question[] }) {
   return (
     <div className={`flex-1 flex overflow-hidden bg-white ${isCalculatorOpen ? 'flex-col md:flex-row' : 'flex-col'}`}>
       {/* Question & Options Column */}
-      <div className={`flex-1 overflow-y-auto px-4 py-6 md:px-10 md:py-10 transition-[width,background-color,border-color] duration-500 ${isCalculatorOpen ? 'w-full md:w-[46%] border-b md:border-b-0 md:border-r border-slate-100 bg-slate-50/30' : 'w-full'}`}>
-        <div className={`${isCalculatorOpen ? 'max-w-2xl' : 'max-w-4xl'} mx-auto w-full flex flex-col min-h-full`}>
-          {/* Question Content - the diagram leads, the stem follows it. The
-              stem is the part a student re-reads while working, so it belongs
-              next to the answer choices rather than above a figure that pushes
-              it off screen. */}
-          <div className="mb-10 flex-grow">
-            {question.imageUrl && (
-              <div className={`mb-6 rounded-2xl overflow-hidden border border-slate-200 bg-white p-3 shadow-sm mx-auto ${isCalculatorOpen ? 'max-w-md' : 'max-w-xl'}`}>
-                {/* The diagram is on screen the moment the question is, so the
-                    default `loading="lazy"` only ever delays it. In Next 16
-                    `priority` is deprecated in favour of these two props. */}
-                <Image
-                  src={question.imageUrl}
-                  alt="Question diagram"
-                  width={QUESTION_IMAGE_WIDTH}
-                  height={QUESTION_IMAGE_HEIGHT}
-                  loading="eager"
-                  fetchPriority="high"
-                  sizes={imageSizes}
-                  className={`mx-auto h-auto w-full object-contain ${isCalculatorOpen ? 'max-h-[250px]' : 'max-h-[340px]'}`}
+      <div className={`flex-1 overflow-y-auto transition-[width,background-color,border-color] duration-500 ${isCalculatorOpen ? 'w-full md:w-[46%] border-b md:border-b-0 md:border-r border-slate-100 bg-slate-50/30' : 'w-full'}`}>
+        {/* The whiteboard's surface: the whole scrolling content, padding and
+            side margins included, at least a screen tall. The padding lives
+            here rather than on the scroller so the drawing reaches the edges,
+            and `isolate` keeps the canvas's z-index inside this box. */}
+        <div className="relative isolate flex min-h-full flex-col px-4 py-6 md:px-10 md:py-10">
+          <div className={`${isCalculatorOpen ? 'max-w-2xl' : 'max-w-4xl'} mx-auto w-full flex flex-1 flex-col`}>
+            {/* Question Content - the diagram leads, the stem follows it. The
+                stem is the part a student re-reads while working, so it belongs
+                next to the answer choices rather than above a figure that pushes
+                it off screen. */}
+            <div className="mb-10 flex-grow">
+              {question.imageUrl && (
+                <div className={`mb-6 rounded-2xl overflow-hidden border border-slate-200 bg-white p-3 shadow-sm mx-auto ${isCalculatorOpen ? 'max-w-md' : 'max-w-xl'}`}>
+                  {/* The diagram is on screen the moment the question is, so the
+                      default `loading="lazy"` only ever delays it. In Next 16
+                      `priority` is deprecated in favour of these two props. */}
+                  <Image
+                    src={question.imageUrl}
+                    alt="Question diagram"
+                    width={QUESTION_IMAGE_WIDTH}
+                    height={QUESTION_IMAGE_HEIGHT}
+                    loading="eager"
+                    fetchPriority="high"
+                    sizes={imageSizes}
+                    className={`mx-auto h-auto w-full object-contain ${isCalculatorOpen ? 'max-h-[250px]' : 'max-h-[340px]'}`}
+                  />
+                </div>
+              )}
+
+              <div className="prose prose-slate max-w-none">
+                <div
+                  className={`${isCalculatorOpen ? 'text-base md:text-xl' : 'text-lg md:text-2xl'} font-medium text-slate-800 leading-relaxed transition-[font-size] duration-500`}
+                  dangerouslySetInnerHTML={{ __html: question.contentHtml }}
                 />
               </div>
-            )}
+            </div>
 
-            <div className="prose prose-slate max-w-none">
-              <div
-                className={`${isCalculatorOpen ? 'text-base md:text-xl' : 'text-lg md:text-2xl'} font-medium text-slate-800 leading-relaxed transition-[font-size] duration-500`}
-                dangerouslySetInnerHTML={{ __html: question.contentHtml }}
-              />
+            {/* Options / Answer Input */}
+            <div className="mt-auto pt-8 border-t border-slate-200/60">
+              {isMultipleChoice ? (
+                <div className="max-w-4xl mx-auto">
+                  {isMultiSelect && (
+                    <p className="mb-4 text-center text-[10px] font-medium uppercase tracking-[0.2em] text-blue-600">
+                      Select all that apply
+                    </p>
+                  )}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {question.optionsHtml.map((optionHtml: string, idx: number) => {
+                      const letter = String.fromCharCode(65 + idx);
+                      return (
+                        <AnswerChoice
+                          key={idx}
+                          letter={letter}
+                          optionHtml={optionHtml}
+                          isSelected={selectedLetters.has(letter)}
+                          isMultiSelect={isMultiSelect}
+                          isCompact={isCalculatorOpen}
+                          onSelect={handleSelectChoice}
+                        />
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : (
+                <div className="mx-auto max-w-sm rounded-2xl border border-blue-100 bg-blue-50 p-5 shadow-sm">
+                  <div className="flex flex-col items-center gap-3">
+                    <h4 className="mb-1 rounded-full border border-blue-100 bg-white px-4 py-1.5 text-[10px] font-medium uppercase tracking-[0.2em] text-blue-600">
+                      Student-Produced Response
+                    </h4>
+                    <div className="mx-auto w-full max-w-[220px]">
+                      <GridInAnswer key={question.id} questionId={question.id} />
+                    </div>
+                    <p className="text-center text-[11px] font-medium uppercase tracking-[0.18em] text-blue-500">
+                      Enter your answer above
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
-
-          {/* Options / Answer Input */}
-          <div className="mt-auto pt-8 border-t border-slate-200/60">
-            {isMultipleChoice ? (
-              <div className="max-w-4xl mx-auto">
-                {isMultiSelect && (
-                  <p className="mb-4 text-center text-[10px] font-medium uppercase tracking-[0.2em] text-blue-600">
-                    Select all that apply
-                  </p>
-                )}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {question.optionsHtml.map((optionHtml: string, idx: number) => {
-                    const letter = String.fromCharCode(65 + idx);
-                    return (
-                      <AnswerChoice
-                        key={idx}
-                        letter={letter}
-                        optionHtml={optionHtml}
-                        isSelected={selectedLetters.has(letter)}
-                        isMultiSelect={isMultiSelect}
-                        isCompact={isCalculatorOpen}
-                        onSelect={handleSelectChoice}
-                      />
-                    );
-                  })}
-                </div>
-              </div>
-            ) : (
-              <div className="mx-auto max-w-sm rounded-2xl border border-blue-100 bg-blue-50 p-5 shadow-sm">
-                <div className="flex flex-col items-center gap-3">
-                  <h4 className="mb-1 rounded-full border border-blue-100 bg-white px-4 py-1.5 text-[10px] font-medium uppercase tracking-[0.2em] text-blue-600">
-                    Student-Produced Response
-                  </h4>
-                  <div className="mx-auto w-full max-w-[220px]">
-                    <GridInAnswer key={question.id} questionId={question.id} />
-                  </div>
-                  <p className="text-center text-[11px] font-medium uppercase tracking-[0.18em] text-blue-500">
-                    Enter your answer above
-                  </p>
-                </div>
-              </div>
-            )}
-          </div>
+          {canDraw && <Whiteboard questionId={question.id} />}
         </div>
       </div>
 

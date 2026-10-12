@@ -12,6 +12,11 @@ type ModulePhase = 'active' | 'pending';
 
 interface ExamState {
   activeTestId: string | null;
+  /**
+   * Names one attempt, so anything kept per attempt - the admin whiteboard's
+   * drawings - can tell a resumed attempt from a new attempt at the same test.
+   */
+  attemptId: string | null;
   answers: Record<string, string>;
   markedForReview: Record<string, boolean>;
   moduleDurations: number[];
@@ -25,6 +30,7 @@ interface ExamState {
   isSubmitted: boolean;
   isCalculatorOpen: boolean;
   isReferenceOpen: boolean;
+  isWhiteboardOpen: boolean;
 
   // Actions
   initializeExam: (testId: string, modules: ExamModuleSpec[]) => void;
@@ -38,10 +44,12 @@ interface ExamState {
   markSubmitted: () => void;
   setCalculatorOpen: (open: boolean) => void;
   setReferenceOpen: (open: boolean) => void;
+  setWhiteboardOpen: (open: boolean) => void;
 }
 
 const createInitialState = () => ({
   activeTestId: null,
+  attemptId: null as string | null,
   answers: {} as Record<string, string>,
   markedForReview: {} as Record<string, boolean>,
   moduleDurations: [EXAM_DURATION_SECONDS],
@@ -55,7 +63,13 @@ const createInitialState = () => ({
   isSubmitted: false,
   isCalculatorOpen: false,
   isReferenceOpen: false,
+  isWhiteboardOpen: false,
 });
+
+/** Unique within one browser, which is as far as an attempt in localStorage goes. */
+function createAttemptId() {
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+}
 
 /** Starts a fresh attempt with module 1 already running. */
 function startFirstModule(testId: string, modules: ExamModuleSpec[]) {
@@ -65,6 +79,7 @@ function startFirstModule(testId: string, modules: ExamModuleSpec[]) {
   return {
     ...createInitialState(),
     activeTestId: testId,
+    attemptId: createAttemptId(),
     moduleDurations: modules.map((item) => item.durationSeconds),
     moduleDurationSeconds: durationSeconds,
     timeLeftSeconds: durationSeconds,
@@ -145,8 +160,12 @@ export const useExamStore = create<ExamState>()(
           const lastQuestionIndex = Math.max(activeModule.questionIds.length - 1, 0);
           const moduleDurations = modules.map((item) => item.durationSeconds);
 
+          // An attempt saved before attempts had ids gets one on resume.
+          const attemptId = state.attemptId ?? createAttemptId();
+
           if (state.modulePhase === 'pending') {
             return {
+              attemptId,
               moduleDurations,
               currentModuleIndex: moduleIndex,
               moduleDurationSeconds: activeModule.durationSeconds,
@@ -174,6 +193,7 @@ export const useExamStore = create<ExamState>()(
             : syncedTimeLeft;
 
           return {
+            attemptId,
             moduleDurations,
             currentModuleIndex: moduleIndex,
             moduleDurationSeconds: activeModule.durationSeconds,
@@ -275,6 +295,7 @@ export const useExamStore = create<ExamState>()(
 
       setCalculatorOpen: (open) => set({ isCalculatorOpen: open }),
       setReferenceOpen: (open) => set({ isReferenceOpen: open }),
+      setWhiteboardOpen: (open) => set({ isWhiteboardOpen: open }),
     }),
     {
       name: 'mysat-exam-storage',
@@ -284,6 +305,7 @@ export const useExamStore = create<ExamState>()(
       migrate: () => createInitialState() as ExamState,
       partialize: (state) => ({
         activeTestId: state.activeTestId,
+        attemptId: state.attemptId,
         answers: state.answers,
         markedForReview: state.markedForReview,
         moduleDurations: state.moduleDurations,
