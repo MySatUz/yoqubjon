@@ -107,8 +107,18 @@ export default async function AdminTestsPage({
           isFree: true,
           visible: true,
           createdAt: true,
+          questionSourceId: true,
+          // A copy has no questions of its own; the count and the name shown
+          // for it come from the original.
+          questionSource: {
+            select: {
+              title: true,
+              collectionCategory: true,
+              _count: { select: { questions: true } },
+            },
+          },
           _count: {
-            select: { questions: true },
+            select: { questions: true, questionCopies: true },
           },
         },
       })

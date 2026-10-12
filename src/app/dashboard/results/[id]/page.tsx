@@ -5,10 +5,18 @@ import { CheckCircle2, XCircle, Clock, Award, ArrowLeft, ShieldCheck } from 'luc
 import { auth } from '@/auth';
 import { formatCreditTotal, normalizeStoredAnswer } from '@/lib/resultAnswers';
 import { buildExamModules } from '@/lib/examModules';
+import { getShownQuestions } from '@/lib/questionSource';
 import ResultReview, {
   type ReviewModule,
   type ReviewStatus,
 } from '@/components/dashboard/ResultReview';
+
+const REVIEW_QUESTION_FIELDS = {
+  id: true,
+  order: true,
+  correctAnswer: true,
+  moduleIndex: true,
+} as const;
 
 const sumCredit = (answers: Array<{ credit: number }>) =>
   answers.reduce((total, answer) => total + answer.credit, 0);
@@ -52,11 +60,15 @@ export default async function ResultPage({ params }: { params: Promise<{ id: str
           moduleDurations: true,
           questions: {
             orderBy: { order: 'asc' },
+            select: REVIEW_QUESTION_FIELDS,
+          },
+          // An attempt at a copy is reviewed against its original's questions.
+          questionSource: {
             select: {
-              id: true,
-              order: true,
-              correctAnswer: true,
-              moduleIndex: true,
+              questions: {
+                orderBy: { order: 'asc' },
+                select: REVIEW_QUESTION_FIELDS,
+              },
             },
           },
         },
@@ -67,7 +79,7 @@ export default async function ResultPage({ params }: { params: Promise<{ id: str
   if (!result) notFound();
 
   const userAnswers = result.answers as Record<string, unknown>;
-  const modules = buildExamModules(result.test, result.test.questions);
+  const modules = buildExamModules(result.test, getShownQuestions(result.test));
   const isModular = modules.length > 1;
 
   // Grading happens here, on the server, and only the verdict crosses to the

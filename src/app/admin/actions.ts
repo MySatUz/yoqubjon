@@ -380,26 +380,138 @@ async function removeTestImages(testId: string) {
   }
 }
 
+/**
+ * Expires the cached exam questions of a test and of every copy of it: a copy
+ * shows the same questions, but caches them under its own id.
+ */
+async function revalidateExamQuestions(testId: string) {
+  const copies = await prisma.test.findMany({
+    where: { questionSourceId: testId },
+    select: { id: true },
+  });
+
+  for (const id of [testId, ...copies.map((copy) => copy.id)]) {
+    revalidateTag(examQuestionsCacheTag(id), { expire: 0 });
+  }
+}
+
 export async function deleteTest(testId: string) {
   try {
     await requireAdmin();
 
-    await prisma.$transaction(async (tx) => {
+    // A copy only borrows its questions, so deleting one leaves the original
+    // alone. Deleting an original takes its copies with it: they would have
+    // nothing left to show, and the database refuses to leave them behind.
+    const copyIds = await prisma.$transaction(async (tx) => {
+      const copies = await tx.test.findMany({
+        where: { questionSourceId: testId },
+        select: { id: true },
+      });
+      const ids = copies.map((copy) => copy.id);
+
+      if (ids.length > 0) {
+        await tx.result.deleteMany({ where: { testId: { in: ids } } });
+        await tx.test.deleteMany({ where: { id: { in: ids } } });
+      }
+
       await tx.result.deleteMany({ where: { testId } });
       await tx.question.deleteMany({ where: { testId } });
       await tx.test.delete({ where: { id: testId } });
+
+      return ids;
     });
 
     // Deliberately after the rows: a failure here only orphans the images, while
-    // the reverse order would leave a live test pointing at deleted files.
+    // the reverse order would leave a live test pointing at deleted files. A
+    // copy has no images of its own, so for one this finds nothing.
     await removeTestImages(testId);
 
-    revalidateTag(examQuestionsCacheTag(testId), { expire: 0 });
+    for (const id of [testId, ...copyIds]) {
+      revalidateTag(examQuestionsCacheTag(id), { expire: 0 });
+    }
     refresh();
     return { success: true };
   } catch (error: unknown) {
     console.error("Delete Test Error:", error);
     return { success: false, error: error instanceof Error ? error.message : 'Delete failed' };
+  }
+}
+
+/**
+ * Puts a test into a section under a new title without copying its questions.
+ * The copy is a test of its own - title, section, settings and results - that
+ * shows the original's questions and images, so they are stored once and an
+ * edit made through either test shows in both. Copying a copy borrows from the
+ * same original, which keeps a single level to follow.
+ *
+ * The olympiad window and the start code are copied only when the form asks
+ * for them. Both are ticked by default: dropping either one would open the copy
+ * to everyone in its section straight away.
+ */
+export async function copyTest(testId: string, formData: FormData) {
+  try {
+    await requireAdmin();
+
+    if (!testId || testId.length > 160) {
+      throw new Error('Invalid test id');
+    }
+
+    const title = normalizeRequiredText(formData.get('title'), 'Test title');
+    const [collection, source] = await Promise.all([
+      resolveCollectionCategory(formData.get('testCategory')),
+      prisma.test.findUnique({
+        where: { id: testId },
+        select: {
+          title: true,
+          description: true,
+          collectionCategory: true,
+          isFree: true,
+          visible: true,
+          durationSeconds: true,
+          moduleDurations: true,
+          maxAttempts: true,
+          olympiadStartsAt: true,
+          olympiadEndsAt: true,
+          accessCode: true,
+          questionSourceId: true,
+        },
+      }),
+    ]);
+
+    if (!source) {
+      throw new Error('Test not found');
+    }
+
+    if (collection.category === source.collectionCategory && title === source.title.trim()) {
+      throw new Error('The copy would sit next to the original under the same title. Give it a new title or pick another section.');
+    }
+
+    const keepOlympiadWindow = formData.get('keepOlympiadWindow') === 'true';
+    const keepAccessCode = formData.get('keepAccessCode') === 'true';
+
+    const copy = await prisma.test.create({
+      data: {
+        title,
+        description: encodeTestDescription(collection.category, cleanTestDescription(source.description)),
+        isFree: source.isFree,
+        visible: source.visible,
+        durationSeconds: source.durationSeconds,
+        moduleDurations: source.moduleDurations,
+        maxAttempts: source.maxAttempts,
+        olympiadStartsAt: keepOlympiadWindow ? source.olympiadStartsAt : null,
+        olympiadEndsAt: keepOlympiadWindow ? source.olympiadEndsAt : null,
+        accessCode: keepAccessCode ? source.accessCode : null,
+        collectionCategory: collection.category,
+        questionSourceId: source.questionSourceId ?? testId,
+      },
+      select: { id: true },
+    });
+
+    refresh();
+    return { success: true as const, testId: copy.id, title, category: collection.category };
+  } catch (error: unknown) {
+    console.error('Copy Test Error:', error);
+    return { success: false as const, error: error instanceof Error ? error.message : 'Copy failed' };
   }
 }
 
@@ -869,8 +981,9 @@ export async function updateQuestion(questionId: string, formData: FormData) {
     });
 
     // Edited question text has to reach the exam page immediately, so the
-    // pre-rendered HTML for its test is expired here.
-    revalidateTag(examQuestionsCacheTag(existingQuestion.testId), { expire: 0 });
+    // pre-rendered HTML for its test - and for every copy showing it - is
+    // expired here.
+    await revalidateExamQuestions(existingQuestion.testId);
     refresh();
     return { success: true };
   } catch (error: unknown) {

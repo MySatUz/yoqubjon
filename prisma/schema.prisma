@@ -49,17 +49,27 @@ model Test {
   // usual subscription / section access. Null means the test needs no code.
   accessCode         String?
   collectionCategory String?
+  // Set on a copy: the test whose questions this one shows. A copy has a title,
+  // section, settings and results of its own, but no questions - they and their
+  // images are stored once, on the original. Always the original itself, never
+  // another copy, so there is one level to follow. Deleting the original
+  // deletes its copies first; the restrict below keeps anything else from
+  // leaving a copy with nothing to show.
+  questionSourceId   String?
   createdAt          DateTime                  @default(now())
   updatedAt          DateTime                  @updatedAt
 
-  collection  TestCollectionVisibility? @relation(fields: [collectionCategory], references: [category], onDelete: SetNull)
-  questions   Question[]
-  results     Result[]
-  codeUnlocks TestCodeUnlock[]
+  collection     TestCollectionVisibility? @relation(fields: [collectionCategory], references: [category], onDelete: SetNull)
+  questionSource Test?                     @relation("TestQuestionSource", fields: [questionSourceId], references: [id], onDelete: Restrict)
+  questionCopies Test[]                    @relation("TestQuestionSource")
+  questions      Question[]
+  results        Result[]
+  codeUnlocks    TestCodeUnlock[]
 
   @@index([createdAt])
   @@index([collectionCategory])
   @@index([visible])
+  @@index([questionSourceId])
 }
 
 model TestCollectionVisibility {

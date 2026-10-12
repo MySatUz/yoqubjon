@@ -2,6 +2,7 @@
 
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
+import { questionsShownBy } from '@/lib/questionSource';
 import { renderMathHtml } from '@/lib/renderMathHtml';
 import { normalizeStoredAnswer } from '@/lib/resultAnswers';
 
@@ -64,10 +65,11 @@ export async function revealResultQuestion(
     return { error: 'Result not found.' };
   }
 
-  // Scoped to the attempt's own test, so a question id from another test
-  // cannot be read through somebody's own result.
+  // Scoped to the questions the attempt's test shows - its own, or for a copy
+  // its original's - so a question id from another test cannot be read through
+  // somebody's own result.
   const question = await prisma.question.findFirst({
-    where: { id: questionId, testId: result.testId },
+    where: { id: questionId, ...questionsShownBy(result.testId) },
     select: {
       id: true,
       order: true,

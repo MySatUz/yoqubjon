@@ -1,6 +1,7 @@
 import TestList from '@/components/admin/TestList';
 import { requireAdminPage } from '@/lib/admin';
 import { prisma } from '@/lib/prisma';
+import { getShownQuestions } from '@/lib/questionSource';
 import { getTestCollections } from '@/lib/testCatalog';
 import { getCollectionVisibilityRows } from '@/lib/testCollections';
 import { ArrowLeft } from 'lucide-react';
@@ -9,6 +10,17 @@ import { notFound } from 'next/navigation';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
+
+const EDITOR_QUESTION_FIELDS = {
+  id: true,
+  content: true,
+  options: true,
+  correctAnswer: true,
+  explanation: true,
+  imageUrl: true,
+  videoUrl: true,
+  order: true,
+} as const;
 
 export default async function AdminTestEditorPage({
   params,
@@ -25,19 +37,22 @@ export default async function AdminTestEditorPage({
       include: {
         questions: {
           orderBy: { order: 'asc' },
+          select: EDITOR_QUESTION_FIELDS,
+        },
+        // A copy edits its original's questions: it has none of its own.
+        questionSource: {
           select: {
-            id: true,
-            content: true,
-            options: true,
-            correctAnswer: true,
-            explanation: true,
-            imageUrl: true,
-            videoUrl: true,
-            order: true,
+            title: true,
+            collectionCategory: true,
+            questions: {
+              orderBy: { order: 'asc' },
+              select: EDITOR_QUESTION_FIELDS,
+            },
+            _count: { select: { questions: true } },
           },
         },
         _count: {
-          select: { questions: true },
+          select: { questions: true, questionCopies: true },
         },
       },
     }),
@@ -49,6 +64,7 @@ export default async function AdminTestEditorPage({
   }
 
   const collections = getTestCollections(collectionRows);
+  const editableTest = { ...test, questions: getShownQuestions(test) };
 
   return (
     <div className="px-4 py-10 sm:px-6 lg:px-8">
@@ -61,7 +77,7 @@ export default async function AdminTestEditorPage({
           Back to tests
         </Link>
 
-        <TestList tests={[test]} collections={collections} initialOpenTestId={test.id} />
+        <TestList tests={[editableTest]} collections={collections} initialOpenTestId={test.id} />
       </div>
     </div>
   );

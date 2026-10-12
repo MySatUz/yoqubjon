@@ -74,6 +74,8 @@ export default async function AdminTestStatsPage({
       durationSeconds: true,
       moduleDurations: true,
       _count: { select: { questions: true } },
+      // A copy is scored on its original's questions.
+      questionSource: { select: { _count: { select: { questions: true } } } },
     },
   });
 
@@ -96,7 +98,7 @@ export default async function AdminTestStatsPage({
   const category = getTestCategory(test);
   const categoryLabel = category ? getCategoryLabel(category, collections) : 'Unassigned';
   const moduleCount = readModuleDurations(test).length;
-  const questionCount = test._count.questions;
+  const questionCount = test.questionSource?._count.questions ?? test._count.questions;
 
   const averageScore = Math.round(totals._avg.score ?? 0);
   const bestScore = totals._max.score ?? 0;

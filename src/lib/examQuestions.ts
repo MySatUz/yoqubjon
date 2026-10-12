@@ -1,6 +1,7 @@
 import { cache } from 'react';
 import { unstable_cache } from 'next/cache';
 import { prisma } from '@/lib/prisma';
+import { questionsShownBy } from '@/lib/questionSource';
 import { renderMathHtml } from '@/lib/renderMathHtml';
 import { isMultiSelectKey } from '@/lib/resultAnswers';
 
@@ -11,7 +12,8 @@ import { isMultiSelectKey } from '@/lib/resultAnswers';
  * 386 formulas measured), which is far too much to pay on every exam start, so
  * the result is kept in the Next data cache per test and invalidated by tag.
  * Every admin action that writes questions or replaces a test must call
- * `revalidateTag(examQuestionsCacheTag(testId), { expire: 0 })`.
+ * `revalidateTag(examQuestionsCacheTag(testId), { expire: 0 })` - for the test
+ * and for each of its copies, which cache the same questions under their own id.
  *
  * Only question content is cached here - never a permission check. Visibility,
  * attempt counts and subscriptions are read fresh in `/exam/[id]`.
@@ -43,7 +45,7 @@ function readOptions(options: unknown) {
 
 async function readExamQuestionsHtml(testId: string): Promise<ExamQuestionHtml[]> {
   const questions = await prisma.question.findMany({
-    where: { testId },
+    where: questionsShownBy(testId),
     orderBy: { order: 'asc' },
     // Correct answers stay out of this cache entry: it is rendered into the
     // exam page, which the student can read. `correctAnswer` is read only to

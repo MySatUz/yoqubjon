@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma';
+import { getShownQuestions } from '@/lib/questionSource';
 import { gradeAnswer } from '@/lib/resultAnswers';
 import { EXAM_TIME_GRACE_SECONDS, MAX_EXAM_DURATION_SECONDS } from '@/lib/examConfig';
 import { estimateSatMathScore } from '@/lib/satScoring';
@@ -125,6 +126,8 @@ export async function createExamResult(
   });
   userPromise.catch(() => {});
 
+  // A copy is graded against its original's questions, which it shows instead
+  // of having its own; both selections ride on the one query.
   const test = await prisma.test.findUnique({
     where: { id: submission.testId },
     include: {
@@ -132,10 +135,19 @@ export async function createExamResult(
         orderBy: { order: 'asc' },
         select: { id: true, correctAnswer: true, moduleIndex: true },
       },
+      questionSource: {
+        select: {
+          questions: {
+            orderBy: { order: 'asc' },
+            select: { id: true, correctAnswer: true, moduleIndex: true },
+          },
+        },
+      },
     },
   });
+  const questions = test ? getShownQuestions(test) : [];
 
-  if (!test || test.questions.length === 0) {
+  if (!test || questions.length === 0) {
     throw new ExamSubmissionError('Test not found', 404);
   }
 
@@ -150,7 +162,7 @@ export async function createExamResult(
     throw new ExamSubmissionError('Invalid time spent', 400);
   }
 
-  if (Object.keys(submission.answers).length > test.questions.length * 2) {
+  if (Object.keys(submission.answers).length > questions.length * 2) {
     throw new ExamSubmissionError('Too many answers', 400);
   }
 
@@ -186,7 +198,7 @@ export async function createExamResult(
     moduleIndex: number;
   }> = {};
 
-  test.questions.forEach((question, index) => {
+  questions.forEach((question, index) => {
     const userAnswer =
       submission.answers[question.id] ??
       submission.answers[index.toString()] ??
@@ -208,7 +220,7 @@ export async function createExamResult(
   // two decimals so the stored total is the number the review pages show and
   // not the sum of a dozen binary fractions.
   const correctCount = Math.round(earnedCredit * 100) / 100;
-  const score = estimateSatMathScore(correctCount, test.questions.length);
+  const score = estimateSatMathScore(correctCount, questions.length);
 
   const resultData = {
     userId,
@@ -274,6 +286,6 @@ export async function createExamResult(
     resultId: result.id,
     score,
     correctCount,
-    totalQuestions: test.questions.length,
+    totalQuestions: questions.length,
   };
 }

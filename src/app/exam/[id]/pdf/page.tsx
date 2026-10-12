@@ -5,10 +5,21 @@ import { requireAdminPage } from '@/lib/admin';
 import { prisma } from '@/lib/prisma';
 import { renderMathText } from '@/lib/renderMathText';
 import { buildExamModules } from '@/lib/examModules';
+import { getShownQuestions } from '@/lib/questionSource';
 import { isMultiSelectKey } from '@/lib/resultAnswers';
 import { ArrowLeft, FileText } from 'lucide-react';
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
+
+const PDF_QUESTION_FIELDS = {
+  id: true,
+  content: true,
+  options: true,
+  correctAnswer: true,
+  imageUrl: true,
+  order: true,
+  moduleIndex: true,
+} as const;
 
 type QuestionForPdf = {
   id: string;
@@ -107,14 +118,15 @@ export default async function ExamPdfPage({ params }: { params: Promise<{ id: st
       moduleDurations: true,
       questions: {
         orderBy: { order: 'asc' },
+        select: PDF_QUESTION_FIELDS,
+      },
+      // A copy prints its original's questions; it has none of its own.
+      questionSource: {
         select: {
-          id: true,
-          content: true,
-          options: true,
-          correctAnswer: true,
-          imageUrl: true,
-          order: true,
-          moduleIndex: true,
+          questions: {
+            orderBy: { order: 'asc' },
+            select: PDF_QUESTION_FIELDS,
+          },
         },
       },
     },
@@ -124,7 +136,8 @@ export default async function ExamPdfPage({ params }: { params: Promise<{ id: st
     notFound();
   }
 
-  const modules = buildExamModules(test, test.questions);
+  const questions = getShownQuestions(test);
+  const modules = buildExamModules(test, questions);
   const isModular = modules.length > 1;
 
   return (
@@ -166,7 +179,7 @@ export default async function ExamPdfPage({ params }: { params: Promise<{ id: st
             </div>
             <h1 className="text-4xl font-black tracking-tight print:text-2xl">{test.title}</h1>
             <p className="mt-3 text-sm font-semibold text-slate-300 print:text-slate-500">
-              {test.questions.length} questions | Generated from MYSATuz
+              {questions.length} questions | Generated from MYSATuz
             </p>
           </header>
 

@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma';
+import { questionsShownBy } from '@/lib/questionSource';
 import { getTotalDurationSeconds } from '@/lib/examModules';
 import {
   rankOlympiadAttempts,
@@ -29,7 +30,7 @@ export async function getOlympiadResults(
         user: { select: { name: true } },
       },
     }),
-    prisma.question.count({ where: { testId } }),
+    prisma.question.count({ where: questionsShownBy(testId) }),
   ]);
 
   const standings = rankOlympiadAttempts(attempts);

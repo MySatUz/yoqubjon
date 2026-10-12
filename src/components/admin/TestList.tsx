@@ -2,9 +2,9 @@
 
 import React, { memo, useCallback, useMemo, useOptimistic, useState, useTransition } from 'react';
 import Link from 'next/link';
-import { deleteTest, updateQuestion, updateTestDetails, updateTestVisibility } from '@/app/admin/actions';
-import { toOlympiadInputValue } from '@/lib/olympiad';
-import { BarChart3, ChevronDown, Clock3, Edit3, Eye, EyeOff, FileDown, ImageIcon, KeyRound, Layers, Loader2, Plus, Repeat2, Save, Settings2, Trash2, Trophy, Video, X } from 'lucide-react';
+import { copyTest, deleteTest, updateQuestion, updateTestDetails, updateTestVisibility } from '@/app/admin/actions';
+import { formatOlympiadMoment, readOlympiadWindow, toOlympiadInputValue } from '@/lib/olympiad';
+import { ArrowUpRight, BarChart3, ChevronDown, Clock3, Copy, Edit3, Eye, EyeOff, FileDown, ImageIcon, KeyRound, Layers, Loader2, Plus, Repeat2, Save, Settings2, Trash2, Trophy, Video, X } from 'lucide-react';
 import { getCategoryLabel, getTestCategory, type TestCollectionOption } from '@/lib/testCatalog';
 import { MAX_TEST_MAX_ATTEMPTS, MIN_TEST_MAX_ATTEMPTS } from '@/lib/testAttempts';
 import { formatModuleBadge, readModuleDurations, secondsToMinutes } from '@/lib/examModules';
@@ -36,9 +36,31 @@ type AdminTest = {
   isFree: boolean;
   visible: boolean;
   createdAt: Date;
+  /** Set on a copy: the test whose questions it shows. */
+  questionSourceId: string | null;
+  questionSource: {
+    title: string;
+    collectionCategory: string | null;
+    _count: { questions: number };
+  } | null;
   questions?: AdminQuestion[];
-  _count: { questions: number };
+  _count: { questions: number; questionCopies: number };
 };
+
+/** Says what a delete takes with it, because a copy and an original differ. */
+function describeDelete(test: AdminTest) {
+  if (test.questionSource) {
+    return `Delete this copy? Its results will be lost. The questions stay with "${test.questionSource.title}".`;
+  }
+
+  const copies = test._count.questionCopies;
+  if (copies > 0) {
+    return `Delete this test? It is also shown as ${copies} ${copies === 1 ? 'copy' : 'copies'} in other places, `
+      + `which will be deleted too. All questions and results will be lost.`;
+  }
+
+  return 'Are you sure you want to delete this test? All questions and results will be lost.';
+}
 
 interface TestListProps {
   tests: AdminTest[];
@@ -300,6 +322,172 @@ function TestSettingsEditor({
   );
 }
 
+type CopyResult = Awaited<ReturnType<typeof copyTest>>;
+
+/**
+ * Puts the test into a section under a new title. The copy has its own title,
+ * section, settings and results, and shows this test's questions instead of
+ * storing them again.
+ */
+function TestCopyForm({
+  test,
+  collections,
+  onClose,
+}: {
+  test: AdminTest;
+  collections: TestCollectionOption[];
+  onClose: () => void;
+}) {
+  const [isCopying, setIsCopying] = useState(false);
+  const [result, setResult] = useState<CopyResult | null>(null);
+  const sourceCategory = getTestCategory(test);
+  // Another section is the usual reason to copy, so one is preselected.
+  const defaultCategory = collections.find((collection) => collection.value !== sourceCategory)?.value
+    ?? collections[0]?.value
+    ?? '';
+  const olympiadWindow = readOlympiadWindow(test);
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setIsCopying(true);
+    setResult(null);
+
+    // `copyTest` calls `refresh()` itself, so the section counts - and the new
+    // row, for a copy into this same section - arrive with this response.
+    const response = await copyTest(test.id, new FormData(event.currentTarget));
+    setResult(response);
+    setIsCopying(false);
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="rounded-2xl border border-slate-200 bg-white p-5">
+      <div className="mb-5 flex items-center justify-between gap-3">
+        <span className="flex items-center gap-2 text-xs font-medium uppercase tracking-widest text-blue-600">
+          <Copy className="h-4 w-4" />
+          Copy test
+        </span>
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close"
+          className="inline-flex h-8 w-8 items-center justify-center rounded-xl text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
+        >
+          <X className="h-4 w-4" />
+        </button>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-[1fr_1.4fr_auto]">
+        <label className="block">
+          <span className="mb-2 block text-xs font-medium uppercase tracking-wide text-slate-500">
+            To section
+          </span>
+          <select
+            name="testCategory"
+            required
+            defaultValue={defaultCategory}
+            className="w-full rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-900 outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+          >
+            {collections.map((collection) => (
+              <option key={collection.value} value={collection.value}>
+                {collection.value === sourceCategory ? `${collection.label} (this section)` : collection.label}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="block">
+          <span className="mb-2 block text-xs font-medium uppercase tracking-wide text-slate-500">
+            New title
+          </span>
+          <input
+            name="title"
+            required
+            defaultValue={test.title}
+            autoFocus
+            className="w-full rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-900 outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+          />
+        </label>
+
+        <div className="flex items-end">
+          <button
+            type="submit"
+            disabled={isCopying || collections.length === 0}
+            className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {isCopying ? <Loader2 className="h-4 w-4 animate-spin" /> : <Copy className="h-4 w-4" />}
+            Copy test
+          </button>
+        </div>
+      </div>
+
+      {(olympiadWindow || test.accessCode) && (
+        <div className="mt-4 grid gap-2">
+          {olympiadWindow && (
+            <label className="flex items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+              <input
+                name="keepOlympiadWindow"
+                type="checkbox"
+                value="true"
+                defaultChecked
+                className="mt-0.5 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+              />
+              <span className="text-sm text-slate-700">
+                <span className="font-medium">Keep the olympiad window</span>
+                {' '}&mdash; {formatOlympiadMoment(olympiadWindow.startsAt)} to {formatOlympiadMoment(olympiadWindow.endsAt)}, Tashkent time.
+                <span className="block text-xs text-slate-500">Without it the copy is an ordinary test.</span>
+              </span>
+            </label>
+          )}
+          {test.accessCode && (
+            <label className="flex items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+              <input
+                name="keepAccessCode"
+                type="checkbox"
+                value="true"
+                defaultChecked
+                className="mt-0.5 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+              />
+              <span className="text-sm text-slate-700">
+                <span className="font-medium">Keep the start code</span>
+                {' '}<span className="tabular-nums">{test.accessCode}</span>.
+                <span className="block text-xs text-slate-500">Without it the copy opens with no code.</span>
+              </span>
+            </label>
+          )}
+        </div>
+      )}
+
+      <p className="mt-4 text-xs text-slate-500">
+        The copy shows this test&apos;s questions and images without storing them again, so
+        editing a question changes it in both, and deleting the original deletes the copy.
+        Settings are copied once; the copy keeps its own results.
+      </p>
+
+      {result?.success && (
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-emerald-100 bg-emerald-50 p-3 text-sm font-semibold text-emerald-700">
+          <span>
+            Copied to {getCategoryLabel(result.category, collections)} as &ldquo;{result.title}&rdquo;.
+          </span>
+          <Link
+            href={`/admin/tests/${result.testId}`}
+            prefetch={false}
+            className="inline-flex items-center gap-1 text-blue-600 transition hover:text-blue-700"
+          >
+            Open the copy
+            <ArrowUpRight className="h-4 w-4" />
+          </Link>
+        </div>
+      )}
+
+      {result && !result.success && (
+        <div className="mt-4 rounded-2xl border border-red-100 bg-red-50 p-3 text-sm font-semibold text-red-700">
+          Error: {result.error}
+        </div>
+      )}
+    </form>
+  );
+}
+
 /**
  * Owns the editable answer options. It is remounted through a `key` built from
  * the saved options, so a refresh that actually changed them re-syncs the
@@ -532,7 +720,7 @@ type TestRowProps = {
   isSavingVisibility: boolean;
   onToggleOpen: (testId: string) => void;
   onToggleVisibility: (testId: string, visible: boolean) => void;
-  onDelete: (testId: string) => void;
+  onDelete: (test: AdminTest) => void;
 };
 
 const TestRow = memo(function TestRow({
@@ -553,14 +741,16 @@ const TestRow = memo(function TestRow({
   const moduleBadge = formatModuleBadge(test);
   const questions = test.questions;
   const hasLoadedQuestions = Array.isArray(questions);
+  const [isCopyFormOpen, setIsCopyFormOpen] = useState(false);
 
   return (
     <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-all hover:border-blue-200">
-      <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
+      {/* Wraps the actions under the title once five of them no longer fit beside it. */}
+      <div className="flex flex-col gap-4 p-5 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <button
           type="button"
           onClick={() => onToggleOpen(test.id)}
-          className="flex min-w-0 flex-1 items-start gap-3 text-left"
+          className="flex min-w-0 flex-1 items-start gap-3 text-left sm:min-w-64"
         >
           <span className="mt-1 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-500">
             <ChevronDown className={`h-5 w-5 transition ${isOpen ? 'rotate-180' : ''}`} />
@@ -604,9 +794,23 @@ const TestRow = memo(function TestRow({
                   Code {test.accessCode}
                 </span>
               )}
+              {test.questionSource && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-medium uppercase text-blue-700">
+                  <Copy className="h-3 w-3" />
+                  Copy
+                </span>
+              )}
+              {test._count.questionCopies > 0 && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium uppercase tabular-nums text-slate-600">
+                  <Copy className="h-3 w-3" />
+                  {test._count.questionCopies} {test._count.questionCopies === 1 ? 'copy' : 'copies'}
+                </span>
+              )}
             </span>
             <span className="mt-1 block text-xs font-medium text-slate-400">
-              {test._count.questions} questions | Uploaded {UPLOADED_DATE_FORMAT.format(new Date(test.createdAt))}
+              {test.questionSource
+                ? <>{test.questionSource._count.questions} questions from &ldquo;{test.questionSource.title}&rdquo; | Copied {UPLOADED_DATE_FORMAT.format(new Date(test.createdAt))}</>
+                : <>{test._count.questions} questions | Uploaded {UPLOADED_DATE_FORMAT.format(new Date(test.createdAt))}</>}
             </span>
           </span>
         </button>
@@ -651,7 +855,19 @@ const TestRow = memo(function TestRow({
 
           <button
             type="button"
-            onClick={() => onDelete(test.id)}
+            onClick={() => setIsCopyFormOpen((current) => !current)}
+            aria-expanded={isCopyFormOpen}
+            className={`inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold transition-all hover:bg-blue-50 hover:text-blue-600 ${
+              isCopyFormOpen ? 'bg-blue-50 text-blue-600' : 'text-slate-500'
+            }`}
+          >
+            <Copy className="h-5 w-5" />
+            Copy
+          </button>
+
+          <button
+            type="button"
+            onClick={() => onDelete(test)}
             disabled={isDeleting}
             className="inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold text-slate-400 transition-all hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
           >
@@ -665,9 +881,23 @@ const TestRow = memo(function TestRow({
         </div>
       </div>
 
+      {isCopyFormOpen && (
+        <div className="border-t border-slate-100 bg-slate-50 p-4 sm:p-5">
+          <TestCopyForm test={test} collections={collections} onClose={() => setIsCopyFormOpen(false)} />
+        </div>
+      )}
+
       {isOpen && (
         <div className="space-y-3 border-t border-slate-100 bg-slate-50 p-4 sm:p-5">
           <TestSettingsEditor test={test} collections={collections} />
+
+          {test.questionSource && (
+            <p className="rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-700">
+              This copy shows the questions of &ldquo;{test.questionSource.title}&rdquo;
+              {' '}({getCategoryLabel(test.questionSource.collectionCategory, collections)}).
+              Editing a question changes it there and in every other copy.
+            </p>
+          )}
 
           {hasLoadedQuestions ? (
             questions.length > 0 ? (
@@ -718,9 +948,10 @@ export default function TestList({ tests, collections, initialOpenTestId = null 
     setOpenTestId((current) => current === id ? null : id);
   }, []);
 
-  const handleDelete = useCallback((id: string) => {
-    if (!confirm('Are you sure you want to delete this test? All questions and results will be lost.')) return;
+  const handleDelete = useCallback((test: AdminTest) => {
+    if (!confirm(describeDelete(test))) return;
 
+    const { id } = test;
     setDeletingId(id);
     startTransition(async () => {
       // `deleteTest` calls `refresh()` on the server, so the new list is part of
