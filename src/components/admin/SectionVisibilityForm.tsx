@@ -7,7 +7,7 @@ import {
   deleteTestCollection,
   updateSectionSettings,
 } from '@/app/admin/actions';
-import { ArrowUpRight, Atom, CheckCircle2, Eye, EyeOff, Layers3, Loader2, PlusCircle, Repeat2, Sparkles, Trash2 } from 'lucide-react';
+import { ArrowUpRight, Atom, CheckCircle2, Eye, EyeOff, Layers3, Loader2, Pencil, PlusCircle, Repeat2, Sparkles, Trash2 } from 'lucide-react';
 import type { TestCollectionOption } from '@/lib/testCatalog';
 import {
   DEFAULT_TEST_MAX_ATTEMPTS,
@@ -32,19 +32,29 @@ type SectionCardProps = {
   icon: ReturnType<typeof getSectionIcon>;
   isDeleting: boolean;
   canDelete: boolean;
+  isRenaming: boolean;
+  isSaving: boolean;
   onDelete: (collection: TestCollectionOption) => void;
+  onRenameChange: (category: string | null) => void;
 };
 
 /**
  * The visibility toggle lives here so ticking one section re-renders one card
  * instead of the whole grid. The checkbox is still read from the form on submit.
+ *
+ * Renaming works the same way: the name fields belong to the surrounding form
+ * and are only rendered while the card is open for renaming, which is how the
+ * server tells a rename apart from a plain save.
  */
 const SectionCard = memo(function SectionCard({
   option,
   icon: Icon,
   isDeleting,
   canDelete,
+  isRenaming,
+  isSaving,
   onDelete,
+  onRenameChange,
 }: SectionCardProps) {
   const [isVisible, setIsVisible] = useState(option.visible);
 
@@ -66,41 +76,105 @@ const SectionCard = memo(function SectionCard({
         >
           <Icon className="h-5 w-5" />
         </Link>
-        <label className={`inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-full bg-white shadow-sm transition hover:ring-4 hover:ring-blue-100 ${
-          isVisible ? 'text-blue-600' : 'text-slate-300'
-        }`}>
-        <input
-          type="checkbox"
-          name={`visible_${option.value}`}
-          value="true"
-          checked={isVisible}
-          onChange={(event) => setIsVisible(event.target.checked)}
-          className="sr-only"
-          aria-label={`${isVisible ? 'Hide' : 'Show'} ${option.label}`}
-        />
-          {isVisible ? (
-            <Eye className="h-4 w-4" />
-          ) : (
-            <EyeOff className="h-4 w-4" />
-          )}
-        </label>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => onRenameChange(isRenaming ? null : option.value)}
+            aria-pressed={isRenaming}
+            aria-label={`Rename ${option.label}`}
+            title="Rename"
+            className={`inline-flex h-9 w-9 items-center justify-center rounded-full bg-white shadow-sm transition hover:text-blue-600 hover:ring-4 hover:ring-blue-100 ${
+              isRenaming ? 'text-blue-600' : 'text-slate-400'
+            }`}
+          >
+            <Pencil className="h-4 w-4" />
+          </button>
+          <label className={`inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-full bg-white shadow-sm transition hover:ring-4 hover:ring-blue-100 ${
+            isVisible ? 'text-blue-600' : 'text-slate-300'
+          }`}>
+          <input
+            type="checkbox"
+            name={`visible_${option.value}`}
+            value="true"
+            checked={isVisible}
+            onChange={(event) => setIsVisible(event.target.checked)}
+            className="sr-only"
+            aria-label={`${isVisible ? 'Hide' : 'Show'} ${option.label}`}
+          />
+            {isVisible ? (
+              <Eye className="h-4 w-4" />
+            ) : (
+              <EyeOff className="h-4 w-4" />
+            )}
+          </label>
+        </div>
       </div>
 
-      <Link
-        href={`/admin/sections/${option.value.toLowerCase()}`}
-        prefetch={false}
-        className="group block rounded-xl outline-none focus-visible:ring-4 focus-visible:ring-blue-100"
-      >
-        <h4 className="text-lg font-semibold text-slate-900">{option.label}</h4>
-        <p className="mt-2 min-h-12 text-xs font-medium leading-relaxed text-slate-500">{option.description}</p>
-        <p className="mt-4 text-xs font-medium uppercase tracking-widest text-blue-600">
-          {isVisible ? 'Shown in Practice Center' : 'Hidden from students'}
-        </p>
-        <span className="mt-4 inline-flex items-center gap-2 text-xs font-medium uppercase tracking-widest text-slate-500 transition group-hover:text-blue-600">
-          Open results
-          <ArrowUpRight className="h-4 w-4" />
-        </span>
-      </Link>
+      {isRenaming ? (
+        <div className="space-y-3">
+          <label className="block">
+            <span className="mb-1 block text-[11px] font-medium uppercase tracking-wide text-slate-500">
+              Section name
+            </span>
+            <input
+              name={`label_${option.value}`}
+              required
+              maxLength={80}
+              defaultValue={option.label}
+              autoFocus
+              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900 outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+            />
+          </label>
+          <label className="block">
+            <span className="mb-1 block text-[11px] font-medium uppercase tracking-wide text-slate-500">
+              Description
+            </span>
+            <input
+              name={`description_${option.value}`}
+              maxLength={180}
+              defaultValue={option.description}
+              placeholder="Short description"
+              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+            />
+          </label>
+          <p className="text-xs text-slate-500">
+            Students see the new name everywhere. Tests, access and results stay in this section.
+          </p>
+          <div className="flex gap-2">
+            <button
+              type="submit"
+              disabled={isSaving}
+              className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-blue-700 disabled:cursor-wait disabled:opacity-60"
+            >
+              {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+              Save
+            </button>
+            <button
+              type="button"
+              onClick={() => onRenameChange(null)}
+              className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-600 transition hover:border-slate-300 hover:text-slate-900"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      ) : (
+        <Link
+          href={`/admin/sections/${option.value.toLowerCase()}`}
+          prefetch={false}
+          className="group block rounded-xl outline-none focus-visible:ring-4 focus-visible:ring-blue-100"
+        >
+          <h4 className="text-lg font-semibold text-slate-900">{option.label}</h4>
+          <p className="mt-2 min-h-12 text-xs font-medium leading-relaxed text-slate-500">{option.description}</p>
+          <p className="mt-4 text-xs font-medium uppercase tracking-widest text-blue-600">
+            {isVisible ? 'Shown in Practice Center' : 'Hidden from students'}
+          </p>
+          <span className="mt-4 inline-flex items-center gap-2 text-xs font-medium uppercase tracking-widest text-slate-500 transition group-hover:text-blue-600">
+            Open results
+            <ArrowUpRight className="h-4 w-4" />
+          </span>
+        </Link>
+      )}
 
       <label className="mt-5 flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3">
         <span className="flex items-center gap-2 text-xs font-medium uppercase tracking-widest text-slate-500">
@@ -140,6 +214,8 @@ export default function SectionVisibilityForm({ collections }: SectionVisibility
   const [isSaving, setIsSaving] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [deletingCategory, setDeletingCategory] = useState<string | null>(null);
+  // One card at a time: opening another one drops the first card's unsaved name.
+  const [renamingCategory, setRenamingCategory] = useState<string | null>(null);
   const [result, setResult] = useState<ActionResult>(null);
 
   const handleCreate = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -167,6 +243,11 @@ export default function SectionVisibilityForm({ collections }: SectionVisibility
     const response = await updateSectionSettings(new FormData(event.currentTarget));
     setResult(response.success ? { ...response, message: 'Sections updated.' } : response);
     setIsSaving(false);
+
+    // A failed save keeps the card open, so the typed name is not lost.
+    if (response.success) {
+      setRenamingCategory(null);
+    }
   };
 
   const handleDelete = useCallback(async (collection: TestCollectionOption) => {
@@ -185,7 +266,7 @@ export default function SectionVisibilityForm({ collections }: SectionVisibility
         <div>
           <h3 className="text-2xl font-semibold tracking-tight text-slate-900">Practice sections</h3>
           <p className="mt-2 max-w-2xl text-sm font-semibold leading-relaxed text-slate-500">
-            Create, delete, and choose which sections appear in Practice Center. The attempt limit
+            Create, rename, delete, and choose which sections appear in Practice Center. The attempt limit
             is the rule for the whole section: changing it applies to every test inside and to new
             uploads.
           </p>
@@ -245,7 +326,10 @@ export default function SectionVisibilityForm({ collections }: SectionVisibility
               icon={getSectionIcon(option.value)}
               isDeleting={deletingCategory === option.value}
               canDelete={collections.length > 1}
+              isRenaming={renamingCategory === option.value}
+              isSaving={isSaving}
               onDelete={handleDelete}
+              onRenameChange={setRenamingCategory}
             />
           ))}
         </div>

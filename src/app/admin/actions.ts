@@ -38,6 +38,8 @@ const ALLOWED_IMAGE_TYPES = new Set(['image/png', 'image/jpeg', 'image/jpg', 'im
 const QUESTION_IMAGE_BUCKET = 'questions';
 const STORAGE_LIST_PAGE_SIZE = 1000;
 const TEST_ID_PATTERN = /^[0-9a-f-]{36}$/i;
+const MAX_SECTION_LABEL_LENGTH = 80;
+const MAX_SECTION_DESCRIPTION_LENGTH = 180;
 const MIN_DURATION_MINUTES = Math.ceil(MIN_EXAM_DURATION_SECONDS / 60);
 const MAX_DURATION_MINUTES = Math.floor(MAX_EXAM_DURATION_SECONDS / 60);
 
@@ -547,6 +549,35 @@ async function resolveCollectionCategory(value: FormDataEntryValue | null) {
   return { category: fallback.category, maxAttempts: fallback.maxAttempts };
 }
 
+/**
+ * Reads a section's new name and description. A card sends them only while it
+ * is open for renaming, so a missing field means "leave it as it is", never
+ * "clear it".
+ *
+ * Only what people read changes. The `category` id stays, because tests, access
+ * grants and the result pages all point at it.
+ */
+function readSectionRename(formData: FormData, category: string) {
+  const label = formData.get(`label_${category}`);
+  if (label === null) return {};
+
+  const name = normalizeRequiredText(label, 'Section name');
+  if (name.length > MAX_SECTION_LABEL_LENGTH) {
+    throw new Error(`Section name must be at most ${MAX_SECTION_LABEL_LENGTH} characters`);
+  }
+
+  const descriptionField = formData.get(`description_${category}`);
+  if (descriptionField === null) return { label: name };
+
+  // Empty falls back to the default description, as it does for a new section.
+  const description = normalizeNullableText(descriptionField);
+  if (description && description.length > MAX_SECTION_DESCRIPTION_LENGTH) {
+    throw new Error(`Section description must be at most ${MAX_SECTION_DESCRIPTION_LENGTH} characters`);
+  }
+
+  return { label: name, description };
+}
+
 export async function updateSectionSettings(formData: FormData) {
   try {
     await requireAdmin();
@@ -584,6 +615,7 @@ export async function updateSectionSettings(formData: FormData) {
           data: {
             visible: formData.get(`visible_${category}`) === 'true',
             maxAttempts,
+            ...readSectionRename(formData, category),
           },
         }),
       ];
