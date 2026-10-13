@@ -81,7 +81,7 @@ export default function ExamRunner({ testId, modules, canDraw = false }: ExamRun
 
   return (
     <main className="flex flex-col h-screen bg-slate-50 overflow-hidden">
-      <TopNav testId={testId} modules={specs} />
+      <TopNav testId={testId} modules={specs} canDraw={canDraw} />
       {isWaitingForModuleStart ? (
         <ModuleTransition
           moduleIndex={activeModule.index}
@@ -96,7 +96,7 @@ export default function ExamRunner({ testId, modules, canDraw = false }: ExamRun
               module 1, question 1 whatever the attempt is really on, and the
               board has no attempt to file its drawings under. */}
           <SplitScreen questions={activeModule.questions} canDraw={canDraw && isReady} />
-          <BottomNav testId={testId} modules={specs} canDraw={canDraw} />
+          <BottomNav testId={testId} modules={specs} />
         </>
       )}
     </main>

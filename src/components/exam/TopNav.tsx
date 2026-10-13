@@ -6,14 +6,27 @@ import ReferenceModal from '@/components/exam/ReferenceModal';
 import { flushPendingAnswer } from '@/components/exam/pendingAnswer';
 import { useExamSubmit } from '@/components/exam/useExamSubmit';
 import type { ExamModuleSpec } from '@/lib/examModules';
-import { BookOpen, Calculator } from 'lucide-react';
+import { BookOpen, Calculator, PenLine } from 'lucide-react';
+
+/**
+ * The exam tools are icons at every width, each named by its tooltip and
+ * label: spelled out, "Reference Sheet" and "Graphing Calculator" left no room
+ * on a 1024px screen for a third tool beside the centred clock.
+ */
+const toolButtonClass =
+  'inline-flex h-9 w-9 items-center justify-center rounded-xl transition-colors';
+const toolIdleClass = 'text-slate-700 hover:bg-slate-100';
+const toolActiveClass = 'bg-blue-100 text-blue-700';
+const toolIconClass = 'h-4 w-4 sm:h-5 sm:w-5';
 
 interface TopNavProps {
   testId: string;
   modules: ExamModuleSpec[];
+  /** Shows the whiteboard switch - admins only, see `/exam/[id]`. */
+  canDraw?: boolean;
 }
 
-export default function TopNav({ testId, modules }: TopNavProps) {
+export default function TopNav({ testId, modules, canDraw = false }: TopNavProps) {
   // The clock lives here, so this is the one component that has to follow
   // `timeLeftSeconds` - the auto handover below depends on it.
   const timeLeftSeconds = useExamStore((state) => state.timeLeftSeconds);
@@ -22,15 +35,19 @@ export default function TopNav({ testId, modules }: TopNavProps) {
   const currentQuestionIndex = useExamStore((state) => state.currentQuestionIndex);
   const isCalculatorOpen = useExamStore((state) => state.isCalculatorOpen);
   const isReferenceOpen = useExamStore((state) => state.isReferenceOpen);
+  const isWhiteboardOpen = useExamStore((state) => state.isWhiteboardOpen);
   const finishCurrentModule = useExamStore((state) => state.finishCurrentModule);
   const setCalculatorOpen = useExamStore((state) => state.setCalculatorOpen);
   const setReferenceOpen = useExamStore((state) => state.setReferenceOpen);
+  const setWhiteboardOpen = useExamStore((state) => state.setWhiteboardOpen);
   const { isSubmitting, submitExam } = useExamSubmit(testId);
   const autoEndedModuleRef = useRef<number | null>(null);
 
   const moduleCount = modules.length;
   const isLastModule = currentModuleIndex >= moduleCount;
   const isPaused = modulePhase === 'pending';
+  // Between modules there is no question on screen to draw over.
+  const showWhiteboardSwitch = canDraw && !isPaused;
 
   useEffect(() => {
     if (isPaused || timeLeftSeconds > 0) return;
@@ -117,36 +134,39 @@ export default function TopNav({ testId, modules }: TopNavProps) {
           </span>
         </div>
 
-        <div className="flex items-center gap-1 sm:gap-3">
+        <div className="flex items-center gap-1">
+          {/* Admin-only, so it goes on the outside: a student's two tools keep
+              their places. */}
+          {showWhiteboardSwitch && (
+            <button
+              type="button"
+              onClick={() => setWhiteboardOpen(!isWhiteboardOpen)}
+              aria-pressed={isWhiteboardOpen}
+              aria-label={isWhiteboardOpen ? 'Close Whiteboard' : 'Whiteboard'}
+              title={isWhiteboardOpen ? 'Close Whiteboard' : 'Whiteboard'}
+              className={`${toolButtonClass} ${isWhiteboardOpen ? toolActiveClass : toolIdleClass}`}
+            >
+              <PenLine className={toolIconClass} />
+            </button>
+          )}
           <button
+            type="button"
             onClick={() => setReferenceOpen(true)}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-slate-700 transition-colors hover:bg-slate-100 sm:hidden"
             aria-label="Reference Sheet"
+            title="Reference Sheet"
+            className={`${toolButtonClass} ${toolIdleClass}`}
           >
-            <BookOpen className="h-4 w-4" />
+            <BookOpen className={toolIconClass} />
           </button>
           <button
+            type="button"
             onClick={() => setCalculatorOpen(!isCalculatorOpen)}
-            className={`inline-flex h-9 w-9 items-center justify-center rounded-xl transition-colors sm:hidden ${
-              isCalculatorOpen ? 'bg-blue-100 text-blue-700' : 'text-slate-700 hover:bg-slate-100'
-            }`}
+            aria-pressed={isCalculatorOpen}
             aria-label={isCalculatorOpen ? 'Close Calculator' : 'Graphing Calculator'}
+            title={isCalculatorOpen ? 'Close Calculator' : 'Graphing Calculator'}
+            className={`${toolButtonClass} ${isCalculatorOpen ? toolActiveClass : toolIdleClass}`}
           >
-            <Calculator className="h-4 w-4" />
-          </button>
-          <button
-            onClick={() => setReferenceOpen(true)}
-            className="text-sm font-medium text-slate-700 hover:bg-slate-100 px-3 py-1.5 rounded transition-colors hidden sm:inline-block"
-          >
-            Reference Sheet
-          </button>
-          <button
-            onClick={() => setCalculatorOpen(!isCalculatorOpen)}
-            className={`text-sm font-medium px-3 py-1.5 rounded transition-colors hidden sm:inline-block ${
-              isCalculatorOpen ? 'bg-blue-100 text-blue-700' : 'text-slate-700 hover:bg-slate-100'
-            }`}
-          >
-            {isCalculatorOpen ? 'Close Calculator' : 'Graphing Calculator'}
+            <Calculator className={toolIconClass} />
           </button>
           {!isPaused && (
             <>
