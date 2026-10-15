@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
-import { EXAM_DURATION_SECONDS } from '@/lib/examConfig';
+import { EXAM_DURATION_SECONDS, EXAM_TIME_GRACE_SECONDS } from '@/lib/examConfig';
 import type { ExamModuleSpec } from '@/lib/examModules';
 
 /**
@@ -28,12 +28,48 @@ interface ExamState {
   endsAtMs: number | null;
   currentQuestionIndex: number;
   isSubmitted: boolean;
+  /**
+   * The attempt whose result is on its way to the server. Not persisted.
+   *
+   * Kept here rather than in each copy of `useExamSubmit` - the header, the
+   * footer and the expired-attempt notice each hold one - so that all of them
+   * see one send, and so the clock knows not to settle an attempt that is
+   * being sent: a phone locked right after Finish wakes up long past the
+   * deadline with the request still out.
+   */
+  sendingAttemptId: string | null;
+  /**
+   * The attempt in the store is the one the exam screen on the page has
+   * loaded: set by `initializeExam`, cleared by `unloadExam` when that screen
+   * goes away. Not persisted.
+   *
+   * The store is a module singleton, so it outlives the page. After a test
+   * that ended on its clock, the next exam screen mounts on that attempt -
+   * 00:00, submitted - and the header's effects run before ExamRunner's
+   * `initializeExam` replaces it, because a child's effects run before its
+   * parent's. Nothing may end a module or submit until this is set.
+   */
+  isAttemptLoaded: boolean;
+  /**
+   * The attempt's clock ran out while nothing was running it: the test was
+   * closed, more than a grace period before it was opened again, or the page
+   * was frozen or asleep. The exam screen then asks what to do with it
+   * instead of submitting it, or handing over to the next module, the moment
+   * the student is back. Not persisted: `initializeExam` works it out again
+   * from `endsAtMs` on every visit.
+   */
+  ranOutWhileAway: boolean;
   isCalculatorOpen: boolean;
   isReferenceOpen: boolean;
   isWhiteboardOpen: boolean;
 
   // Actions
   initializeExam: (testId: string, modules: ExamModuleSpec[]) => void;
+  unloadExam: () => void;
+  startSending: (attemptId: string) => void;
+  stopSending: (attemptId: string) => void;
+  startNewAttempt: (testId: string, modules: ExamModuleSpec[]) => void;
+  continueExpiredAttempt: () => void;
   startCurrentModule: () => void;
   finishCurrentModule: () => void;
   setAnswer: (questionId: string, answer: string) => void;
@@ -61,6 +97,9 @@ const createInitialState = () => ({
   endsAtMs: null as number | null,
   currentQuestionIndex: 0,
   isSubmitted: false,
+  sendingAttemptId: null as string | null,
+  isAttemptLoaded: false,
+  ranOutWhileAway: false,
   isCalculatorOpen: false,
   isReferenceOpen: false,
   isWhiteboardOpen: false,
@@ -72,19 +111,43 @@ function createAttemptId() {
 }
 
 /** Starts a fresh attempt with module 1 already running. */
-function startFirstModule(testId: string, modules: ExamModuleSpec[]) {
+function startFirstModule(testId: string, moduleDurations: number[]) {
   const now = Date.now();
-  const durationSeconds = modules[0].durationSeconds;
+  const durationSeconds = moduleDurations[0];
 
   return {
     ...createInitialState(),
     activeTestId: testId,
     attemptId: createAttemptId(),
-    moduleDurations: modules.map((item) => item.durationSeconds),
+    moduleDurations,
     moduleDurationSeconds: durationSeconds,
     timeLeftSeconds: durationSeconds,
     endsAtMs: now + durationSeconds * 1000,
+    isAttemptLoaded: true,
   };
+}
+
+/**
+ * An attempt with nothing answered has nothing to keep. When its clock runs
+ * out while the student is away it is replaced by a new attempt rather than
+ * filed as a blank result, which would use up an attempt and push their real
+ * one off the dashboard.
+ */
+function hasAnyAnswer(answers: Record<string, string>) {
+  return Object.values(answers).some((answer) => answer.trim() !== '');
+}
+
+/**
+ * How late a running clock may notice its deadline and still end the module
+ * as usual. A visible page ticks every second, and a hidden one at least once
+ * a minute (Chrome's throttling of background tabs), so anything later means
+ * nothing was running the page: a phone switched to another app, a closed
+ * laptop lid.
+ */
+const WOKE_PAST_DEADLINE_MS = 2 * 60 * 1000;
+
+function isPageHidden() {
+  return typeof document !== 'undefined' && document.visibilityState === 'hidden';
 }
 
 /**
@@ -148,17 +211,18 @@ export const useExamStore = create<ExamState>()(
         set((state) => {
           if (modules.length === 0) return {};
 
+          const moduleDurations = modules.map((item) => item.durationSeconds);
+
           // A submitted attempt is never resumed: the next visit is a new
           // attempt that starts module 1 on a fresh clock.
           if (state.activeTestId !== testId || state.isSubmitted) {
-            return startFirstModule(testId, modules);
+            return startFirstModule(testId, moduleDurations);
           }
 
           const now = Date.now();
           const moduleIndex = Math.min(state.currentModuleIndex, modules.length);
           const activeModule = modules[moduleIndex - 1];
           const lastQuestionIndex = Math.max(activeModule.questionIds.length - 1, 0);
-          const moduleDurations = modules.map((item) => item.durationSeconds);
 
           // An attempt saved before attempts had ids gets one on resume.
           const attemptId = state.attemptId ?? createAttemptId();
@@ -172,25 +236,51 @@ export const useExamStore = create<ExamState>()(
               timeLeftSeconds: activeModule.durationSeconds,
               endsAtMs: null,
               currentQuestionIndex: 0,
+              isAttemptLoaded: true,
+              ranOutWhileAway: false,
+            };
+          }
+
+          // The module's deadline, moved along with its duration if an admin
+          // changed that since the module started.
+          const deadlineMs = state.endsAtMs === null
+            ? null
+            : state.endsAtMs + (activeModule.durationSeconds - state.moduleDurationSeconds) * 1000;
+
+          // Past the deadline by more than the grace period: the clock ran
+          // out while the test was closed - the student left yesterday and is
+          // opening it again today - not during a reload in the module's last
+          // seconds, which still ends the module as usual.
+          if (deadlineMs !== null && now - deadlineMs > EXAM_TIME_GRACE_SECONDS * 1000) {
+            if (!hasAnyAnswer(state.answers)) {
+              return startFirstModule(testId, moduleDurations);
+            }
+
+            return {
+              attemptId,
+              moduleDurations,
+              currentModuleIndex: moduleIndex,
+              moduleDurationSeconds: activeModule.durationSeconds,
+              timeLeftSeconds: 0,
+              // Kept as the deadline rather than reset to now, so a reload on
+              // the question screen asks again instead of ending the module.
+              endsAtMs: deadlineMs,
+              currentQuestionIndex: Math.min(state.currentQuestionIndex, lastQuestionIndex),
+              isAttemptLoaded: true,
+              ranOutWhileAway: true,
             };
           }
 
           // `endsAtMs` is the stored source of truth for the running clock;
-          // `timeLeftSeconds` is only a live value and is not persisted.
-          const remainingSeconds = state.endsAtMs
-            ? Math.max(0, Math.ceil((state.endsAtMs - now) / 1000))
-            : state.timeLeftSeconds;
-          const elapsedSeconds = Math.max(
-            0,
-            state.moduleDurationSeconds - remainingSeconds
-          );
-          const durationChanged = state.moduleDurationSeconds !== activeModule.durationSeconds;
-          const syncedTimeLeft = state.endsAtMs
-            ? remainingSeconds
-            : Math.min(remainingSeconds, activeModule.durationSeconds);
-          const timeLeftSeconds = durationChanged
-            ? Math.max(0, activeModule.durationSeconds - elapsedSeconds)
-            : syncedTimeLeft;
+          // `timeLeftSeconds` is only a live value and is not persisted. Read
+          // through the same moved deadline as the check above, so the two
+          // cannot disagree about how much time is left.
+          const timeLeftSeconds = deadlineMs !== null
+            ? Math.min(
+              activeModule.durationSeconds,
+              Math.max(0, Math.ceil((deadlineMs - now) / 1000))
+            )
+            : Math.min(state.timeLeftSeconds, activeModule.durationSeconds);
 
           return {
             attemptId,
@@ -200,8 +290,36 @@ export const useExamStore = create<ExamState>()(
             timeLeftSeconds,
             endsAtMs: timeLeftSeconds > 0 ? now + timeLeftSeconds * 1000 : now,
             currentQuestionIndex: Math.min(state.currentQuestionIndex, lastQuestionIndex),
+            isAttemptLoaded: true,
+            ranOutWhileAway: false,
           };
         }),
+
+      unloadExam: () => set({ isAttemptLoaded: false, ranOutWhileAway: false }),
+
+      startSending: (attemptId) => set({ sendingAttemptId: attemptId }),
+
+      // Only the send that started it ends it: a slow answer for an attempt
+      // the student has since replaced must not clear the next one's.
+      stopSending: (attemptId) =>
+        set((state) => (state.sendingAttemptId === attemptId ? { sendingAttemptId: null } : {})),
+
+      // Abandoning an attempt is already free - attempts only count once they
+      // are submitted, and opening another test discards the saved one - so
+      // offering it here opens no new way around the clock.
+      startNewAttempt: (testId, modules) =>
+        set(() => (
+          modules.length === 0
+            ? {}
+            : startFirstModule(testId, modules.map((item) => item.durationSeconds))
+        )),
+
+      // For a module before the last one. Leaves the clock at 00:00, so the
+      // header hands over to the next module the way it would have had the
+      // test been open when the time ran out. The last module is submitted
+      // from the notice itself instead, which stays up while that is sent.
+      continueExpiredAttempt: () =>
+        set((state) => (state.ranOutWhileAway ? { ranOutWhileAway: false } : {})),
 
       startCurrentModule: () =>
         set((state) => {
@@ -280,11 +398,38 @@ export const useExamStore = create<ExamState>()(
 
       syncTimeLeft: () =>
         set((state) => {
-          if (state.modulePhase !== 'active') return {};
+          if (state.modulePhase !== 'active' || state.ranOutWhileAway) return {};
+
+          const now = Date.now();
+
+          // A clock that was still running and now finds itself well past its
+          // deadline was frozen or asleep, not counting down in front of the
+          // student. That is the same as reopening the test later, so it is
+          // settled the way `initializeExam` settles it, rather than ending
+          // the module the moment the student looks at the page again.
+          if (
+            state.activeTestId !== null &&
+            state.timeLeftSeconds > 0 &&
+            state.endsAtMs !== null &&
+            now - state.endsAtMs > WOKE_PAST_DEADLINE_MS
+          ) {
+            // Settled only where the student can see it, and never in the
+            // middle of a send. Until then the clock is left as it was, so this
+            // keeps waiting: a hidden tab woken overnight that restarted here
+            // would run the new attempt's clock with nobody watching, and file
+            // the very blank result this exists to prevent.
+            const isSending = state.sendingAttemptId !== null
+              && state.sendingAttemptId === state.attemptId;
+            if (isPageHidden() || isSending) return {};
+
+            return hasAnyAnswer(state.answers)
+              ? { timeLeftSeconds: 0, ranOutWhileAway: true }
+              : startFirstModule(state.activeTestId, state.moduleDurations);
+          }
 
           return {
             timeLeftSeconds: state.endsAtMs
-              ? Math.max(0, Math.ceil((state.endsAtMs - Date.now()) / 1000))
+              ? Math.max(0, Math.ceil((state.endsAtMs - now) / 1000))
               : Math.max(0, state.timeLeftSeconds - 1)
           };
         }),

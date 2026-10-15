@@ -31,6 +31,11 @@ export default function TopNav({ testId, modules, canDraw = false }: TopNavProps
   // `timeLeftSeconds` - the auto handover below depends on it.
   const timeLeftSeconds = useExamStore((state) => state.timeLeftSeconds);
   const modulePhase = useExamStore((state) => state.modulePhase);
+  const activeTestId = useExamStore((state) => state.activeTestId);
+  const attemptId = useExamStore((state) => state.attemptId);
+  const isAttemptLoaded = useExamStore((state) => state.isAttemptLoaded);
+  const isSubmitted = useExamStore((state) => state.isSubmitted);
+  const ranOutWhileAway = useExamStore((state) => state.ranOutWhileAway);
   const currentModuleIndex = useExamStore((state) => state.currentModuleIndex);
   const currentQuestionIndex = useExamStore((state) => state.currentQuestionIndex);
   const isCalculatorOpen = useExamStore((state) => state.isCalculatorOpen);
@@ -41,20 +46,36 @@ export default function TopNav({ testId, modules, canDraw = false }: TopNavProps
   const setReferenceOpen = useExamStore((state) => state.setReferenceOpen);
   const setWhiteboardOpen = useExamStore((state) => state.setWhiteboardOpen);
   const { isSubmitting, submitExam } = useExamSubmit(testId);
-  const autoEndedModuleRef = useRef<number | null>(null);
+  const autoEndedModuleRef = useRef<string | null>(null);
+
+  // Until ExamRunner has loaded this test's attempt, the store can still hold
+  // the one before it (see `isAttemptLoaded`). Nothing acts on that attempt,
+  // and the header shows this test's opening state instead of its numbers: a
+  // 00:00 left over from the last test read as this one being over already.
+  const isLoadedHere = isAttemptLoaded && activeTestId === testId;
+  const isOwnLiveAttempt = isLoadedHere && !isSubmitted;
+  const shownModuleIndex = isLoadedHere ? currentModuleIndex : 1;
+  const shownQuestionIndex = isLoadedHere ? currentQuestionIndex : 0;
+  const shownTimeLeft = isLoadedHere ? timeLeftSeconds : modules[0]?.durationSeconds ?? 0;
 
   const moduleCount = modules.length;
   const isLastModule = currentModuleIndex >= moduleCount;
-  const isPaused = modulePhase === 'pending';
+  // Between modules, and while the student decides what to do with an attempt
+  // whose time ran out while they were away, no clock is running.
+  const isPaused = isLoadedHere && (modulePhase === 'pending' || ranOutWhileAway);
   // Between modules there is no question on screen to draw over.
   const showWhiteboardSwitch = canDraw && !isPaused;
 
   useEffect(() => {
-    if (isPaused || timeLeftSeconds > 0) return;
-    if (autoEndedModuleRef.current === currentModuleIndex) return;
+    if (!isOwnLiveAttempt || isPaused || timeLeftSeconds > 0) return;
+
+    // Per attempt, not just per module: a new attempt started on this same
+    // screen must still end on its own clock.
+    const attemptModule = `${attemptId}:${currentModuleIndex}`;
+    if (autoEndedModuleRef.current === attemptModule) return;
 
     // Time is up: hand over to the next module, or submit the whole test.
-    autoEndedModuleRef.current = currentModuleIndex;
+    autoEndedModuleRef.current = attemptModule;
     flushPendingAnswer();
 
     if (isLastModule) {
@@ -63,9 +84,11 @@ export default function TopNav({ testId, modules, canDraw = false }: TopNavProps
       finishCurrentModule();
     }
   }, [
+    attemptId,
     currentModuleIndex,
     finishCurrentModule,
     isLastModule,
+    isOwnLiveAttempt,
     isPaused,
     submitExam,
     timeLeftSeconds,
@@ -112,14 +135,14 @@ export default function TopNav({ testId, modules, canDraw = false }: TopNavProps
           <h1 className="hidden font-semibold text-slate-900 tracking-tight sm:block">MYSATuz</h1>
           {moduleCount > 1 && (
             <span className="shrink-0 rounded-full bg-blue-50 px-2.5 py-1 text-[10px] font-medium uppercase tracking-widest text-blue-700 sm:px-3">
-              <span className="sm:hidden">M {currentModuleIndex}/{moduleCount}</span>
-              <span className="hidden sm:inline">Module {currentModuleIndex} of {moduleCount}</span>
+              <span className="sm:hidden">M {shownModuleIndex}/{moduleCount}</span>
+              <span className="hidden sm:inline">Module {shownModuleIndex} of {moduleCount}</span>
             </span>
           )}
           {!isPaused && (
             <span className="truncate text-xs font-medium text-slate-900 uppercase tracking-widest sm:text-sm">
-              <span className="sm:hidden">Q {currentQuestionIndex + 1}</span>
-              <span className="hidden sm:inline">Question {currentQuestionIndex + 1}</span>
+              <span className="sm:hidden">Q {shownQuestionIndex + 1}</span>
+              <span className="hidden sm:inline">Question {shownQuestionIndex + 1}</span>
             </span>
           )}
         </div>
@@ -130,7 +153,7 @@ export default function TopNav({ testId, modules, canDraw = false }: TopNavProps
               ? 'border-slate-200 bg-white text-slate-400'
               : 'border-slate-100 bg-slate-50 text-slate-900'
           }`}>
-            {formatTime(timeLeftSeconds)}
+            {formatTime(shownTimeLeft)}
           </span>
         </div>
 
@@ -176,7 +199,7 @@ export default function TopNav({ testId, modules, canDraw = false }: TopNavProps
                 disabled={isSubmitting}
                 className="rounded px-2 py-1.5 text-xs font-medium text-red-600 transition-colors hover:bg-red-50 disabled:opacity-50 sm:px-3 sm:text-sm"
               >
-                {isSubmitting ? 'Submitting...' : isLastModule ? (
+                {isSubmitting ? 'Submitting...' : shownModuleIndex >= moduleCount ? (
                   <><span className="sm:hidden">End</span><span className="hidden sm:inline">End Section</span></>
                 ) : (
                   <><span className="sm:hidden">End</span><span className="hidden sm:inline">End Module</span></>
