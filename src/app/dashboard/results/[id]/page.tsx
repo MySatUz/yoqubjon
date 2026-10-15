@@ -49,6 +49,7 @@ export default async function ResultPage({ params }: { params: Promise<{ id: str
       userId: session.user.id,
     },
     select: {
+      testId: true,
       score: true,
       timeSpent: true,
       createdAt: true,
@@ -58,6 +59,13 @@ export default async function ResultPage({ params }: { params: Promise<{ id: str
           title: true,
           durationSeconds: true,
           moduleDurations: true,
+          // This student's attempts at the test, to say which one this is: a
+          // later, emptier attempt must not pass for the only review there is.
+          results: {
+            where: { userId: session.user.id },
+            orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+            select: { id: true },
+          },
           questions: {
             orderBy: { order: 'asc' },
             select: REVIEW_QUESTION_FIELDS,
@@ -81,6 +89,8 @@ export default async function ResultPage({ params }: { params: Promise<{ id: str
   const userAnswers = result.answers as Record<string, unknown>;
   const modules = buildExamModules(result.test, getShownQuestions(result.test));
   const isModular = modules.length > 1;
+  const attemptCount = result.test.results.length;
+  const attemptNumber = result.test.results.findIndex((attempt) => attempt.id === id) + 1;
 
   // Grading happens here, on the server, and only the verdict crosses to the
   // client — never the answer key it was graded against.
@@ -136,6 +146,18 @@ export default async function ResultPage({ params }: { params: Promise<{ id: str
             <div>
               <h1 className="text-4xl font-black tracking-tight mb-2">{result.test.title} Analysis</h1>
               <p className="text-slate-400 text-lg">Completed on {new Date(result.createdAt).toLocaleDateString()}</p>
+              {attemptCount > 1 && attemptNumber > 0 && (
+                <p className="mt-2 text-sm font-medium text-slate-400">
+                  <span className="tabular-nums">Attempt {attemptNumber} of {attemptCount}</span>
+                  {' · '}
+                  <Link
+                    href={`/dashboard/results?test=${encodeURIComponent(result.testId)}`}
+                    className="text-blue-400 transition-colors hover:text-white"
+                  >
+                    See all attempts
+                  </Link>
+                </p>
+              )}
             </div>
 
             <div className="bg-slate-800 border border-slate-700 rounded-2xl p-6 flex items-center gap-6">

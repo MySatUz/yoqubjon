@@ -33,6 +33,34 @@ export type RevealQuestionResponse =
 /** Both ids are uuids; anything longer is not worth a database round-trip. */
 const MAX_ID_LENGTH = 160;
 
+async function readRevealedRecords(userId: string, resultId: string, questionId: string) {
+  // `userId` in the filter, not a check afterwards: a result belonging to
+  // somebody else must be indistinguishable from one that does not exist.
+  const result = await prisma.result.findFirst({
+    where: { id: resultId, userId },
+    select: { testId: true, answers: true },
+  });
+
+  if (!result) return { result: null, question: null };
+
+  // Scoped to the questions the attempt's test shows - its own, or for a copy
+  // its original's - so a question id from another test cannot be read through
+  // somebody's own result.
+  const question = await prisma.question.findFirst({
+    where: { id: questionId, ...questionsShownBy(result.testId) },
+    select: {
+      id: true,
+      order: true,
+      content: true,
+      imageUrl: true,
+      videoUrl: true,
+      correctAnswer: true,
+    },
+  });
+
+  return { result, question };
+}
+
 export async function revealResultQuestion(
   resultId: string,
   questionId: string
@@ -54,31 +82,23 @@ export async function revealResultQuestion(
     return { error: 'Your session has expired. Please sign in again.' };
   }
 
-  // `userId` in the filter, not a check afterwards: a result belonging to
-  // somebody else must be indistinguishable from one that does not exist.
-  const result = await prisma.result.findFirst({
-    where: { id: resultId, userId: session.user.id },
-    select: { testId: true, answers: true },
-  });
+  const userId = session.user.id;
 
-  if (!result) {
+  // A thrown error would reach the client as a rejected action, so a database
+  // hiccup is answered as data the review can show and retry.
+  let records;
+  try {
+    records = await readRevealedRecords(userId, resultId, questionId);
+  } catch (error) {
+    console.error('Reveal Result Question Error:', error);
+    return { error: 'Could not load this question. Please try again.' };
+  }
+
+  if (!records.result) {
     return { error: 'Result not found.' };
   }
 
-  // Scoped to the questions the attempt's test shows - its own, or for a copy
-  // its original's - so a question id from another test cannot be read through
-  // somebody's own result.
-  const question = await prisma.question.findFirst({
-    where: { id: questionId, ...questionsShownBy(result.testId) },
-    select: {
-      id: true,
-      order: true,
-      content: true,
-      imageUrl: true,
-      videoUrl: true,
-      correctAnswer: true,
-    },
-  });
+  const { result, question } = records;
 
   if (!question) {
     return { error: 'Question not found.' };

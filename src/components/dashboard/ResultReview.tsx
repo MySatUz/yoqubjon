@@ -3,6 +3,7 @@
 import React, { useCallback, useMemo, useRef, useState, useTransition } from 'react';
 import 'katex/dist/katex.min.css';
 import Image from 'next/image';
+import { unstable_isUnrecognizedActionError } from 'next/navigation';
 import VideoClient from '@/components/exam/VideoClient';
 import {
   revealResultQuestion,
@@ -16,11 +17,15 @@ import {
   CircleDot,
   Loader2,
   Lock,
+  RotateCw,
   X,
   XCircle,
 } from 'lucide-react';
 
 export type ReviewStatus = 'correct' | 'partial' | 'incorrect';
+
+/** `canRetry` false: retrying cannot help, only reloading the page can. */
+type ReviewError = { message: string; canRetry: boolean };
 
 export type ReviewQuestion = {
   id: string;
@@ -96,7 +101,7 @@ function StatusBadge({ status, credit }: { status: ReviewStatus; credit: number 
 export default function ResultReview({ resultId, modules }: ResultReviewProps) {
   const [openQuestionId, setOpenQuestionId] = useState<string | null>(null);
   const [detail, setDetail] = useState<RevealedQuestion | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<ReviewError | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const flatQuestions = useMemo(
@@ -105,22 +110,44 @@ export default function ResultReview({ resultId, modules }: ResultReviewProps) {
   );
   const isModular = modules.length > 1;
 
-  // Which question the student asked for last. A slower earlier request must
-  // not paint its answer over a question they have already moved on from.
-  const requestedIdRef = useRef<string | null>(null);
+  // The request the student made last. A slower earlier one must not paint
+  // over it - not even one for the same question, which a double click or
+  // Try again can leave in flight next to it.
+  const latestRequestRef = useRef(0);
 
   const openQuestion = useCallback(
     (question: ReviewQuestion) => {
-      requestedIdRef.current = question.id;
+      const request = ++latestRequestRef.current;
       setOpenQuestionId(question.id);
       setDetail(null);
       setError(null);
 
       startTransition(async () => {
-        const response = await revealResultQuestion(resultId, question.id);
-        if (requestedIdRef.current !== question.id) return;
+        // A rejection must not escape this callback: React rethrows it from
+        // the transition into the nearest error boundary, and this app has
+        // none, so one failed request used to replace the whole results page
+        // with "This page couldn't load".
+        let response: Awaited<ReturnType<typeof revealResultQuestion>>;
+        try {
+          response = await revealResultQuestion(resultId, question.id);
+        } catch (caught) {
+          if (latestRequestRef.current !== request) return;
 
-        if (response.error) setError(response.error);
+          // A page opened before a deploy asks for an action id the new
+          // build no longer has. Only a reload brings the matching one. Other
+          // failures are usually the network, but a lost session lands here
+          // too, so the message leaves room for a reload.
+          setError(
+            unstable_isUnrecognizedActionError(caught)
+              ? { message: 'The site was updated since you opened this page.', canRetry: false }
+              : { message: 'Could not open this question. Try again, or reload the page if it keeps failing.', canRetry: true }
+          );
+          return;
+        }
+
+        if (latestRequestRef.current !== request) return;
+
+        if (response.error) setError({ message: response.error, canRetry: true });
         else setDetail(response.question ?? null);
       });
     },
@@ -128,7 +155,7 @@ export default function ResultReview({ resultId, modules }: ResultReviewProps) {
   );
 
   const close = useCallback(() => {
-    requestedIdRef.current = null;
+    latestRequestRef.current += 1;
     setOpenQuestionId(null);
     setDetail(null);
     setError(null);
@@ -207,9 +234,17 @@ export default function ResultReview({ resultId, modules }: ResultReviewProps) {
           )}
 
           {error && (
-            <p className="rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-600">
-              {error}
-            </p>
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-red-50 px-4 py-3">
+              <p className="text-sm font-semibold text-red-600">{error.message}</p>
+              <button
+                type="button"
+                onClick={() => (error.canRetry ? openQuestion(current) : window.location.reload())}
+                className="inline-flex items-center gap-2 rounded-xl border border-red-200 bg-white px-3 py-1.5 text-sm font-semibold text-red-600 transition hover:border-red-300"
+              >
+                <RotateCw className="h-4 w-4" />
+                {error.canRetry ? 'Try again' : 'Reload page'}
+              </button>
+            </div>
           )}
 
           {detail && (

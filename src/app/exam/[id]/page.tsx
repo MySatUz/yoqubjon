@@ -93,7 +93,7 @@ export default async function DynamicExamPage({ params }: { params: Promise<{ id
   }
 
   if (!isAdmin && attemptsUsed >= test.maxAttempts) {
-    redirect('/dashboard?attemptLimit=reached');
+    redirect(`/dashboard?attemptLimit=reached&test=${encodeURIComponent(id)}`);
   }
 
   if (!test.isFree) {

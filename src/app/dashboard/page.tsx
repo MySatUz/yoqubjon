@@ -2,7 +2,7 @@ import React, { Suspense } from 'react';
 import { auth } from "@/auth";
 import Link from 'next/link';
 import { prisma } from '@/lib/prisma';
-import { History, CheckCircle2 } from 'lucide-react';
+import { ArrowRight, History, CheckCircle2 } from 'lucide-react';
 import {
   sortCatalogTests,
   findCategoryByQuery,
@@ -31,6 +31,7 @@ export default async function DashboardPage(props: {
   const session = await auth();
   const isSuccess = searchParams.payment === 'success';
   const attemptLimitReached = searchParams.attemptLimit === 'reached';
+  const limitedTestId = typeof searchParams.test === 'string' ? searchParams.test : null;
   const requestedSet = searchParams.set;
 
   if (!session?.user?.id) {
@@ -52,8 +53,15 @@ export default async function DashboardPage(props: {
         </div>
       )}
       {attemptLimitReached && (
-        <div className="mb-8 rounded-2xl border border-amber-200 bg-amber-50 p-4 font-semibold text-amber-800">
+        <div className="mb-8 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 font-semibold text-amber-800">
           The attempt limit for this test has been reached.
+          {/* Every attempt stays reviewable, so point at them. */}
+          <Link
+            href={limitedTestId ? `/dashboard/results?test=${encodeURIComponent(limitedTestId)}` : '/dashboard/results'}
+            className="text-sm font-semibold text-blue-600 hover:text-blue-700"
+          >
+            Review your attempts
+          </Link>
         </div>
       )}
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
@@ -250,6 +258,16 @@ async function RecentActivity({ userId }: { userId: string }) {
           </div>
         </Link>
       ))}
+      {/* This list keeps one attempt per test and five tests at most, so an
+          attempt drops off it after a retake or five other tests. Every one
+          of them is still on the results page. */}
+      <Link
+        href="/dashboard/results"
+        className="flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-600 transition hover:border-blue-200 hover:text-blue-600"
+      >
+        All results
+        <ArrowRight className="h-4 w-4" />
+      </Link>
     </>
   );
 }

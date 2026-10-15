@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { ArrowLeft, ArrowRight, Atom, FileDown, FolderKanban, Layers3, LayoutDashboard, Lock, Repeat2, Sparkles, Trophy } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Atom, ClipboardList, FileDown, FolderKanban, Layers3, LayoutDashboard, Lock, Repeat2, Sparkles, Trophy } from 'lucide-react';
 import {
   findCategoryByQuery,
   getCategoryQueryValue,
@@ -114,6 +114,24 @@ function StartPracticeLink({ testId }: { testId: string }) {
       className="inline-flex items-center justify-center w-full py-4 px-6 rounded-2xl text-sm font-semibold text-white bg-slate-900 hover:bg-blue-600 transition-[background-color,transform] duration-200 active:scale-95 shadow-lg"
     >
       Start Practice Module
+    </Link>
+  );
+}
+
+/**
+ * Every attempt stays reviewable whatever happens to the card - the limit is
+ * reached, the subscription runs out - so the way back to them is on the card
+ * itself, not only in the dashboard's short Recent Activity list.
+ */
+function PastResultsLink({ testId, attemptsUsed }: { testId: string; attemptsUsed: number }) {
+  return (
+    <Link
+      href={`/dashboard/results?test=${encodeURIComponent(testId)}`}
+      className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-6 py-3 text-sm font-semibold text-slate-600 transition-[color,border-color] duration-200 hover:border-blue-200 hover:text-blue-600"
+    >
+      <ClipboardList className="h-4 w-4" />
+      Review past attempts
+      <span className="tabular-nums text-slate-400">({attemptsUsed})</span>
     </Link>
   );
 }
@@ -344,6 +362,9 @@ export default function PracticeCatalog({
                       ) : (
                         <StartPracticeLink testId={test.id} />
                       )}
+                      {test.attemptsUsed > 0 && (
+                        <PastResultsLink testId={test.id} attemptsUsed={test.attemptsUsed} />
+                      )}
                       {canDownloadPdf && (
                         <Link
                           href={`/exam/${test.id}/pdf`}
@@ -363,9 +384,13 @@ export default function PracticeCatalog({
                       >
                         Unlock with Premium
                       </Link>
-                      <button disabled className="w-full py-3 text-xs font-medium text-slate-400 uppercase tracking-widest">
-                        Module Locked
-                      </button>
+                      {test.attemptsUsed > 0 ? (
+                        <PastResultsLink testId={test.id} attemptsUsed={test.attemptsUsed} />
+                      ) : (
+                        <button disabled className="w-full py-3 text-xs font-medium text-slate-400 uppercase tracking-widest">
+                          Module Locked
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>

@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { CreditCard, LayoutDashboard, ShieldCheck, User } from 'lucide-react';
+import { ClipboardList, CreditCard, LayoutDashboard, ShieldCheck, User } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 type NavItem = {
@@ -17,6 +17,8 @@ type ShellNavVariant = 'desktop' | 'mobile';
 
 const navItems: NavItem[] = [
   { href: '/dashboard', label: 'Practice Center', shortLabel: 'Practice', icon: LayoutDashboard },
+  // Also lit on /dashboard/results/[id]: a single result is part of the list.
+  { href: '/dashboard/results', label: 'My Results', shortLabel: 'Results', icon: ClipboardList },
   { href: '/dashboard/profile', label: 'Personal Cabinet', shortLabel: 'Cabinet', icon: User },
   { href: '/dashboard/subscription', label: 'Subscription', shortLabel: 'Subscription', icon: CreditCard },
 ];
@@ -36,7 +38,7 @@ function isActivePath(pathname: string, href: string) {
 /**
  * No `prefetch` prop on purpose — the default is what we want here.
  *
- * These are three or four permanently visible entries (fixed sidebar on
+ * These are four or five permanently visible entries (fixed sidebar on
  * desktop, bottom bar on mobile), so viewport-triggered prefetching fires once
  * and is done. For a dynamic route the default only prefetches the shell down
  * to the nearest `loading.js` boundary, which every one of these targets has,

@@ -5,7 +5,7 @@
  * for, so the swap from skeleton to content does not move anything. Adding a new
  * dashboard segment means adding a variant here, not reusing a neighbour's.
  */
-type SkeletonVariant = 'practice' | 'profile' | 'subscription' | 'result';
+type SkeletonVariant = 'practice' | 'profile' | 'subscription' | 'result' | 'results';
 
 type PageLoadingSkeletonProps = {
   title?: string;
@@ -25,6 +25,7 @@ export default function PageLoadingSkeleton({
       {variant === 'profile' && <ProfileSkeleton />}
       {variant === 'subscription' && <SubscriptionSkeleton />}
       {variant === 'result' && <ResultSkeleton />}
+      {variant === 'results' && <ResultsSkeleton />}
     </>
   );
 }
@@ -102,6 +103,28 @@ function SubscriptionSkeleton() {
           <div className={`h-80 rounded-2xl ${block}`} />
         </div>
         <div className={`h-64 rounded-2xl ${block}`} />
+      </div>
+    </div>
+  );
+}
+
+/** Mirrors /dashboard/results: the profile-style header over a list of attempt rows. */
+function ResultsSkeleton() {
+  return (
+    <div className="px-4 py-10 sm:px-6 lg:px-8">
+      <header className="mb-8 flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <div className="h-3 w-36 animate-pulse rounded-full bg-blue-100" />
+          <div className="mt-3 h-10 w-56 max-w-full animate-pulse rounded-2xl bg-slate-200" />
+          <div className="mt-3 h-5 w-[28rem] max-w-full animate-pulse rounded-full bg-slate-100" />
+        </div>
+        <div className="h-11 w-44 animate-pulse rounded-xl bg-slate-200" />
+      </header>
+
+      <div className="space-y-3">
+        {[0, 1, 2, 3, 4, 5].map((i) => (
+          <div key={i} className={`h-[5.375rem] rounded-2xl ${block}`} />
+        ))}
       </div>
     </div>
   );

@@ -229,7 +229,10 @@ async function SectionHistory({ userId }: { userId: string }) {
           <h2 className="mt-2 text-2xl font-semibold text-slate-900">Practice history by section</h2>
           {isHistoryTruncated && (
             <p className="mt-2 text-xs font-medium text-slate-400">
-              Showing your latest {userResults.length} of {totalAttempts} attempts.
+              Showing your latest {userResults.length} of {totalAttempts} attempts.{' '}
+              <Link href="/dashboard/results" className="text-blue-600 hover:text-blue-700">
+                See all
+              </Link>
             </p>
           )}
         </div>
