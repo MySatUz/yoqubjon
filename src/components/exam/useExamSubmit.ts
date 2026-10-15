@@ -65,6 +65,10 @@ export function useExamSubmit(testId: string) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           testId,
+          // Lets the server answer a second send of this attempt - a reload
+          // while this one is out, another tab, a retry after a lost
+          // response - with the result it already filed.
+          attemptId,
           answers,
           timeSpent: Math.max(0, Math.round(timeSpent)),
         }),

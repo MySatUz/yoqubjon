@@ -1,3 +1,4 @@
+import type { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { getShownQuestions } from '@/lib/questionSource';
 import { gradeAnswer } from '@/lib/resultAnswers';
@@ -28,6 +29,8 @@ export class ExamSubmissionError extends Error {
 
 export interface ExamSubmissionInput {
   testId: string;
+  /** Null from clients older than the field: they get no duplicate check. */
+  attemptId: string | null;
   answers: Record<string, string>;
   timeSpent: number;
 }
@@ -45,10 +48,18 @@ export function parseExamSubmissionBody(body: unknown): ExamSubmissionInput {
     throw new ExamSubmissionError('Invalid request body', 400);
   }
 
-  const { testId, answers, timeSpent } = body;
+  const { testId, attemptId, answers, timeSpent } = body;
 
   if (typeof testId !== 'string' || testId.trim().length === 0 || testId.length > 160) {
     throw new ExamSubmissionError('Invalid test id', 400);
+  }
+
+  if (
+    attemptId !== undefined &&
+    attemptId !== null &&
+    (typeof attemptId !== 'string' || attemptId.trim().length === 0 || attemptId.length > 160)
+  ) {
+    throw new ExamSubmissionError('Invalid attempt id', 400);
   }
 
   if (!isPlainObject(answers)) {
@@ -84,9 +95,46 @@ export function parseExamSubmissionBody(body: unknown): ExamSubmissionInput {
 
   return {
     testId: testId.trim(),
+    attemptId: typeof attemptId === 'string' ? attemptId.trim() : null,
     answers: normalizedAnswers,
     timeSpent,
   };
+}
+
+const SAVED_RESULT_SELECT = {
+  id: true,
+  testId: true,
+  score: true,
+  correctCount: true,
+} satisfies Prisma.ResultSelect;
+
+/**
+ * The result this attempt already filed, if any. An attempt is sent again when
+ * the page reloads while it is out, from a second tab, or as a retry after the
+ * response was lost; each of those used to add a row and use up an attempt.
+ *
+ * The same id on another test is not a resend - a stale client sending one
+ * attempt's id with the next test - and filing it would be a result the
+ * student never submitted.
+ */
+async function findFiledAttempt(
+  db: Prisma.TransactionClient,
+  userId: string,
+  attemptId: string | null,
+  testId: string
+) {
+  if (!attemptId) return null;
+
+  const filed = await db.result.findFirst({
+    where: { userId, attemptId },
+    select: SAVED_RESULT_SELECT,
+  });
+
+  if (filed && filed.testId !== testId) {
+    throw new ExamSubmissionError('This attempt was already submitted for another test', 409);
+  }
+
+  return filed;
 }
 
 /**
@@ -225,6 +273,7 @@ export async function createExamResult(
   const resultData = {
     userId,
     testId: test.id,
+    attemptId: submission.attemptId,
     score,
     // Written on every submission. It used to be computed here and dropped, so
     // every row since the column was added stored NULL and the olympiad
@@ -245,11 +294,18 @@ export async function createExamResult(
 
   try {
     result = isAdmin
-      ? await prisma.result.create({ data: resultData })
+      ? await findFiledAttempt(prisma, userId, submission.attemptId, test.id)
+        ?? await prisma.result.create({ data: resultData, select: SAVED_RESULT_SELECT })
       : await prisma.$transaction(async (tx) => {
         await tx.$queryRaw<Array<{ locked: boolean }>>`
           SELECT pg_advisory_xact_lock(hashtext(${userId}), hashtext(${test.id})) IS NULL AS locked
         `;
+
+        // Before the attempt count: a resend of the student's last allowed
+        // attempt must get its result back, not "Attempt limit reached". The
+        // lock makes a resend of the same test wait for the first send.
+        const filed = await findFiledAttempt(tx, userId, submission.attemptId, test.id);
+        if (filed) return filed;
 
         const currentTest = await tx.test.findUnique({
           where: { id: test.id },
@@ -273,19 +329,31 @@ export async function createExamResult(
 
         return tx.result.create({
           data: resultData,
+          select: SAVED_RESULT_SELECT,
         });
       });
   } catch (error) {
-    // `ExamSubmissionError` (404/409 from inside the transaction) passes through
-    // untouched; only a foreign-key failure is reinterpreted.
-    throw await asExamSubmissionError(error, userId);
+    // Two sends of one attempt that the lock does not order - the admin path
+    // takes none, and the lock is per test - both found nothing and raced to
+    // insert. The index let one through; that row is the answer to both.
+    const filed = isPlainObject(error) && error.code === 'P2002'
+      ? await findFiledAttempt(prisma, userId, submission.attemptId, test.id)
+      : null;
+    if (!filed) {
+      // `ExamSubmissionError` (404/409 from inside the transaction) passes
+      // through untouched; only a foreign-key failure is reinterpreted.
+      throw await asExamSubmissionError(error, userId);
+    }
+    result = filed;
   }
 
+  // From the row rather than this request's grading, so a resend reports what
+  // was filed.
   return {
     success: true,
     resultId: result.id,
-    score,
-    correctCount,
+    score: result.score,
+    correctCount: result.correctCount,
     totalQuestions: questions.length,
   };
 }
