@@ -1,85 +1,14 @@
-import AdminSectionHub from '@/components/admin/AdminSectionHub';
-import StudentViewLauncher from '@/components/admin/StudentViewLauncher';
-import SubscriptionAvailabilityControl from '@/components/admin/SubscriptionAvailabilityControl';
-import { isOwnerSessionUser, OWNER_ADMIN_EMAIL, requireAdminPage } from '@/lib/admin';
-import { prisma } from '@/lib/prisma';
-import { getSubscriptionSettings } from '@/lib/subscription-settings';
-import { getCollectionVisibilityRows } from '@/lib/testCollections';
-import { getTestCollections } from '@/lib/testCatalog';
+import { redirect } from 'next/navigation';
+import { requireAdminPage } from '@/lib/admin';
 
 export const dynamic = 'force-dynamic';
-export const maxDuration = 30;
 
+/**
+ * There is no admin hub: the admin's places are in the sidebar, and the phone's
+ * one Admin tab opens Courses. The check comes first, so a student gets the
+ * 404 rather than a redirect that tells them the page exists.
+ */
 export default async function AdminPage() {
-  const session = await requireAdminPage();
-  const canManageAdmins = isOwnerSessionUser(session?.user);
-
-  const [
-    userCount,
-    adminCount,
-    paymentCount,
-    pendingPaymentCount,
-    visibleTestCount,
-    testCount,
-    collectionRows,
-    subscriptionSettings,
-  ] = await Promise.all([
-    prisma.user.count(),
-    prisma.user.count({
-      where: {
-        OR: [
-          { role: 'ADMIN' },
-          { email: OWNER_ADMIN_EMAIL },
-        ],
-      },
-    }),
-    prisma.manualPaymentRequest.count(),
-    prisma.manualPaymentRequest.count({ where: { status: 'PENDING' } }),
-    prisma.test.count({ where: { visible: true } }),
-    prisma.test.count(),
-    getCollectionVisibilityRows(),
-    getSubscriptionSettings(),
-  ]);
-
-  const collections = getTestCollections(collectionRows);
-  const visibleSectionCount = collections.filter((collection) => collection.visible).length;
-
-  return (
-    <div className="px-4 py-10 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-6xl">
-        <div className="mb-10 text-center">
-          <h1 className="mb-2 text-4xl font-black tracking-tight text-slate-900">Admin Test Manager</h1>
-          <p className="font-medium text-slate-500">
-            Choose a section. Heavy lists load only after you open the section.
-          </p>
-        </div>
-
-        <SubscriptionAvailabilityControl
-          initialEnabled={subscriptionSettings.isEnabled}
-          canEditPaymentSettings={canManageAdmins}
-          initialPaymentSettings={canManageAdmins
-            ? {
-                cardHolder: subscriptionSettings.cardHolder,
-                cardNumber: subscriptionSettings.cardNumber,
-                cardType: subscriptionSettings.cardType,
-                amount: subscriptionSettings.amount,
-              }
-            : null}
-        />
-
-        <AdminSectionHub
-          canManageAdmins={canManageAdmins}
-          adminCount={adminCount}
-          userCount={userCount}
-          paymentCount={paymentCount}
-          pendingPaymentCount={pendingPaymentCount}
-          visibleSectionCount={visibleSectionCount}
-          visibleTestCount={visibleTestCount}
-          testCount={testCount}
-        />
-
-        <StudentViewLauncher />
-      </div>
-    </div>
-  );
+  await requireAdminPage();
+  redirect('/admin/courses');
 }

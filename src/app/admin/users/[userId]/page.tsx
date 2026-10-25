@@ -1,38 +1,81 @@
+import type { Metadata } from "next";
+import Link from "next/link";
+import { cache } from "react";
 import { requireAdminPage } from "@/lib/admin";
 import { prisma } from "@/lib/prisma";
-import {
-  buildSectionResultSummaries,
-  formatResultTime,
-} from "@/lib/resultSections";
-import { getTestCollections } from "@/lib/testCatalog";
+import { buildSectionTestSummaries } from "@/lib/resultSections";
+import { getCategoryLabel, getTestCollections } from "@/lib/testCatalog";
 import { getCollectionVisibilityRows } from "@/lib/testCollections";
-import {
-  ArrowLeft,
-  Award,
-  BarChart3,
-  BookOpen,
-  Clock,
-  Mail,
-  Target,
-  UserRound,
-} from "lucide-react";
-import Link from "next/link";
+import { linkRowClass, rowLinkClass } from "@/components/admin/adminControls";
+import { courseHref } from "@/components/admin/courses/courseLinks";
+import { formatDateKey, utcDateKey } from "@/components/admin/courses/accessPlan";
+import { isGrantActive, readToday } from "@/app/admin/courses/courseData";
+import { formatDuration } from "@/lib/olympiad";
+import { formatDate } from "@/lib/formatDate";
+import { formatCorrectOf, hasScoreEstimate } from "@/lib/scoreDisplay";
+import { normalizeAccessEmail } from "@/lib/sectionAccess";
+import { linkClass } from "@/components/ui/Button";
+import { ChevronRight, ClipboardList } from "lucide-react";
 import { notFound } from "next/navigation";
+import { BackLink, Page, PageHeader, SectionHeading } from "@/components/ui/Page";
+import { Card, CardHeader } from "@/components/ui/Card";
+import { Badge } from "@/components/ui/Badge";
+import { Avatar } from "@/components/ui/Misc";
+import { Stat, StatGroup } from "@/components/ui/Stat";
+import { EmptyState } from "@/components/ui/Feedback";
+import { listRowClass, rowChevronClass, tableClass, tdClass, thClass } from "@/components/ui/List";
+import { cn } from "@/components/ui/cn";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
-// An active student accumulates attempts without bound, and every attempt used
-// to add a card to this page. The summary numbers below come from an aggregate
-// instead of this slice, so capping the list does not change them.
-const RESULT_LIST_LIMIT = 100;
+/**
+ * Attempts read to build the per-test table. Rows are folded into one line per
+ * test, so the page no longer grows with every attempt, but an account that
+ * somehow piled up thousands still should not pull them all in one request.
+ * The tiles come from an aggregate over the full history either way.
+ */
+const RESULT_READ_LIMIT = 2000;
 
-function formatDate(value: Date | string) {
-  return new Date(value).toLocaleDateString(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
+// The tables run edge to edge in their card; the outer columns line up with
+// the card header's px-5 instead of the table's default px-4.
+const sectionThClass = cn(thClass, "first:pl-5 last:pr-5");
+const sectionTdClass = cn(tdClass, "first:pl-5 last:pr-5");
+const numericThClass = cn(sectionThClass, "text-right");
+const numericTdClass = cn(sectionTdClass, "text-right tabular-nums");
+
+/**
+ * A score, or under 10 questions the questions solved ("7 of 9"): there a
+ * score is noise. A dash when an old attempt stored no count.
+ */
+function formatOutcome(score: number, correct: number | null, questionCount: number | null) {
+  if (questionCount === null || hasScoreEstimate(questionCount)) return score;
+  return correct === null ? "—" : formatCorrectOf(correct, questionCount);
+}
+
+/** One read per request, shared by the tab title and the page. */
+const readUser = cache((userId: string) => prisma.user.findUnique({
+  where: { id: userId },
+  select: {
+    id: true,
+    email: true,
+    name: true,
+    role: true,
+    createdAt: true,
+  },
+}));
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ userId: string }>;
+}): Promise<Metadata> {
+  const { userId } = await params;
+  // Same gate as the page: a user's name is not for anyone else's tab.
+  await requireAdminPage();
+  const user = await readUser(userId);
+
+  return { title: user ? user.name || user.email : "User" };
 }
 
 export default async function AdminUserResultsPage({
@@ -44,33 +87,29 @@ export default async function AdminUserResultsPage({
   // Kept here on purpose: access must not depend on the segment layout.
   await requireAdminPage();
 
-  const [user, visibilityRows, totals] = await Promise.all([
-    prisma.user.findUnique({
-      where: { id: userId },
+  const [user, results, visibilityRows, totals] = await Promise.all([
+    readUser(userId),
+    prisma.result.findMany({
+      where: { userId },
+      orderBy: { createdAt: "desc" },
+      take: RESULT_READ_LIMIT,
       select: {
         id: true,
-        email: true,
-        name: true,
-        role: true,
+        testId: true,
+        score: true,
+        correctCount: true,
+        timeSpent: true,
         createdAt: true,
-        results: {
-          orderBy: { createdAt: "desc" },
-          take: RESULT_LIST_LIMIT,
+        test: {
           select: {
             id: true,
-            testId: true,
-            score: true,
-            timeSpent: true,
+            title: true,
+            description: true,
+            collectionCategory: true,
             createdAt: true,
-            test: {
-              select: {
-                id: true,
-                title: true,
-                description: true,
-                collectionCategory: true,
-                createdAt: true,
-              },
-            },
+            // Under 10 shown questions a score is noise; a copy shows its original's.
+            _count: { select: { questions: true } },
+            questionSource: { select: { _count: { select: { questions: true } } } },
           },
         },
       },
@@ -79,8 +118,8 @@ export default async function AdminUserResultsPage({
     prisma.result.aggregate({
       where: { userId },
       _count: { _all: true },
-      _sum: { score: true, timeSpent: true },
-      _max: { score: true },
+      _sum: { timeSpent: true },
+      _max: { createdAt: true },
     }),
   ]);
 
@@ -89,159 +128,173 @@ export default async function AdminUserResultsPage({
   }
 
   const collections = getTestCollections(visibilityRows);
-  const sectionSummaries = buildSectionResultSummaries(user.results, collections);
-  // Computed over the full history in the database, not over the capped list.
+  // Access is given by email, often before sign-up, so the entry may carry no user id yet.
+  const grants = await prisma.sectionAccess.findMany({
+    where: { OR: [{ userId }, { email: normalizeAccessEmail(user.email) }] },
+    select: { id: true, category: true, expiresAt: true, note: true },
+  });
+  const { now, todayKey } = readToday();
+  const courseAccess = grants
+    .map((grant) => ({
+      ...grant,
+      label: getCategoryLabel(grant.category, collections),
+      endKey: grant.expiresAt ? utcDateKey(grant.expiresAt) : null,
+      active: isGrantActive(grant, now),
+    }))
+    .sort((a, b) => Number(b.active) - Number(a.active) || a.label.localeCompare(b.label));
+
+  const sections = buildSectionTestSummaries(
+    results.map((result) => ({
+      ...result,
+      test: { ...result.test, questionCount: result.test.questionSource?._count.questions ?? result.test._count.questions },
+    })),
+    collections,
+  );
+  // Computed over the full history in the database, not over the capped read.
   const totalAttempts = totals._count._all;
-  const totalScore = totals._sum.score ?? 0;
-  const bestScore = totals._max.score ?? 0;
-  const averageScore = totalAttempts > 0 ? Math.round(totalScore / totalAttempts) : 0;
   const totalTimeSpent = totals._sum.timeSpent ?? 0;
-  const listedAttempts = user.results.length;
-  const isTruncated = totalAttempts > listedAttempts;
+  const lastActiveAt = totals._max.createdAt;
+  const testCount = sections.reduce((total, section) => total + section.tests.length, 0);
+  const isTruncated = totalAttempts > results.length;
   const displayName = user.name || user.email;
-  const initial = displayName[0] || "U";
 
   return (
-    <div className="px-4 py-10 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-6xl">
-        <Link
-          href="/admin/users"
-          className="mb-6 inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-blue-200 hover:text-blue-600"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back to admin
-        </Link>
+    <Page>
+      <PageHeader
+        back={<BackLink href="/admin/users">Back to users</BackLink>}
+        title={
+          <span className="flex min-w-0 items-center gap-3">
+            {/* Hidden from screen readers by Avatar itself: the initial would
+                otherwise be read out before the name. */}
+            <Avatar name={displayName} />
+            <span className="truncate">{displayName}</span>
+          </span>
+        }
+        // A user without a name is titled by their email; do not print it twice.
+        description={user.name ? user.email : undefined}
+        meta={
+          <>
+            <Badge tone={user.role === "ADMIN" ? "accent" : "neutral"} onCanvas>
+              {user.role === "ADMIN" ? "Admin" : "User"}
+            </Badge>
+            {/* On the mist-100 canvas, where mist-500 misses AA. */}
+            <span className="text-xs text-mist-600">Joined {formatDate(user.createdAt)}</span>
+          </>
+        }
+      />
 
-        <header className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-          <div className="bg-slate-900 p-8 text-white">
-            <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
-              <div className="flex min-w-0 items-center gap-5">
-                <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl bg-blue-600 text-3xl font-black shadow-2xl">
-                  {initial}
+      {/* No sum of scores: adding up SAT-scale scores of different tests gave
+          a number that measured nothing. These are counts and dates. */}
+      <StatGroup>
+        <Stat label="Attempts" value={totalAttempts} />
+        <Stat label="Tests taken" value={testCount} hint={isTruncated ? `From the latest ${results.length} attempts` : undefined} />
+        <Stat label="Time practising" value={totalAttempts > 0 ? formatDuration(totalTimeSpent) : "None"} />
+        <Stat label="Last active" value={lastActiveAt ? formatDate(lastActiveAt) : "Never"} />
+      </StatGroup>
+
+      {courseAccess.length > 0 && (
+        <Card as="section" className="overflow-hidden">
+          <CardHeader title="Course access" />
+          <ul className="divide-y divide-mist-100">
+            {courseAccess.map((grant) => (
+              <li key={grant.id} className={listRowClass}>
+                <div className="min-w-0 flex-1">
+                  <Link href={courseHref(grant.category)} prefetch={false} className={cn(linkClass, "block truncate")}>
+                    {grant.label}
+                  </Link>
+                  {grant.note && <p className="mt-0.5 truncate text-xs text-mist-500">{grant.note}</p>}
                 </div>
-                <div className="min-w-0">
-                  <p className="text-xs font-medium uppercase tracking-[0.22em] text-blue-300">
-                    User result profile
-                  </p>
-                  <h1 className="mt-2 truncate text-3xl font-black tracking-tight md:text-4xl">
-                    {displayName}
-                  </h1>
-                  <p className="mt-2 flex min-w-0 items-center gap-2 text-sm font-semibold text-slate-300">
-                    <Mail className="h-4 w-4 shrink-0" />
-                    <span className="truncate">{user.email}</span>
-                  </p>
-                </div>
-              </div>
+                {/* The end is the UTC date the admin chose (see accessPlan.ts). */}
+                <span className={cn("shrink-0 text-sm tabular-nums", grant.active ? "text-mist-700" : "text-mist-500")}>
+                  {grant.endKey === null
+                    ? "No end date"
+                    : grant.active
+                      ? `Until ${formatDateKey(grant.endKey, todayKey)}`
+                      : `Ended ${formatDateKey(grant.endKey, todayKey)}`}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
 
-              <div className="rounded-2xl bg-white/10 px-5 py-4 text-sm font-semibold text-slate-200">
-                <div className="flex items-center gap-2">
-                  <UserRound className="h-5 w-5 text-blue-300" />
-                  {user.role}
-                </div>
-                <p className="mt-1 text-xs font-medium text-slate-400">
-                  Joined {formatDate(user.createdAt)}
-                </p>
-              </div>
-            </div>
-          </div>
-        </header>
+      <section className="space-y-4">
+        <SectionHeading
+          title="Results by test"
+          description={
+            isTruncated
+              ? // The tiles above cover every attempt; the tables are built
+                // from the capped read, so say so instead of showing numbers
+                // that silently disagree with the tiles.
+                `Built from the latest ${results.length} of ${totalAttempts} attempts.`
+              : "Best and latest score of each test, most recent first. Under 10 questions, the questions solved."
+          }
+        />
 
-        <section className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          {[
-            { label: "Tests solved", value: totalAttempts, icon: BookOpen },
-            { label: "Total score", value: totalScore, icon: BarChart3 },
-            { label: "Average score", value: averageScore, icon: Award },
-            { label: "Best score", value: bestScore, icon: Target },
-          ].map((stat) => {
-            const Icon = stat.icon;
-
-            return (
-              <div key={stat.label} className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                <div className="mb-5 inline-flex rounded-xl bg-blue-50 p-3 text-blue-600">
-                  <Icon className="h-6 w-6" />
-                </div>
-                <p className="text-[10px] font-medium uppercase tracking-widest text-slate-400">
-                  {stat.label}
-                </p>
-                <p className="mt-2 text-3xl font-black text-slate-900 tabular-nums">{stat.value}</p>
-              </div>
-            );
-          })}
-        </section>
-
-        <section className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <p className="text-[10px] font-medium uppercase tracking-[0.22em] text-blue-600">
-                Section breakdown
-              </p>
-              <h2 className="mt-2 text-2xl font-semibold text-slate-900">Results by section</h2>
-              {isTruncated && (
-                // The four tiles above cover every attempt; this breakdown is
-                // built from the capped list, so say so instead of showing
-                // numbers that silently disagree with the tiles.
-                <p className="mt-1 text-xs font-medium text-slate-400">
-                  Latest {listedAttempts} of {totalAttempts} attempts
-                </p>
-              )}
-            </div>
-            <span className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-4 py-2 text-xs font-medium uppercase tracking-widest text-slate-500">
-              <Clock className="h-4 w-4" />
-              {formatResultTime(totalTimeSpent)}
-            </span>
-          </div>
-
-          {sectionSummaries.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-10 text-center text-sm font-semibold text-slate-400">
-              This user has not completed any tests yet.
-            </div>
-          ) : (
-            <div className="space-y-5">
-              {sectionSummaries.map((section) => (
-                <article key={section.categoryKey} className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-                  <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                    <div>
-                      <h3 className="text-xl font-semibold text-slate-900">{section.label}</h3>
-                      <p className="mt-1 max-w-2xl text-sm font-semibold leading-relaxed text-slate-500">
-                        {section.description}
-                      </p>
-                    </div>
-                    <div className="grid gap-2 text-xs font-medium text-slate-600 sm:grid-cols-4 lg:min-w-[34rem]">
-                      <span className="rounded-2xl bg-white px-3 py-2">{section.attempts} attempts</span>
-                      <span className="rounded-2xl bg-white px-3 py-2">{section.uniqueTests} tests</span>
-                      <span className="rounded-2xl bg-white px-3 py-2">{section.totalScore} total</span>
-                      <span className="rounded-2xl bg-white px-3 py-2">{section.bestScore} best</span>
-                    </div>
-                  </div>
-
-                  <div className="mt-5 grid gap-3 md:grid-cols-2">
-                    {section.results.map((result) => (
-                      <div
-                        key={result.id}
-                        className="rounded-2xl border border-slate-200 bg-white p-4"
-                      >
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="min-w-0">
-                            <p className="truncate text-sm font-semibold text-slate-900">
-                              {result.testTitle}
-                            </p>
-                            <p className="mt-1 text-xs font-medium text-slate-400">
-                              {formatDate(result.createdAt)} - {formatResultTime(result.timeSpent)}
-                            </p>
-                          </div>
-                          <span className="rounded-2xl bg-slate-900 px-3 py-2 text-sm font-semibold text-white">
-                            {result.score}
-                          </span>
-                        </div>
-                      </div>
+        {sections.length === 0 ? (
+          <EmptyState icon={<ClipboardList />} title="This user has not completed any tests yet" />
+        ) : (
+          sections.map((section) => (
+            <Card as="section" key={section.categoryKey} className="overflow-hidden">
+              <CardHeader
+                title={collections.some((course) => course.value === section.categoryKey) ? (
+                  <Link href={courseHref(section.categoryKey, "results")} prefetch={false} className={linkClass}>
+                    {section.label}
+                  </Link>
+                ) : section.label}
+                description={`${section.tests.length} ${section.tests.length === 1 ? "test" : "tests"} · ${section.attempts} ${section.attempts === 1 ? "attempt" : "attempts"}`}
+              />
+              <div className="overflow-x-auto">
+                <table className={tableClass}>
+                  <thead>
+                    <tr>
+                      <th scope="col" className={sectionThClass}>Test</th>
+                      <th scope="col" className={numericThClass}>Attempts</th>
+                      <th scope="col" className={numericThClass}>Best</th>
+                      <th scope="col" className={numericThClass}>Latest</th>
+                      <th scope="col" className={cn(numericThClass, "hidden sm:table-cell")}>Time spent</th>
+                      <th scope="col" className={numericThClass}>Last attempt</th>
+                      <th scope="col" className={cn(sectionThClass, "w-10")}><span className="sr-only">Open</span></th>
+                    </tr>
+                  </thead>
+                  <tbody className="[&>tr:last-child>td]:border-b-0">
+                    {section.tests.map((test) => (
+                      // The whole row opens the test's stats (see `linkRowClass`); the chevron says so.
+                      <tr key={test.testId} className={cn(linkRowClass, "group")}>
+                        <td className={sectionTdClass}>
+                          {/* The test's stats show this student among everyone who sat it. */}
+                          <Link
+                            href={`/admin/tests/${test.testId}/stats`}
+                            prefetch={false}
+                            className={cn(rowLinkClass, "block max-w-80 truncate")}
+                          >
+                            {test.testTitle}
+                          </Link>
+                        </td>
+                        <td className={numericTdClass}>{test.attempts}</td>
+                        <td className={cn(numericTdClass, "font-semibold text-mist-900")}>
+                          {formatOutcome(test.bestScore, test.bestCorrect, test.questionCount)}
+                        </td>
+                        {/* Only a single attempt makes latest and best the same sitting. */}
+                        <td className={cn(numericTdClass, test.attempts === 1 && "text-mist-500")}>
+                          {formatOutcome(test.latestScore, test.latestCorrect, test.questionCount)}
+                        </td>
+                        <td className={cn(numericTdClass, "hidden whitespace-nowrap sm:table-cell")}>
+                          {formatDuration(test.totalTimeSpent)}
+                        </td>
+                        <td className={cn(numericTdClass, "whitespace-nowrap")}>{formatDate(test.latestAt)}</td>
+                        <td className={cn(sectionTdClass, "w-10")}>
+                          <ChevronRight aria-hidden className={rowChevronClass} />
+                        </td>
+                      </tr>
                     ))}
-                  </div>
-                </article>
-              ))}
-            </div>
-          )}
-        </section>
-      </div>
-    </div>
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+          ))
+        )}
+      </section>
+    </Page>
   );
 }

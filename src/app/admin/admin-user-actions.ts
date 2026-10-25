@@ -14,7 +14,7 @@ export async function grantAdminRole(formData: FormData) {
     await requireOwnerAdmin();
 
     const email = readEmail(formData);
-    if (!email) throw new Error('Email is required');
+    if (!email) throw new Error('Enter an email.');
 
     const user = await prisma.user.findUnique({
       where: { email },
@@ -22,7 +22,7 @@ export async function grantAdminRole(formData: FormData) {
     });
 
     if (!user) {
-      throw new Error('User was not found. The user must register first.');
+      throw new Error('No account with this email. They must sign up first.');
     }
 
     await prisma.user.update({
@@ -37,7 +37,7 @@ export async function grantAdminRole(formData: FormData) {
   } catch (error: unknown) {
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to grant admin role',
+      error: error instanceof Error ? error.message : 'Admin access was not given. Try again.',
     };
   }
 }
@@ -47,9 +47,9 @@ export async function revokeAdminRole(formData: FormData) {
     await requireOwnerAdmin();
 
     const email = readEmail(formData);
-    if (!email) throw new Error('Email is required');
+    if (!email) throw new Error('Enter an email.');
     if (email === OWNER_ADMIN_EMAIL) {
-      throw new Error('The owner admin role cannot be revoked.');
+      throw new Error("The owner's admin role cannot be removed.");
     }
 
     const user = await prisma.user.findUnique({
@@ -58,7 +58,7 @@ export async function revokeAdminRole(formData: FormData) {
     });
 
     if (!user) {
-      throw new Error('User was not found.');
+      throw new Error('No account with this email.');
     }
 
     await prisma.user.update({
@@ -71,7 +71,7 @@ export async function revokeAdminRole(formData: FormData) {
   } catch (error: unknown) {
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to revoke admin role',
+      error: error instanceof Error ? error.message : 'Admin access was not removed. Try again.',
     };
   }
 }

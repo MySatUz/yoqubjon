@@ -27,6 +27,55 @@ model User {
   manualPaymentRequests ManualPaymentRequest[]
   sectionAccesses SectionAccess[]
   testCodeUnlocks TestCodeUnlock[]
+  emailCodes      EmailCode[]
+  pendingEmailVerification PendingEmailVerification?
+}
+
+// An account that still has to prove it owns its email address. No row means
+// verified: everyone who signed up before verification existed, and everyone
+// who has entered their code (the row is deleted then). A table of its own, not
+// a column on User, so that no query on users changes shape and an older
+// deployment keeps working against a database that already has it.
+model PendingEmailVerification {
+  userId     String   @id
+  // sha256 of a random secret kept in the signing-up browser's httpOnly cookie.
+  // A code is only accepted with that secret or with the account's password,
+  // so whoever typed someone else's address cannot have the real owner's code
+  // confirm an account that carries the stranger's password.
+  secretHash String?
+  createdAt  DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// A one-time six-digit code sent by email, to confirm the address
+// ("verify-email") or to set a new password ("reset-password"). Only an HMAC of
+// the code is stored. The newest row per user and purpose is the live one;
+// older rows stay until it is used, so the hourly sending limit can count them.
+model EmailCode {
+  id        String   @id @default(uuid())
+  userId    String
+  purpose   String
+  codeHash  String
+  attempts  Int      @default(0)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, purpose, createdAt])
+}
+
+// One row per rate-limited auth event (a failed sign-in, a sign-up, a reset
+// request), keyed like "login:email:<email>" or "register:ip:<ip>". Kept in
+// Postgres because a counter in memory does not survive a new serverless
+// instance.
+model AuthAttempt {
+  id        String   @id @default(uuid())
+  key       String
+  createdAt DateTime @default(now())
+
+  @@index([key, createdAt])
 }
 
 model Test {
@@ -139,13 +188,48 @@ model Question {
   imageUrl      String?  // Local path to image
   order         Int      // Question order in the test
   moduleIndex   Int      @default(1) // 1-based module this question belongs to
+  // The bank question this one shows, when the test was imported or built
+  // after the bank existed. Null for older tests. See BankQuestion.
+  bankQuestionId String?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
   test          Test     @relation(fields: [testId], references: [id])
+  bankQuestion  BankQuestion? @relation(fields: [bankQuestionId], references: [id], onDelete: SetNull)
 
   @@index([testId, order])
   @@index([testId, moduleIndex, order])
+  @@index([bankQuestionId])
+}
+
+// The question bank: every question imported or written since it exists,
+// tagged by the SAT Math domain and a difficulty, independent of any test.
+//
+// A test still shows its own Question rows, so the exam, grading, review and
+// stats read questions exactly as before. A row taken from the bank carries
+// `bankQuestionId` and a copy of the bank text: deleting the test deletes the
+// row, never the bank question, and an edit to either side is written through
+// to the bank and every row linked to it (src/lib/questionBank.ts).
+model BankQuestion {
+  id            String   @id @default(uuid())
+  content       String
+  options       Json     // answer choices; empty for a grid-in question
+  correctAnswer String
+  imageUrl      String?
+  // "algebra" | "advanced-math" | "problem-solving" | "geometry-trig"
+  // (src/lib/questionBank.ts). Null only for a question not sorted yet.
+  domain        String?
+  difficulty    Int?     // 1 easy, 2 medium, 3 hard
+  // Where it came from, for the admin: the .tex file name or the test title.
+  source        String?
+  createdById   String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  questions     Question[]
+
+  @@index([domain, difficulty])
+  @@index([createdAt])
 }
 
 model Result {

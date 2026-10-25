@@ -37,5 +37,6 @@ export async function enterStudentView(formData: FormData) {
 export async function exitStudentView() {
   (await cookies()).delete(STUDENT_VIEW_COOKIE);
 
-  redirect('/admin');
+  // Courses: there is no admin hub to return to.
+  redirect('/admin/courses');
 }

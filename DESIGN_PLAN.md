@@ -325,8 +325,8 @@ answer panel and the reference sheet (step 3).
 
 ## 4. What is deliberately *not* done
 
-- No font swap. `Plus_Jakarta_Sans` is fine and already wired through
-  `--font-jakarta`; swapping it would churn every line-height in the app for no clear gain.
+- No font swap in this pass. (Superseded later: the app moved to Inter for Cyrillic,
+  Uzbek ʻ and true tabular figures — see AGENTS.md, "Type".)
 - No layout restructuring. The three-column feature row and the card grids stay — the brief
   is style unification, not an information-architecture change.
 - No dark mode. Nothing in the codebase currently supports it; adding it here would triple

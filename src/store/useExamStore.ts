@@ -4,14 +4,31 @@ import { EXAM_DURATION_SECONDS, EXAM_TIME_GRACE_SECONDS } from '@/lib/examConfig
 import type { ExamModuleSpec } from '@/lib/examModules';
 
 /**
- * `active` means the module clock is running. `pending` means the previous
- * module is over and the next one has not been started yet, so no time is
- * being consumed: unused time never carries over between modules.
+ * `active` means the module clock is running. `pending` means the module has
+ * not been started yet - module 1 of a new attempt, or the next module after
+ * the previous one ended - so no time is being consumed: the clock starts on
+ * the student's Start, and unused time never carries over between modules.
  */
 type ModulePhase = 'active' | 'pending';
 
+/** Another test's unfinished attempt that opening this test would replace. */
+export type BlockingAttempt = { testId: string; title: string | null };
+
 interface ExamState {
   activeTestId: string | null;
+  /**
+   * The test's title, kept with the attempt so another test's exam screen can
+   * name it before replacing it (see `blockingAttempt`). Null on attempts
+   * saved before this existed.
+   */
+  activeTestTitle: string | null;
+  /**
+   * The account the saved attempt belongs to. On a shared computer the next
+   * student must not open the previous one's unfinished attempt - answers,
+   * clock and all - and submit it as their own. Null on attempts saved before
+   * this existed; those are resumed as before, so nobody mid-exam loses one.
+   */
+  ownerId: string | null;
   /**
    * Names one attempt, so anything kept per attempt - the admin whiteboard's
    * drawings - can tell a resumed attempt from a new attempt at the same test.
@@ -19,6 +36,12 @@ interface ExamState {
   attemptId: string | null;
   answers: Record<string, string>;
   markedForReview: Record<string, boolean>;
+  /**
+   * Choices the student has ruled out, by question: a working note on the
+   * screen, like a pencil line on paper. Kept with the attempt so it survives
+   * a reload, and never part of the answers that are sent.
+   */
+  crossedOut: Record<string, string[]>;
   moduleDurations: number[];
   moduleTimeSpent: Record<number, number>;
   currentModuleIndex: number;
@@ -59,23 +82,34 @@ interface ExamState {
    * from `endsAtMs` on every visit.
    */
   ranOutWhileAway: boolean;
+  /**
+   * Set by `initializeExam` instead of replacing an attempt this student has
+   * started on another test: the exam screen asks whether to continue that
+   * one or discard it. Opening a test used to wipe it without a word. Not
+   * persisted.
+   */
+  blockingAttempt: BlockingAttempt | null;
+  /** "Check your work" is on screen instead of the question. Not persisted. */
+  isReviewOpen: boolean;
   isCalculatorOpen: boolean;
   isReferenceOpen: boolean;
   isWhiteboardOpen: boolean;
 
   // Actions
-  initializeExam: (testId: string, modules: ExamModuleSpec[]) => void;
+  initializeExam: (testId: string, modules: ExamModuleSpec[], ownerId: string, title: string) => void;
   unloadExam: () => void;
   startSending: (attemptId: string) => void;
   stopSending: (attemptId: string) => void;
-  startNewAttempt: (testId: string, modules: ExamModuleSpec[]) => void;
+  startNewAttempt: (testId: string, modules: ExamModuleSpec[], ownerId: string, title: string) => void;
   continueExpiredAttempt: () => void;
   startCurrentModule: () => void;
   finishCurrentModule: () => void;
   setAnswer: (questionId: string, answer: string) => void;
   toggleAnswerChoice: (questionId: string, letter: string) => void;
   toggleMarkForReview: (questionId: string) => void;
+  toggleCrossOut: (questionId: string, letter: string) => void;
   setCurrentQuestionIndex: (index: number) => void;
+  setReviewOpen: (open: boolean) => void;
   syncTimeLeft: () => void;
   markSubmitted: () => void;
   setCalculatorOpen: (open: boolean) => void;
@@ -85,9 +119,12 @@ interface ExamState {
 
 const createInitialState = () => ({
   activeTestId: null,
+  activeTestTitle: null as string | null,
+  ownerId: null as string | null,
   attemptId: null as string | null,
   answers: {} as Record<string, string>,
   markedForReview: {} as Record<string, boolean>,
+  crossedOut: {} as Record<string, string[]>,
   moduleDurations: [EXAM_DURATION_SECONDS],
   moduleTimeSpent: {} as Record<number, number>,
   currentModuleIndex: 1,
@@ -100,6 +137,8 @@ const createInitialState = () => ({
   sendingAttemptId: null as string | null,
   isAttemptLoaded: false,
   ranOutWhileAway: false,
+  blockingAttempt: null as BlockingAttempt | null,
+  isReviewOpen: false,
   isCalculatorOpen: false,
   isReferenceOpen: false,
   isWhiteboardOpen: false,
@@ -110,21 +149,53 @@ function createAttemptId() {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
-/** Starts a fresh attempt with module 1 already running. */
-function startFirstModule(testId: string, moduleDurations: number[]) {
-  const now = Date.now();
+/**
+ * A fresh attempt, waiting on module 1's start screen. Its clock starts only
+ * when the student presses Start (`startCurrentModule`): it used to start the
+ * moment the test opened, so time went while the page loaded and while the
+ * student was still reading what the test was.
+ */
+function createAttempt(
+  testId: string,
+  moduleDurations: number[],
+  ownerId: string | null,
+  title: string | null
+) {
   const durationSeconds = moduleDurations[0];
 
   return {
     ...createInitialState(),
     activeTestId: testId,
+    activeTestTitle: title,
+    ownerId,
     attemptId: createAttemptId(),
     moduleDurations,
+    modulePhase: 'pending' as ModulePhase,
     moduleDurationSeconds: durationSeconds,
     timeLeftSeconds: durationSeconds,
-    endsAtMs: now + durationSeconds * 1000,
+    endsAtMs: null,
     isAttemptLoaded: true,
   };
+}
+
+/** A choice answer as a set of letters: `"B"` or `"A,C"`. */
+function readLetters(answer: string | undefined) {
+  return new Set((answer ?? '').split(',').map((part) => part.trim()).filter(Boolean));
+}
+
+/** Choosing a crossed-out choice brings it back: the student changed their mind. */
+function uncross(crossedOut: Record<string, string[]>, questionId: string, letters: Iterable<string>) {
+  const crossed = crossedOut[questionId];
+  if (!crossed) return crossedOut;
+
+  const chosen = new Set(letters);
+  const kept = crossed.filter((letter) => !chosen.has(letter));
+  if (kept.length === crossed.length) return crossedOut;
+
+  const next = { ...crossedOut };
+  if (kept.length > 0) next[questionId] = kept;
+  else delete next[questionId];
+  return next;
 }
 
 /**
@@ -207,16 +278,34 @@ export const useExamStore = create<ExamState>()(
     (set) => ({
       ...createInitialState(),
 
-      initializeExam: (testId, modules) =>
+      initializeExam: (testId, modules, ownerId, title) =>
         set((state) => {
           if (modules.length === 0) return {};
 
           const moduleDurations = modules.map((item) => item.durationSeconds);
+          const ownedByAnother = state.ownerId !== null && state.ownerId !== ownerId;
 
           // A submitted attempt is never resumed: the next visit is a new
-          // attempt that starts module 1 on a fresh clock.
-          if (state.activeTestId !== testId || state.isSubmitted) {
-            return startFirstModule(testId, moduleDurations);
+          // attempt that starts module 1 on a fresh clock. Neither is another
+          // account's attempt left in this browser.
+          if (state.activeTestId !== testId || state.isSubmitted || ownedByAnother) {
+            // This student's own answers on another test are not thrown away
+            // by opening this one: nothing is loaded, and the exam screen asks
+            // first. `startNewAttempt` replaces the attempt once they agree.
+            if (
+              state.activeTestId !== null &&
+              state.activeTestId !== testId &&
+              !state.isSubmitted &&
+              !ownedByAnother &&
+              hasAnyAnswer(state.answers)
+            ) {
+              return {
+                blockingAttempt: { testId: state.activeTestId, title: state.activeTestTitle },
+                isAttemptLoaded: false,
+              };
+            }
+
+            return createAttempt(testId, moduleDurations, ownerId, title);
           }
 
           const now = Date.now();
@@ -226,10 +315,15 @@ export const useExamStore = create<ExamState>()(
 
           // An attempt saved before attempts had ids gets one on resume.
           const attemptId = state.attemptId ?? createAttemptId();
+          // Claimed on resume: an attempt saved before owners existed becomes this
+          // student's, so the shared-computer guard covers it from now on. The
+          // title is taken again too, in case the test was renamed.
+          const claimed = { ownerId: state.ownerId ?? ownerId, activeTestTitle: title };
 
           if (state.modulePhase === 'pending') {
             return {
               attemptId,
+              ...claimed,
               moduleDurations,
               currentModuleIndex: moduleIndex,
               moduleDurationSeconds: activeModule.durationSeconds,
@@ -253,11 +347,12 @@ export const useExamStore = create<ExamState>()(
           // seconds, which still ends the module as usual.
           if (deadlineMs !== null && now - deadlineMs > EXAM_TIME_GRACE_SECONDS * 1000) {
             if (!hasAnyAnswer(state.answers)) {
-              return startFirstModule(testId, moduleDurations);
+              return createAttempt(testId, moduleDurations, ownerId, title);
             }
 
             return {
               attemptId,
+              ...claimed,
               moduleDurations,
               currentModuleIndex: moduleIndex,
               moduleDurationSeconds: activeModule.durationSeconds,
@@ -284,6 +379,7 @@ export const useExamStore = create<ExamState>()(
 
           return {
             attemptId,
+            ...claimed,
             moduleDurations,
             currentModuleIndex: moduleIndex,
             moduleDurationSeconds: activeModule.durationSeconds,
@@ -295,7 +391,12 @@ export const useExamStore = create<ExamState>()(
           };
         }),
 
-      unloadExam: () => set({ isAttemptLoaded: false, ranOutWhileAway: false }),
+      unloadExam: () => set({
+        isAttemptLoaded: false,
+        ranOutWhileAway: false,
+        blockingAttempt: null,
+        isReviewOpen: false,
+      }),
 
       startSending: (attemptId) => set({ sendingAttemptId: attemptId }),
 
@@ -305,13 +406,14 @@ export const useExamStore = create<ExamState>()(
         set((state) => (state.sendingAttemptId === attemptId ? { sendingAttemptId: null } : {})),
 
       // Abandoning an attempt is already free - attempts only count once they
-      // are submitted, and opening another test discards the saved one - so
-      // offering it here opens no new way around the clock.
-      startNewAttempt: (testId, modules) =>
+      // are submitted, and opening another test discards the saved one once
+      // the student agrees - so offering it here opens no new way around the
+      // clock. Also how another test's attempt is discarded (`blockingAttempt`).
+      startNewAttempt: (testId, modules, ownerId, title) =>
         set(() => (
           modules.length === 0
             ? {}
-            : startFirstModule(testId, modules.map((item) => item.durationSeconds))
+            : createAttempt(testId, modules.map((item) => item.durationSeconds), ownerId, title)
         )),
 
       // For a module before the last one. Leaves the clock at 00:00, so the
@@ -330,6 +432,7 @@ export const useExamStore = create<ExamState>()(
             timeLeftSeconds: state.moduleDurationSeconds,
             endsAtMs: Date.now() + state.moduleDurationSeconds * 1000,
             currentQuestionIndex: 0,
+            isReviewOpen: false,
           };
         }),
 
@@ -357,12 +460,14 @@ export const useExamStore = create<ExamState>()(
             timeLeftSeconds: nextDuration,
             endsAtMs: null,
             currentQuestionIndex: 0,
+            isReviewOpen: false,
           };
         }),
 
       setAnswer: (questionId, answer) =>
         set((state) => ({
-          answers: { ...state.answers, [questionId]: answer }
+          answers: { ...state.answers, [questionId]: answer },
+          crossedOut: uncross(state.crossedOut, questionId, readLetters(answer)),
         })),
 
       /**
@@ -373,15 +478,14 @@ export const useExamStore = create<ExamState>()(
        */
       toggleAnswerChoice: (questionId, letter) =>
         set((state) => {
-          const selected = new Set(
-            (state.answers[questionId] ?? '').split(',').map((part) => part.trim()).filter(Boolean)
-          );
+          const selected = readLetters(state.answers[questionId]);
 
           if (selected.has(letter)) selected.delete(letter);
           else selected.add(letter);
 
           return {
             answers: { ...state.answers, [questionId]: [...selected].sort().join(',') },
+            crossedOut: uncross(state.crossedOut, questionId, selected),
           };
         }),
 
@@ -393,8 +497,33 @@ export const useExamStore = create<ExamState>()(
           }
         })),
 
+      /**
+       * Ruling out a choice the student had picked also takes it out of the
+       * answer, the way a crossed-out answer on paper is no longer the answer.
+       */
+      toggleCrossOut: (questionId, letter) =>
+        set((state) => {
+          const crossed = state.crossedOut[questionId] ?? [];
+
+          if (crossed.includes(letter)) {
+            return { crossedOut: uncross(state.crossedOut, questionId, [letter]) };
+          }
+
+          const crossedOut = { ...state.crossedOut, [questionId]: [...crossed, letter].sort() };
+          const selected = readLetters(state.answers[questionId]);
+          if (!selected.has(letter)) return { crossedOut };
+
+          selected.delete(letter);
+          return {
+            crossedOut,
+            answers: { ...state.answers, [questionId]: [...selected].sort().join(',') },
+          };
+        }),
+
       setCurrentQuestionIndex: (index) =>
         set(() => ({ currentQuestionIndex: Math.max(0, index) })),
+
+      setReviewOpen: (open) => set({ isReviewOpen: open }),
 
       syncTimeLeft: () =>
         set((state) => {
@@ -415,16 +544,21 @@ export const useExamStore = create<ExamState>()(
           ) {
             // Settled only where the student can see it, and never in the
             // middle of a send. Until then the clock is left as it was, so this
-            // keeps waiting: a hidden tab woken overnight that restarted here
-            // would run the new attempt's clock with nobody watching, and file
-            // the very blank result this exists to prevent.
+            // keeps waiting: the attempt is replaced, or the student asked
+            // about it, when they are back to see it - not by a hidden tab
+            // woken overnight with nobody watching.
             const isSending = state.sendingAttemptId !== null
               && state.sendingAttemptId === state.attemptId;
             if (isPageHidden() || isSending) return {};
 
             return hasAnyAnswer(state.answers)
               ? { timeLeftSeconds: 0, ranOutWhileAway: true }
-              : startFirstModule(state.activeTestId, state.moduleDurations);
+              : createAttempt(
+                state.activeTestId,
+                state.moduleDurations,
+                state.ownerId,
+                state.activeTestTitle
+              );
           }
 
           return {
@@ -448,11 +582,17 @@ export const useExamStore = create<ExamState>()(
       storage: dedupedStorage,
       // Attempts saved by the pre-module timer cannot be resumed safely.
       migrate: () => createInitialState() as ExamState,
+      // A field added here needs no version bump: an attempt saved without it
+      // is merged over the initial state, which supplies the empty default,
+      // whereas a bump would discard every attempt in progress.
       partialize: (state) => ({
         activeTestId: state.activeTestId,
+        activeTestTitle: state.activeTestTitle,
+        ownerId: state.ownerId,
         attemptId: state.attemptId,
         answers: state.answers,
         markedForReview: state.markedForReview,
+        crossedOut: state.crossedOut,
         moduleDurations: state.moduleDurations,
         moduleTimeSpent: state.moduleTimeSpent,
         currentModuleIndex: state.currentModuleIndex,

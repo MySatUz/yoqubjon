@@ -1,14 +1,17 @@
 /* eslint-disable @next/next/no-img-element */
 import 'katex/dist/katex.min.css';
 import PrintPdfButton from '@/components/exam/PrintPdfButton';
+import { optionAsMath } from '@/components/exam/optionMath';
 import { requireAdminPage } from '@/lib/admin';
 import { prisma } from '@/lib/prisma';
 import { renderMathText } from '@/lib/renderMathText';
 import { buildExamModules } from '@/lib/examModules';
+import { formatDuration } from '@/lib/olympiad';
 import { getShownQuestions } from '@/lib/questionSource';
 import { isMultiSelectKey } from '@/lib/resultAnswers';
-import { ArrowLeft, FileText } from 'lucide-react';
-import Link from 'next/link';
+import { BackLink } from '@/components/ui/Page';
+import { cardClass } from '@/components/ui/Card';
+import { cn } from '@/components/ui/cn';
 import { notFound, redirect } from 'next/navigation';
 
 const PDF_QUESTION_FIELDS = {
@@ -38,23 +41,22 @@ function readOptions(options: unknown) {
     : [];
 }
 
+/**
+ * One question as a section of the sheet, divided from the next by a hairline
+ * - not a card of its own inside the sheet's card.
+ */
 function QuestionPdfCard({ question, number }: { question: QuestionForPdf; number: number }) {
   const options = readOptions(question.options);
 
   return (
-    <section className="break-inside-avoid rounded-2xl border border-slate-200 bg-white p-6 shadow-sm print:rounded-none print:border-slate-300 print:p-4 print:shadow-none">
-      <div className="mb-5 flex items-center gap-3">
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-slate-900 text-sm font-semibold text-white print:h-8 print:w-8 print:rounded-lg">
-          {number}
-        </span>
-        <p className="text-[10px] font-medium uppercase tracking-[0.24em] text-blue-600">
-          Question {number}
-        </p>
-      </div>
+    <section className="break-inside-avoid p-5 print:px-0 print:py-4">
+      <h3 className="mb-3 text-sm font-semibold tabular-nums text-mist-900">
+        Question {number}
+      </h3>
 
       {/* Diagram first, stem second - the same order the exam screen uses. */}
       {question.imageUrl && (
-        <div className="mb-5 overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 p-3 print:rounded-lg">
+        <div className="mb-4 overflow-hidden rounded-xl border border-mist-200 p-3 print:rounded-lg">
           <img
             src={question.imageUrl}
             alt={`Question ${question.order} diagram`}
@@ -63,36 +65,34 @@ function QuestionPdfCard({ question, number }: { question: QuestionForPdf; numbe
         </div>
       )}
 
-      <div className="prose prose-slate max-w-none">
-        <div className="text-lg font-semibold leading-relaxed text-slate-900 print:text-[12pt]">
-          {renderMathText(question.content)}
-        </div>
+      <div className="text-base leading-relaxed text-mist-900 print:text-[12pt]">
+        {renderMathText(question.content)}
       </div>
 
       {options.length > 0 && isMultiSelectKey(question.correctAnswer) && (
-        <p className="mt-6 text-[10px] font-medium uppercase tracking-[0.24em] text-blue-600">
+        <p className="mt-4 text-sm font-medium text-mist-700">
           Select all that apply
         </p>
       )}
 
       {options.length > 0 ? (
-        <div className="mt-6 grid gap-3 sm:grid-cols-2 print:grid-cols-1">
+        <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2 print:grid-cols-1">
           {options.map((option, index) => (
             <div
               key={`${question.id}-${index}`}
-              className="flex gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 print:rounded-lg print:bg-white print:p-3"
+              className="flex gap-3 rounded-xl border border-mist-200 px-3 py-2.5 print:rounded-lg print:py-2"
             >
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-slate-300 bg-white text-sm font-semibold text-slate-700 print:h-7 print:w-7 print:rounded-lg">
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border border-mist-300 text-xs font-semibold text-mist-700">
                 {String.fromCharCode(65 + index)}
               </span>
-              <div className="text-sm font-semibold leading-relaxed text-slate-800 print:text-[11pt]">
-                {renderMathText(option)}
+              <div className="min-w-0 text-sm leading-relaxed text-mist-800 print:text-[11pt]">
+                {renderMathText(optionAsMath(option))}
               </div>
             </div>
           ))}
         </div>
       ) : (
-        <div className="mt-6 rounded-2xl border border-dashed border-blue-200 bg-blue-50 px-4 py-3 text-sm font-semibold text-blue-700 print:rounded-lg print:bg-white">
+        <div className="mt-4 rounded-xl border border-dashed border-mist-300 px-4 py-3 text-sm text-mist-500 print:rounded-lg">
           Student-produced response
         </div>
       )}
@@ -140,8 +140,9 @@ export default async function ExamPdfPage({ params }: { params: Promise<{ id: st
   const modules = buildExamModules(test, questions);
   const isModular = modules.length > 1;
 
+  // Outside the app shell, so the page paints the shell's canvas itself.
   return (
-    <main className="min-h-screen bg-slate-100 px-4 py-8 text-slate-900 print:bg-white print:px-0 print:py-0">
+    <main className="min-h-screen bg-mist-100 px-4 py-6 text-mist-900 sm:px-6 lg:py-8 print:bg-white print:px-0 print:py-0">
       <style>{`
         @page {
           size: A4;
@@ -159,49 +160,41 @@ export default async function ExamPdfPage({ params }: { params: Promise<{ id: st
         }
       `}</style>
 
-      <div className="mx-auto max-w-5xl print:max-w-none">
-        <div className="mb-6 flex flex-wrap items-center justify-between gap-3 print:hidden">
-          <Link
-            href="/dashboard"
-            className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-600 shadow-sm transition hover:border-blue-200 hover:text-blue-600"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to tests
-          </Link>
+      <div className="mx-auto max-w-4xl space-y-6 print:max-w-none print:space-y-0">
+        <div className="flex flex-wrap items-center justify-between gap-3 print:hidden">
+          <BackLink href="/dashboard">Back to tests</BackLink>
           <PrintPdfButton />
         </div>
 
-        <article className="overflow-hidden rounded-2xl bg-white shadow-sm print:overflow-visible print:rounded-none print:shadow-none">
-          <header className="border-b border-slate-200 bg-slate-900 p-8 text-white print:border-slate-300 print:bg-white print:p-0 print:pb-6 print:text-slate-900">
-            <div className="mb-5 inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-xs font-medium uppercase tracking-[0.22em] text-blue-100 print:bg-white print:px-0 print:text-slate-500">
-              <FileText className="h-4 w-4" />
-              Printable practice module
-            </div>
-            <h1 className="text-4xl font-black tracking-tight print:text-2xl">{test.title}</h1>
-            <p className="mt-3 text-sm font-semibold text-slate-300 print:text-slate-500">
-              {questions.length} questions | Generated from MYSATuz
+        <article className={cn(cardClass, 'overflow-hidden print:overflow-visible print:rounded-none print:border-0')}>
+          <header className="border-b border-mist-200 p-5 print:border-mist-300 print:px-0 print:pb-6 print:pt-0">
+            <h1 className="text-xl font-semibold tracking-tight text-mist-900 sm:text-2xl">{test.title}</h1>
+            <p className="mt-1 text-sm text-mist-500 tabular-nums">
+              {/* "Module" only where the test has modules: a one-block test is one set of questions. */}
+              Printable test · {isModular ? `${modules.length} modules · ` : ''}
+              {questions.length} {questions.length === 1 ? 'question' : 'questions'} · Generated from MYSATuz
             </p>
           </header>
 
-          <div className="space-y-5 p-6 print:space-y-4 print:p-0 print:pt-6">
-            {modules.map((module) => (
-              <div key={module.index} className="space-y-5 print:space-y-4">
-                {isModular && (
-                  <div className="break-inside-avoid rounded-2xl border border-slate-900 bg-slate-900 px-5 py-4 text-white print:rounded-none print:border-slate-300 print:bg-white print:text-slate-900">
-                    <p className="text-sm font-medium uppercase tracking-[0.22em]">
-                      Module {module.index}
-                    </p>
-                    <p className="mt-1 text-xs font-medium text-slate-300 print:text-slate-500">
-                      {module.questions.length} questions | {Math.round(module.durationSeconds / 60)} minutes
-                    </p>
-                  </div>
-                )}
+          {modules.map((module) => (
+            <div key={module.index} className="border-b border-mist-200 last:border-b-0 print:border-mist-300">
+              {isModular && (
+                <div className="break-inside-avoid border-b border-mist-200 bg-mist-50 px-5 py-3 print:border-mist-300 print:bg-white print:px-0 print:pt-6">
+                  <h2 className="text-sm font-semibold text-mist-900">
+                    Module {module.index}
+                  </h2>
+                  <p className="mt-0.5 text-xs text-mist-500 tabular-nums">
+                    {module.questions.length} {module.questions.length === 1 ? 'question' : 'questions'} · {formatDuration(module.durationSeconds)}
+                  </p>
+                </div>
+              )}
+              <div className="divide-y divide-mist-100 print:divide-mist-300">
                 {module.questions.map((question, index) => (
                   <QuestionPdfCard key={question.id} question={question} number={index + 1} />
                 ))}
               </div>
-            ))}
-          </div>
+            </div>
+          ))}
         </article>
       </div>
     </main>

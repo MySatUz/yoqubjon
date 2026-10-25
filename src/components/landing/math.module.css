@@ -1,0 +1,18 @@
+/* KaTeX's own faces for the landing's maths (MathText, TangentFigure). The
+   @font-face rules come from katex.min.css, which MathText imports.
+
+   A CSS module, not a Tailwind arbitrary property: Tailwind turns the
+   underscores in `[font-family:KaTeX_Math]` into spaces, and "KaTeX Math" is
+   no font at all, so every variable fell back to the system serif. */
+
+/* An italic variable, as KaTeX sets \mathnormal. ℓ is not in KaTeX_Math: it
+   falls through to KaTeX_Main, which is where KaTeX itself draws \ell. */
+.variable {
+  font-family: KaTeX_Math, KaTeX_Main, serif;
+  font-style: italic;
+}
+
+/* Upright digits and operators of a formula. */
+.upright {
+  font-family: KaTeX_Main, serif;
+}

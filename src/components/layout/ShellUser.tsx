@@ -1,70 +1,58 @@
-import { getShellSession } from '@/components/layout/shell-data';
+import { getShellCanManageTests, getShellStudentView, getShellUser } from '@/components/layout/shell-data';
+import ShellUserMenu from '@/components/layout/ShellUserMenu';
 
-export type ShellSession = {
-  user?: {
-    name?: string | null;
-    email?: string | null;
-  } | null;
-} | null;
+type ShellUser = { name?: string | null; email?: string | null };
 
-function userInitialOf(session: ShellSession) {
-  return session?.user?.name?.[0] || session?.user?.email?.[0] || 'U';
+function userInitialOf(user: ShellUser) {
+  return user.name?.trim()?.[0] || user.email?.[0] || 'U';
 }
 
-/* ---------- mobile header avatar ---------- */
+/**
+ * What the account menu needs from the server: who the user is, and whether
+ * they are an admin (and in student view right now) — for the "See the site as
+ * a student" / "Exit student view" item. All three reads are request-cached. The
+ * name comes from the database (getShellUser), so a rename in Profile shows
+ * here as soon as the page refreshes.
+ */
+async function readMenuProps() {
+  const [user, isAdmin, studentView] = await Promise.all([
+    getShellUser(),
+    getShellCanManageTests(),
+    getShellStudentView(),
+  ]);
 
-export function ShellUserAvatarView({ session }: { session: ShellSession }) {
-  return (
-    <div className="h-8 w-8 rounded-lg bg-blue-600 flex items-center justify-center text-white font-medium uppercase">
-      {userInitialOf(session)}
-    </div>
-  );
+  return {
+    name: user.name?.trim() || 'User',
+    email: user.email,
+    initial: userInitialOf(user),
+    isAdmin,
+    inStudentView: Boolean(studentView),
+  };
 }
+
+/* ---------- mobile header avatar: opens the account menu ---------- */
 
 export function ShellUserAvatarSkeleton() {
-  return <div className="h-8 w-8 animate-pulse rounded-lg bg-slate-200" />;
+  return <div className="h-8 w-8 animate-pulse rounded-full bg-mist-200" />;
 }
 
 export async function ShellUserAvatar() {
-  const session = await getShellSession();
-
-  return <ShellUserAvatarView session={session} />;
+  return <ShellUserMenu variant="mobile" {...await readMenuProps()} />;
 }
 
-/* ---------- desktop sidebar user card ---------- */
-
-export function ShellUserCardView({ session }: { session: ShellSession }) {
-  return (
-    <div className="bg-slate-50 rounded-2xl p-4 flex items-center gap-3 mb-4">
-      <div className="h-10 w-10 rounded-xl bg-blue-600 flex items-center justify-center text-white font-medium uppercase">
-        {userInitialOf(session)}
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold text-slate-900 truncate">{session?.user?.name || 'User'}</p>
-        <p className="text-[10px] font-medium text-slate-400 uppercase tracking-widest truncate">
-          {session?.user?.email}
-        </p>
-      </div>
-    </div>
-  );
-}
+/* ---------- desktop sidebar user row: opens the account menu ---------- */
 
 export function ShellUserCardSkeleton() {
-  // Same wrapper/padding/avatar size as ShellUserCardView, so the card height
-  // (40px avatar + p-4) is identical and the swap causes no layout shift.
+  // Same row height and avatar slot as the menu's row, so the swap causes no
+  // layout shift.
   return (
-    <div className="bg-slate-50 rounded-2xl p-4 flex items-center gap-3 mb-4">
-      <div className="h-10 w-10 animate-pulse rounded-xl bg-slate-200" />
-      <div className="flex-1 min-w-0 space-y-2">
-        <div className="h-3.5 w-24 animate-pulse rounded-full bg-slate-200" />
-        <div className="h-2.5 w-32 animate-pulse rounded-full bg-slate-100" />
-      </div>
+    <div className="flex h-12 items-center gap-3 pl-1 pr-3">
+      <div className="h-10 w-10 shrink-0 animate-pulse rounded-full bg-board-900" />
+      <div className="h-3 w-24 animate-pulse rounded-full bg-board-900 collapsed:hidden" />
     </div>
   );
 }
 
 export async function ShellUserCard() {
-  const session = await getShellSession();
-
-  return <ShellUserCardView session={session} />;
+  return <ShellUserMenu variant="desktop" {...await readMenuProps()} />;
 }

@@ -17,7 +17,8 @@ export type BoardPoint = [number, number];
 
 export const STROKE_KINDS = ['pen', 'marker', 'line', 'arrow', 'rect', 'ellipse', 'text'] as const;
 export type StrokeKind = (typeof STROKE_KINDS)[number];
-export type BoardTool = StrokeKind | 'laser' | 'eraser';
+/** `cursor` draws nothing: it hands the page under the drawing back to the pointer. */
+export type BoardTool = StrokeKind | 'cursor' | 'laser' | 'eraser';
 
 export interface Stroke {
   id: string;
@@ -30,17 +31,31 @@ export interface Stroke {
 
 /**
  * Ink, from the five colour families the design system allows (AGENTS.md):
- * red-600, blue-600, emerald-600, amber-600 and slate-900. Hex rather than
+ * red-600, board-600, lime-700, amber-600 and mist-900. Hex rather than
  * Tailwind's oklch values because these go to a canvas, and a stored stroke is
  * only ever given a colour from this list.
  */
 export const INKS = [
   { name: 'Red', value: '#dc2626' },
-  { name: 'Blue', value: '#2563eb' },
-  { name: 'Green', value: '#059669' },
+  { name: 'Green', value: '#0d6657' },
+  { name: 'Lime', value: '#497d00' },
   { name: 'Amber', value: '#d97706' },
-  { name: 'Black', value: '#0f172a' },
+  { name: 'Black', value: '#161b1d' },
 ] as const;
+
+/**
+ * Inks this list used to hold, and the one each is drawn in now. Each left
+ * with the palette it came from - blue-600 and then indigo-600 with the old
+ * accents, emerald and slate with indigo - and a stroke drawn in one before
+ * the change, read back from the tab's storage, takes its successor rather
+ * than turning red.
+ */
+const RETIRED_INKS: Record<string, string> = {
+  '#2563eb': '#0d6657',
+  '#4f46e5': '#0d6657',
+  '#059669': '#497d00',
+  '#0f172a': '#161b1d',
+};
 
 /** Three, not five: a fourth choice on a switch nobody explains is noise. */
 export const WIDTHS = [2, 4, 8] as const;
@@ -116,7 +131,8 @@ export function sanitizeStroke(raw: unknown): Stroke | null {
   }
   if (kind === 'text') points = [points[0]];
 
-  const color = INKS.find((ink) => ink.value === source.color)?.value ?? INKS[0].value;
+  const named = typeof source.color === 'string' ? RETIRED_INKS[source.color] ?? source.color : null;
+  const color = INKS.find((ink) => ink.value === named)?.value ?? INKS[0].value;
   const width = WIDTHS.find((item) => item === source.width) ?? WIDTHS[1];
 
   const stroke: Stroke = {

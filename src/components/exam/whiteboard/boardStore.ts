@@ -111,6 +111,9 @@ export interface PanelOffset {
   y: number;
 }
 
+/** The side of the window the toolbar is docked to, standing in a column; null while it floats. */
+export type PanelDock = 'left' | 'right' | null;
+
 interface BoardState {
   attemptId: string | null;
   pages: Record<string, Page>;
@@ -119,8 +122,16 @@ interface BoardState {
   width: number;
   /** Where the toolbar was dragged to, kept across questions and modules. */
   panelOffset: PanelOffset;
+  /** The side it was docked to, kept the same way. The offset is where it floats again. */
+  panelDock: PanelDock;
 
   bindAttempt: (attemptId: string) => void;
+  /**
+   * Forgets every page whose key starts with `keyPrefix` - its strokes, its
+   * history and the tab's copy. For the admin Board, which never goes back to
+   * a question it has left; the exam never calls it.
+   */
+  discardPages: (keyPrefix: string) => void;
   addStroke: (key: string, stroke: Stroke) => void;
   replaceStrokes: (key: string, strokes: readonly Stroke[]) => void;
   clear: (key: string) => void;
@@ -130,6 +141,7 @@ interface BoardState {
   setColorIndex: (index: number) => void;
   setWidth: (width: number) => void;
   setPanelOffset: (offset: PanelOffset) => void;
+  setPanelDock: (dock: PanelDock) => void;
 }
 
 export const useBoardStore = create<BoardState>()((set, get) => {
@@ -157,6 +169,7 @@ export const useBoardStore = create<BoardState>()((set, get) => {
     colorIndex: 0,
     width: WIDTHS[1],
     panelOffset: { x: 0, y: 0 },
+    panelDock: null,
 
     // The store outlives the exam page - client navigation keeps modules
     // loaded - so it has to be told which attempt is on screen, and it drops
@@ -164,6 +177,26 @@ export const useBoardStore = create<BoardState>()((set, get) => {
     bindAttempt: (attemptId) => {
       if (get().attemptId === attemptId) return;
       set({ attemptId, pages: readAttempt(attemptId) });
+    },
+
+    discardPages: (keyPrefix) => {
+      const storage = safeSessionStorage();
+      if (storage) {
+        try {
+          const names: string[] = [];
+          for (let i = 0; i < storage.length; i += 1) {
+            const name = storage.key(i);
+            if (name?.startsWith(STORAGE_PREFIX + keyPrefix)) names.push(name);
+          }
+          for (const name of names) storage.removeItem(name);
+        } catch {
+          // Storage that cannot be read holds nothing of these pages.
+        }
+      }
+
+      const pages = get().pages;
+      const kept = Object.fromEntries(Object.entries(pages).filter(([key]) => !key.startsWith(keyPrefix)));
+      if (Object.keys(kept).length !== Object.keys(pages).length) set({ pages: kept });
     },
 
     addStroke: (key, stroke) => change(key, appendStroke((get().pages[key] ?? EMPTY_PAGE).strokes, stroke)),
@@ -213,6 +246,7 @@ export const useBoardStore = create<BoardState>()((set, get) => {
     setColorIndex: (index) => set({ colorIndex: Math.min(Math.max(index, 0), INKS.length - 1) }),
     setWidth: (width) => set({ width }),
     setPanelOffset: (offset) => set({ panelOffset: offset }),
+    setPanelDock: (dock) => set({ panelDock: dock }),
   };
 });
 

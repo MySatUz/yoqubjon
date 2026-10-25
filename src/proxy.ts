@@ -9,11 +9,16 @@ export default auth((req) => {
   const isLoggedIn = !!req.auth;
   const { nextUrl } = req;
 
-  const isAuthRoute = nextUrl.pathname.startsWith("/login") || nextUrl.pathname.startsWith("/register");
+  const isAuthRoute =
+    nextUrl.pathname.startsWith("/login") ||
+    nextUrl.pathname.startsWith("/register") ||
+    nextUrl.pathname.startsWith("/verify-email") ||
+    nextUrl.pathname.startsWith("/reset-password");
   const isProtectedRoute =
     nextUrl.pathname.startsWith("/admin") ||
     nextUrl.pathname.startsWith("/dashboard") ||
     nextUrl.pathname.startsWith("/exam") ||
+    nextUrl.pathname.startsWith("/olympiad") ||
     nextUrl.pathname.startsWith("/payment/mock");
 
   if (isAuthRoute) {
@@ -24,7 +29,14 @@ export default auth((req) => {
   }
 
   if (isProtectedRoute && !isLoggedIn) {
-    return Response.redirect(new URL("/login", nextUrl));
+    // Remember the page, so signing in comes back to it instead of the
+    // catalog: links from Telegram open a result or an olympiad, not Practice.
+    // The login action only follows a path on this site (safeCallbackUrl).
+    const login = new URL("/login", nextUrl);
+    if (nextUrl.pathname !== "/dashboard") {
+      login.searchParams.set("callbackUrl", nextUrl.pathname + nextUrl.search);
+    }
+    return Response.redirect(login);
   }
 });
 
@@ -40,7 +52,9 @@ export default auth((req) => {
  *
  * Server Functions are POSTs to the route that renders them, so every route
  * hosting one must stay listed here: `login`/`register` (`src/lib/auth-actions`),
- * `/dashboard/*` and `/admin/*` (sign-out, admin and subscription actions).
+ * `/dashboard/*` and `/admin/*` (sign-out, admin and subscription actions),
+ * and `/olympiad/*`, which wears the student shell and so carries its
+ * sign-out and student-view actions.
  * Authorization is still enforced inside the actions themselves — see
  * `requireAdmin()` in `src/lib/admin.ts` — this matcher is the optimistic
  * first line only.
@@ -50,8 +64,11 @@ export const config = {
     "/dashboard/:path*",
     "/admin/:path*",
     "/exam/:path*",
+    "/olympiad/:path*",
     "/payment/:path*",
     "/login",
     "/register",
+    "/verify-email",
+    "/reset-password",
   ],
 };

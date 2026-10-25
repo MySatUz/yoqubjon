@@ -35,6 +35,23 @@ export function getOlympiadStatus(window: OlympiadWindow, now = new Date()): Oly
 }
 
 /**
+ * When a student may open the questions of an attempt at this test: null when
+ * they may now, otherwise the instant they may.
+ *
+ * An olympiad allows several attempts and ranks the best one, so its review -
+ * the questions, the correct answers, even which of the student's own answers
+ * were right - stays closed until the window has ended. Otherwise a blank first
+ * attempt would hand out the answer key for a second one, or for a friend
+ * still sitting it. Before the window opens counts too: a test can become an
+ * olympiad after students took it as practice. Callers let admins through.
+ */
+export function getReviewOpensAt(test: OlympiadTest, now = new Date()): Date | null {
+  const window = readOlympiadWindow(test);
+  if (!window || getOlympiadStatus(window, now) === 'finished') return null;
+  return window.endsAt;
+}
+
+/**
  * Whether a new attempt may be started right now.
  *
  * An attempt counts only if it is *submitted* before the window closes, so the
@@ -77,6 +94,38 @@ export function formatOlympiadMoment(date: Date) {
     minute: '2-digit',
     hour12: false,
   }).format(date);
+}
+
+const tashkentTime = new Intl.DateTimeFormat('en-GB', {
+  timeZone: OLYMPIAD_TIME_ZONE,
+  hour: '2-digit',
+  minute: '2-digit',
+  hour12: false,
+});
+
+// The long month name: it reads the same in every ICU version, unlike "Sep".
+const tashkentDay = new Intl.DateTimeFormat('en-GB', {
+  timeZone: OLYMPIAD_TIME_ZONE,
+  day: 'numeric',
+  month: 'long',
+});
+
+const tashkentDayKey = new Intl.DateTimeFormat('en-CA', {
+  timeZone: OLYMPIAD_TIME_ZONE,
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+});
+
+/**
+ * "Questions open after 14:00, Tashkent time." - with the day named
+ * ("after 14:00 on 12 September") when it is not today in Tashkent. Server
+ * side only: "today" is read from the clock it runs on.
+ */
+export function formatReviewOpens(opensAt: Date, now = new Date()) {
+  const time = tashkentTime.format(opensAt);
+  const sameDay = tashkentDayKey.format(opensAt) === tashkentDayKey.format(now);
+  return `Questions open after ${time}${sameDay ? '' : ` on ${tashkentDay.format(opensAt)}`}, Tashkent time.`;
 }
 
 /**

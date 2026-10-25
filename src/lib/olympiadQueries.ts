@@ -38,14 +38,25 @@ export async function getOlympiadResults(
   return { standings, totalQuestions, participants: standings.length };
 }
 
-/** Reads the window off a test and returns its total run time in one place. */
+/**
+ * Reads the window off a test and returns its total run time in one place.
+ * `description` and `collectionCategory` are what getTestCategory reads, so the
+ * olympiad page can link back to its Practice collection without a second read,
+ * and check access to it.
+ */
 export async function getOlympiadTest(testId: string) {
   const test = await prisma.test.findUnique({
     where: { id: testId },
     select: {
       id: true,
       title: true,
+      description: true,
+      collectionCategory: true,
+      // The exam page's gates, so the olympiad page offers Start only where
+      // the exam would open: a hidden test is not there for a student at all.
       visible: true,
+      isFree: true,
+      maxAttempts: true,
       durationSeconds: true,
       moduleDurations: true,
       olympiadStartsAt: true,

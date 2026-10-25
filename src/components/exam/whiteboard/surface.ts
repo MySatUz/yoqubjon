@@ -346,11 +346,15 @@ export function createSurface(canvas: HTMLCanvasElement, { pageKey, onTextReques
     if (event.button !== 0 && event.button !== 5) return;
     if (activePointer !== null) return;
 
+    const { tool, colorIndex, width } = store.getState();
+    // BoardCanvas already lets presses through on the cursor; this keeps a
+    // surface told otherwise from starting a stroke of no kind.
+    if (tool === 'cursor') return;
+
     // Keeps the press from selecting question text or moving focus away from
     // a label that is about to open.
     event.preventDefault();
 
-    const { tool, colorIndex, width } = store.getState();
     const [point] = pointsFrom(event).slice(-1);
 
     if (tool === 'text' && event.button !== 5) {

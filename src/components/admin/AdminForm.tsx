@@ -1,10 +1,22 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useId, useMemo, useRef, useState } from 'react';
+import { flushSync } from 'react-dom';
+import Link from 'next/link';
 import { uploadTest } from '@/app/admin/actions';
 import AccessCodeField from '@/components/admin/AccessCodeField';
-import { FileText, Image as ImageIcon, Upload, CheckCircle2, AlertCircle, Clock3, Eye, Loader2, Plus, Repeat2, Timer, Trophy, X } from 'lucide-react';
+import OlympiadWindowFields from '@/components/admin/OlympiadWindowFields';
+import { FilePickBox } from '@/components/admin/bank/FilePickBox';
+import { TexImportPreview, describeImportBlocker } from '@/components/admin/bank/TexImportPreview';
+import { uploadQuestionImages, type UploadedImage } from '@/components/admin/bank/uploadImages';
+import { findMissingImages, useTexCheck } from '@/components/admin/bank/useTexCheck';
+import { ArrowUpRight, FileText, Image as ImageIcon, Loader2, Plus, Upload, X } from 'lucide-react';
 import type { TestCollectionOption } from '@/lib/testCatalog';
+import { Button, IconButton, buttonClass } from '@/components/ui/Button';
+import { CardBody, CardFooter, CardHeader, cardClass } from '@/components/ui/Card';
+import { Alert } from '@/components/ui/Feedback';
+import { Field, Input, checkboxClass, hintClass, labelClass } from '@/components/ui/Field';
+import { cn } from '@/components/ui/cn';
 import {
   DEFAULT_TEST_MAX_ATTEMPTS,
   MAX_TEST_MAX_ATTEMPTS,
@@ -15,20 +27,15 @@ import {
   DEFAULT_MODULE_DURATION_SECONDS,
   DEFAULT_MODULE_QUESTION_COUNT,
   MAX_MODULE_COUNT,
+  resolveExamModules,
 } from '@/lib/examModules';
-
-type PreparedUpload = {
-  name: string;
-  path: string;
-  token: string;
-  signedUrl: string;
-  publicUrl: string;
-};
 
 type AdminFormProps = {
   collections: TestCollectionOption[];
-  /** Section chosen above the form; a new test lands in it by default. */
+  /** Course the form was opened from; a new test lands in it by default. */
   defaultCategory?: string;
+  /** Closes the form; the tests page opens it from its header. */
+  onClose?: () => void;
 };
 
 type ExamFormat = 'modular' | 'single';
@@ -44,11 +51,7 @@ type ModuleDraft = {
 };
 
 const MIN_MODULAR_MODULE_COUNT = 2;
-
-/** Uploads run in parallel, but only a few at a time so nothing times out in a queue. */
-const IMAGE_UPLOAD_CONCURRENCY = 4;
-const IMAGE_UPLOAD_TIMEOUT_MS = 60_000;
-const MAX_LISTED_FAILED_UPLOADS = 10;
+const DEFAULT_MODULE_MINUTES = Math.round(DEFAULT_MODULE_DURATION_SECONDS / 60);
 
 let moduleDraftCounter = 0;
 
@@ -59,7 +62,7 @@ function createModuleDrafts(count: number): ModuleDraft[] {
     return {
       id: `module-${moduleDraftCounter}`,
       questions: String(DEFAULT_MODULE_QUESTION_COUNT),
-      minutes: String(Math.round(DEFAULT_MODULE_DURATION_SECONDS / 60)),
+      minutes: String(DEFAULT_MODULE_MINUTES),
     };
   });
 }
@@ -70,30 +73,88 @@ function parseDraftNumber(value: string, fallback: number) {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 }
 
-function describeFailedUploads(failed: string[], total: number) {
-  const listed = failed.slice(0, MAX_LISTED_FAILED_UPLOADS).join(', ');
-  const rest = failed.length - MAX_LISTED_FAILED_UPLOADS;
-
-  return `Could not upload ${failed.length} of ${total} images: ${listed}${
-    rest > 0 ? ` and ${rest} more` : ''
-  }. Fix them and upload the test again.`;
-}
-
-export default function AdminForm({ collections, defaultCategory: preselected }: AdminFormProps) {
+/**
+ * Imports a test into a course from one `.tex` file and its images. Choosing
+ * the file checks it at once: the preview lists every question with the
+ * domain and difficulty it goes into the question bank with, and the test
+ * cannot be created while one is missing. The questions land in the bank and
+ * in the test together (`uploadTest`).
+ */
+export default function AdminForm({ collections, defaultCategory: preselected, onClose }: AdminFormProps) {
   const [loading, setLoading] = useState(false);
-  const [statusText, setStatusText] = useState('Processing LaTeX...');
-  const [result, setResult] = useState<{ success?: boolean; error?: string; testId?: string } | null>(null);
+  const [statusText, setStatusText] = useState('Creating test…');
+  const [result, setResult] = useState<
+    { success?: boolean; error?: string; testId?: string; title?: string; questionCount?: number } | null
+  >(null);
+  // The chosen files, so the boxes stop saying "Select…" once a file is
+  // chosen (a hidden file input shows nothing on its own), the preview can
+  // be checked again, and missing images are named before anything uploads.
+  const [texFile, setTexFile] = useState<File | null>(null);
+  const [imageNames, setImageNames] = useState<string[]>([]);
   const defaultCategory =
     collections.find((option) => option.value === preselected)?.value ??
     (collections.some((option) => option.value === 'STANDARD') ? 'STANDARD' : collections[0]?.value);
-  const sectionAttempts = (category: string | undefined) =>
+  const courseLabel = collections.find((option) => option.value === defaultCategory)?.label;
+  const courseAttempts = (category: string | undefined) =>
     collections.find((option) => option.value === category)?.maxAttempts ?? DEFAULT_TEST_MAX_ATTEMPTS;
-  const [maxAttempts, setMaxAttempts] = useState(() => String(sectionAttempts(defaultCategory)));
+  const [maxAttempts, setMaxAttempts] = useState(() => String(courseAttempts(defaultCategory)));
   const [examFormat, setExamFormat] = useState<ExamFormat>('modular');
   const [modules, setModules] = useState<ModuleDraft[]>(() => createModuleDrafts(DEFAULT_MODULE_COUNT));
-  // The code field keeps its value in state, which `form.reset()` cannot reach;
-  // a new key remounts it empty after a successful upload.
-  const [accessCodeFieldKey, setAccessCodeFieldKey] = useState(0);
+  // The code and olympiad fields keep their values in state, which
+  // `form.reset()` cannot reach; a new key remounts them empty after a
+  // successful upload.
+  const [resetKey, setResetKey] = useState(0);
+  const texCheck = useTexCheck();
+  const fieldId = useId();
+  const moduleListRef = useRef<HTMLDivElement>(null);
+  const addModuleRef = useRef<HTMLButtonElement>(null);
+
+  // Which module each question will run in with the format as it stands, so
+  // the preview shows the split before the test exists - and says at once
+  // when the file's `\module` markers do not fit the chosen format.
+  const moduleLayout = useMemo(() => {
+    const questions = texCheck.questions;
+    if (!questions) return { modules: null, error: null };
+
+    try {
+      const resolved = resolveExamModules({
+        questionCount: questions.length,
+        markerModules: questions.some((question) => question.markerModule !== null)
+          ? questions.map((question) => question.markerModule ?? 1)
+          : null,
+        format: {
+          durationSeconds: 0,
+          moduleDurations: examFormat === 'modular'
+            ? modules.map((module) => parseDraftNumber(module.minutes, DEFAULT_MODULE_MINUTES) * 60)
+            : [],
+          moduleQuestionCounts: modules.map((module) => parseDraftNumber(module.questions, DEFAULT_MODULE_QUESTION_COUNT)),
+        },
+      });
+      return { modules: resolved.moduleIndexes, error: null };
+    } catch (error) {
+      // examModules.ts names the option by its older label.
+      const message = error instanceof Error ? error.message.replace('SAT modules', 'Modules') : null;
+      return { modules: null, error: message || 'The file does not fit this format.' };
+    }
+  }, [texCheck.questions, examFormat, modules]);
+
+  const missingImages = findMissingImages(texCheck.questions, imageNames);
+  const blocker = describeImportBlocker({
+    state: texCheck.state,
+    untagged: texCheck.untagged,
+    missingImages,
+    moduleError: moduleLayout.error,
+  });
+
+  // The pressed X goes away with its row, so focus moves to the X that took
+  // its place (or the one above it), and to "Add module" once the last
+  // removable one is gone, instead of falling to the top of the page.
+  const removeModule = (id: string, index: number) => {
+    flushSync(() => setModules((current) => current.filter((item) => item.id !== id)));
+    const removeButtons = moduleListRef.current?.querySelectorAll<HTMLButtonElement>('[data-remove-module]');
+    const next = removeButtons?.length ? removeButtons[Math.min(index, removeButtons.length - 1)] : null;
+    (next ?? addModuleRef.current)?.focus();
+  };
 
   const updateModule = (id: string, patch: Partial<ModuleDraft>) => {
     setModules((current) => current.map((module) => (
@@ -101,28 +162,20 @@ export default function AdminForm({ collections, defaultCategory: preselected }:
     )));
   };
 
-  async function uploadImageToSignedUrl(file: File, upload: PreparedUpload) {
-    const body = new FormData();
-    body.append('cacheControl', '3600');
-    body.append('', file);
-
-    const response = await fetch(upload.signedUrl, {
-      method: 'PUT',
-      body,
-      signal: AbortSignal.timeout(IMAGE_UPLOAD_TIMEOUT_MS),
-    });
-
-    if (!response.ok) {
-      const message = await response.text().catch(() => '');
-      throw new Error(`Image upload failed for ${file.name}: ${message || response.statusText}`);
-    }
-  }
+  const chooseTexFile = (files: File[]) => {
+    const file = files[0] ?? null;
+    setTexFile(file);
+    setResult(null);
+    void texCheck.check(file);
+  };
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (blocker || loading) return;
+
     const form = e.currentTarget;
     setLoading(true);
-    setStatusText('Preparing upload...');
+    setStatusText('Preparing upload…');
     setResult(null);
 
     try {
@@ -132,84 +185,27 @@ export default function AdminForm({ collections, defaultCategory: preselected }:
       const isVisible = formData.getAll('isVisible').includes('true');
       const testCategory = formData.get('testCategory');
       const durationMinutes = formData.get('durationMinutes');
-      const maxAttempts = formData.get('maxAttempts');
+      const attempts = formData.get('maxAttempts');
       const olympiadStartsAt = formData.get('olympiadStartsAt');
       const olympiadEndsAt = formData.get('olympiadEndsAt');
       const accessCode = formData.get('accessCode');
-      const texFile = formData.get('texFile');
       const imageFiles = formData.getAll('images').filter(
         (file): file is File => file instanceof File && file.size > 0
       );
-      let uploadedImages: { name: string; publicUrl: string }[] = [];
+      let uploadedImages: UploadedImage[] = [];
       let testId = '';
 
       if (imageFiles.length > 0) {
-        setStatusText('Preparing image uploads...');
-        const prepareResponse = await fetch('/api/admin/test-upload/signed-urls', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            files: imageFiles.map((file) => ({
-              name: file.name,
-              type: file.type,
-              size: file.size,
-            })),
-          }),
+        setStatusText('Preparing image uploads…');
+        const upload = await uploadQuestionImages(imageFiles, 'test', (done, total) => {
+          setStatusText(`Uploading images ${done}/${total}…`);
         });
-        const prepareData = await prepareResponse.json().catch(() => null) as {
-          testId?: string;
-          uploads?: PreparedUpload[];
-          error?: string;
-        } | null;
-
-        if (!prepareResponse.ok || !prepareData?.uploads || !prepareData.testId) {
-          throw new Error(prepareData?.error || 'Could not prepare image uploads');
-        }
-
-        testId = prepareData.testId;
-        setStatusText(`Uploading images 0/${imageFiles.length}...`);
-
-        const uploadsByName = new Map(prepareData.uploads.map((upload) => [upload.name, upload]));
-        const queue = [...imageFiles];
-        const failed: string[] = [];
-        let completed = 0;
-
-        // Workers pull from a shared queue: a failing file is recorded and the rest
-        // keep going, instead of Promise.all aborting the whole upload.
-        await Promise.all(Array.from(
-          { length: Math.min(IMAGE_UPLOAD_CONCURRENCY, queue.length) },
-          async () => {
-            for (let file = queue.shift(); file; file = queue.shift()) {
-              const upload = uploadsByName.get(file.name);
-              if (!upload) {
-                failed.push(file.name);
-                continue;
-              }
-
-              try {
-                await uploadImageToSignedUrl(file, upload);
-              } catch {
-                failed.push(file.name);
-                continue;
-              }
-
-              completed += 1;
-              setStatusText(`Uploading images ${completed}/${imageFiles.length}...`);
-            }
-          }
-        ));
-
-        if (failed.length > 0) {
-          throw new Error(describeFailedUploads(failed, imageFiles.length));
-        }
-
-        uploadedImages = prepareData.uploads.map((upload) => ({
-          name: upload.name,
-          publicUrl: upload.publicUrl,
-        }));
+        // A test upload's folder is the id the test is created under.
+        testId = upload.folder;
+        uploadedImages = upload.images;
       }
 
-      setStatusText('Creating test...');
+      setStatusText('Creating test…');
       const serverFormData = new FormData();
       if (typeof title === 'string') serverFormData.set('title', title);
       if (isFree === 'true') serverFormData.set('isFree', 'true');
@@ -218,10 +214,7 @@ export default function AdminForm({ collections, defaultCategory: preselected }:
       serverFormData.set('examFormat', examFormat);
       if (examFormat === 'modular') {
         for (const draft of modules) {
-          serverFormData.append('moduleMinutes', String(parseDraftNumber(
-            draft.minutes,
-            Math.round(DEFAULT_MODULE_DURATION_SECONDS / 60)
-          )));
+          serverFormData.append('moduleMinutes', String(parseDraftNumber(draft.minutes, DEFAULT_MODULE_MINUTES)));
           serverFormData.append('moduleQuestions', String(parseDraftNumber(
             draft.questions,
             DEFAULT_MODULE_QUESTION_COUNT
@@ -230,77 +223,142 @@ export default function AdminForm({ collections, defaultCategory: preselected }:
       } else if (typeof durationMinutes === 'string') {
         serverFormData.set('durationMinutes', durationMinutes);
       }
-      if (typeof maxAttempts === 'string') serverFormData.set('maxAttempts', maxAttempts);
+      if (typeof attempts === 'string') serverFormData.set('maxAttempts', attempts);
       // Sent even when blank: the server reads "both empty" as "not an olympiad".
       if (typeof olympiadStartsAt === 'string') serverFormData.set('olympiadStartsAt', olympiadStartsAt);
       if (typeof olympiadEndsAt === 'string') serverFormData.set('olympiadEndsAt', olympiadEndsAt);
       if (typeof accessCode === 'string') serverFormData.set('accessCode', accessCode);
-      if (texFile instanceof File) serverFormData.set('texFile', texFile);
+      if (texFile) serverFormData.set('texFile', texFile);
       if (testId) serverFormData.set('testId', testId);
       serverFormData.set('uploadedImages', JSON.stringify(uploadedImages));
+      // One entry per question, in file order: the server parses the file
+      // again and pairs them up by position.
+      serverFormData.set('questionTags', JSON.stringify(texCheck.tags));
 
       const response = await uploadTest(serverFormData);
 
-      setResult(response);
+      setResult({ ...response, title: typeof title === 'string' ? title.trim() : undefined });
       if (response.success) {
         form.reset();
-        setMaxAttempts(String(sectionAttempts(defaultCategory)));
+        setMaxAttempts(String(courseAttempts(defaultCategory)));
         setExamFormat('modular');
         setModules(createModuleDrafts(DEFAULT_MODULE_COUNT));
-        setAccessCodeFieldKey((key) => key + 1);
+        setResetKey((key) => key + 1);
+        setTexFile(null);
+        setImageNames([]);
+        texCheck.reset();
       }
     } catch (error) {
       setResult({
         success: false,
         error: error instanceof Error
           ? error.message
-          : 'Upload failed. Please try again.',
+          : 'The upload failed. Nothing was saved. Try again.',
       });
     } finally {
       setLoading(false);
-      setStatusText('Processing LaTeX...');
     }
   }
 
   return (
-    <form onSubmit={handleSubmit} className="bg-white rounded-2xl p-8 shadow-lg border border-slate-200 space-y-8">
-      {/* Test Info */}
-      <div className="space-y-4">
-        <div>
-          <label className="block text-xs font-medium text-slate-400 uppercase tracking-widest mb-2">Test Title</label>
-          <input 
-            name="title" 
-            type="text" 
-            required 
-            placeholder="e.g., March SAT Math Practice"
-            className="w-full px-5 py-4 rounded-2xl bg-slate-50 border border-slate-100 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all font-semibold text-slate-900"
-          />
-        </div>
+    <form onSubmit={handleSubmit} className={cardClass}>
+      <CardHeader
+        title="Upload a test"
+        description={
+          courseLabel
+            ? `Into ${courseLabel}. One .tex file and its images; the questions also go into the question bank.`
+            : 'One .tex file and its images; the questions also go into the question bank.'
+        }
+        actions={
+          onClose && (
+            // Not while uploading: closing would hide the progress and the outcome.
+            <IconButton size="sm" onClick={onClose} disabled={loading} aria-label="Close upload form">
+              <X className="h-4 w-4" />
+            </IconButton>
+          )
+        }
+      />
 
-        {/* The section is picked once, above the form; this only carries it to
-            the action so the picker does not exist in two places. */}
+      {/* What every upload needs comes first (a title and the files, then the
+          check of its questions), then the format, then the settings most
+          tests leave as they are. */}
+      <CardBody className="grid grid-cols-1 gap-x-4 gap-y-5 sm:grid-cols-2">
+        <Field label="Test title" htmlFor={`${fieldId}-title`} className="sm:col-span-2">
+          <Input
+            id={`${fieldId}-title`}
+            name="title"
+            type="text"
+            required
+            maxLength={200}
+            autoFocus
+            placeholder="e.g., March SAT Math Practice"
+          />
+        </Field>
+
+        {/* The course is the one the form was opened from; this only carries
+            it to the action so the picker does not exist in two places. */}
         <input type="hidden" name="testCategory" value={defaultCategory ?? ''} />
 
-        <div className="rounded-2xl border border-slate-100 bg-slate-50 p-5">
-          <span className="mb-3 flex items-center gap-2 text-xs font-medium uppercase tracking-widest text-slate-400">
-            <Timer className="h-4 w-4" />
-            Exam format
-          </span>
+        <FilePickBox
+          id={`${fieldId}-tex`}
+          name="texFile"
+          label="LaTeX file (.tex)"
+          accept=".tex"
+          required
+          disabled={loading}
+          icon={<FileText />}
+          summary={texFile?.name ?? null}
+          placeholder="Select main.tex"
+          onFiles={chooseTexFile}
+        />
 
-          <div className="grid gap-3 sm:grid-cols-2">
+        <FilePickBox
+          id={`${fieldId}-images`}
+          name="images"
+          label="Images (.png, .jpg)"
+          accept="image/*"
+          multiple
+          disabled={loading}
+          icon={<ImageIcon />}
+          summary={imageNames.length > 0
+            ? `${imageNames.length} ${imageNames.length === 1 ? 'image' : 'images'} selected`
+            : null}
+          placeholder="Select all images"
+          onFiles={(files) => setImageNames(files.map((file) => file.name))}
+        />
+
+        {texCheck.state.status !== 'idle' && (
+          <div className="sm:col-span-2">
+            <TexImportPreview
+              state={texCheck.state}
+              tags={texCheck.tags}
+              onTagsChange={texCheck.setTags}
+              modules={moduleLayout.modules}
+              moduleError={moduleLayout.error}
+              missingImages={missingImages}
+              onRecheck={() => void texCheck.check(texFile)}
+              disabled={loading}
+            />
+          </div>
+        )}
+
+        <fieldset className="sm:col-span-2">
+          <legend className={cn(labelClass, 'mb-1.5')}>Format</legend>
+
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             {([
               {
                 value: 'modular' as const,
-                title: 'SAT modules',
+                title: 'Modules',
                 description: 'Each module runs on its own timer. Time left over in one module is not carried into the next.',
               },
               {
                 value: 'single' as const,
-                title: 'Single timer',
+                title: 'One block',
                 description: 'One timer for the whole test, e.g. a 30-question set with a single time limit.',
               },
             ]).map((option) => (
-              <label key={option.value} className="group relative cursor-pointer">
+              <label key={option.value} className="cursor-pointer">
                 <input
                   type="radio"
                   name="examFormat"
@@ -309,266 +367,211 @@ export default function AdminForm({ collections, defaultCategory: preselected }:
                   onChange={() => setExamFormat(option.value)}
                   className="peer sr-only"
                 />
-                <div className="h-full rounded-2xl border border-slate-200 bg-white p-4 transition-all peer-checked:border-blue-500 peer-checked:bg-blue-50 peer-checked:ring-4 peer-checked:ring-blue-100 group-hover:border-blue-200">
-                  <span className="mb-2 block text-sm font-semibold text-slate-900">{option.title}</span>
-                  <p className="text-xs font-medium leading-relaxed text-slate-500">{option.description}</p>
-                </div>
+                {/* Selected is the accent, never a second colour. The idle
+                    edge is a control's, as on a chip: a mist-200 box read as
+                    a note rather than as an option to pick. Chosen from the
+                    state, not `peer-checked:`, so hover cannot paint over the
+                    selected one. */}
+                <span
+                  className={cn(
+                    'block h-full rounded-xl border px-3.5 py-3 transition-colors',
+                    'peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-board-600',
+                    examFormat === option.value
+                      ? 'border-board-600 bg-board-50'
+                      : 'border-mist-400 hover:border-mist-500 hover:bg-mist-50',
+                  )}
+                >
+                  <span className="block text-sm font-medium text-mist-900">{option.title}</span>
+                  {option.description && <span className="mt-0.5 block text-xs text-mist-500">{option.description}</span>}
+                </span>
               </label>
             ))}
           </div>
 
           {examFormat === 'modular' ? (
-            <div className="mt-4 space-y-3">
+            <div ref={moduleListRef} className="mt-3 space-y-2">
               {modules.map((module, index) => (
-                <div
-                  key={module.id}
-                  className="flex flex-wrap items-center gap-3 rounded-2xl border border-slate-100 bg-white px-4 py-3"
-                >
-                  <span className="rounded-full bg-slate-100 px-3 py-1 text-[10px] font-medium uppercase tracking-widest text-slate-600">
-                    Module {index + 1}
-                  </span>
+                <div key={module.id} className="flex flex-wrap items-center gap-2">
+                  <span className="w-20 text-sm text-mist-600">Module {index + 1}</span>
 
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="number"
-                      min={1}
-                      max={200}
-                      step={1}
-                      required
-                      value={module.questions}
-                      onChange={(event) => updateModule(module.id, { questions: event.target.value })}
-                      className="w-20 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-900 outline-none focus:border-blue-400"
-                    />
-                    <span className="text-xs font-medium uppercase tracking-wide text-slate-400">questions</span>
-                  </label>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={200}
+                    step={1}
+                    required
+                    aria-label={`Module ${index + 1} questions`}
+                    value={module.questions}
+                    onChange={(event) => updateModule(module.id, { questions: event.target.value })}
+                    suffix="questions"
+                    className="max-w-36"
+                  />
 
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="number"
-                      min={1}
-                      max={360}
-                      step={1}
-                      required
-                      value={module.minutes}
-                      onChange={(event) => updateModule(module.id, { minutes: event.target.value })}
-                      className="w-20 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-900 outline-none focus:border-blue-400"
-                    />
-                    <span className="text-xs font-medium uppercase tracking-wide text-slate-400">minutes</span>
-                  </label>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={360}
+                    step={1}
+                    required
+                    aria-label={`Module ${index + 1} minutes`}
+                    value={module.minutes}
+                    onChange={(event) => updateModule(module.id, { minutes: event.target.value })}
+                    suffix="minutes"
+                    className="max-w-36"
+                  />
 
+                  {/* Keyed, red only on hover and focus, like the remove
+                      buttons of the question editor's options. */}
                   {modules.length > MIN_MODULAR_MODULE_COUNT && (
-                    <button
-                      type="button"
-                      onClick={() => setModules((current) => current.filter((item) => item.id !== module.id))}
-                      className="ml-auto inline-flex h-8 w-8 items-center justify-center rounded-xl text-slate-400 transition hover:bg-red-50 hover:text-red-600"
+                    <IconButton
+                      variant="danger-secondary"
+                      data-remove-module
+                      onClick={() => removeModule(module.id, index)}
                       aria-label={`Remove module ${index + 1}`}
+                      title="Remove module"
                     >
                       <X className="h-4 w-4" />
-                    </button>
+                    </IconButton>
                   )}
                 </div>
               ))}
 
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <p className="text-xs font-medium text-slate-400">
+              <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+                <p className={cn(hintClass, 'max-w-xl')}>
                   Questions per module are used when the .tex file has no <code>\module</code> markers.
                   With markers, the split from the file wins.
                 </p>
-                <button
-                  type="button"
+                <Button
+                  ref={addModuleRef}
+                  variant="secondary"
+                  size="sm"
                   onClick={() => setModules((current) => [...current, ...createModuleDrafts(1)])}
                   disabled={modules.length >= MAX_MODULE_COUNT}
-                  className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-3 py-2 text-xs font-medium text-white transition hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   <Plus className="h-4 w-4" />
                   Add module
-                </button>
+                </Button>
               </div>
             </div>
           ) : (
-            <label className="mt-4 block">
-              <span className="mb-2 flex items-center gap-2 text-xs font-medium uppercase tracking-widest text-slate-400">
-                <Clock3 className="h-4 w-4" />
-                Test time
-              </span>
-              <div className="flex items-center gap-3 rounded-2xl border border-slate-100 bg-white px-5 py-4">
-                <input
-                  name="durationMinutes"
-                  type="number"
-                  min={1}
-                  max={360}
-                  step={1}
-                  defaultValue={120}
-                  required
-                  className="w-24 bg-transparent text-lg font-semibold text-slate-900 outline-none"
-                />
-                <span className="text-sm font-semibold text-slate-500">minutes</span>
-              </div>
-            </label>
-          )}
-        </div>
-
-        <div className="rounded-2xl border border-slate-100 bg-slate-50 p-5">
-          <span className="mb-1 flex items-center gap-2 text-xs font-medium uppercase tracking-widest text-slate-400">
-            <Trophy className="h-4 w-4" />
-            Olympiad window
-          </span>
-          <p className="mb-4 text-xs font-medium leading-relaxed text-slate-500">
-            Leave both empty for an ordinary test. With a window set, the test opens only inside
-            it, entry closes one test length before the end, and a ranking by solved questions
-            then time appears once it is over. Times are Tashkent time.
-          </p>
-
-          <div className="grid gap-3 sm:grid-cols-2">
-            <label className="block">
-              <span className="mb-2 block text-[11px] font-medium uppercase tracking-wide text-slate-400">
-                Opens
-              </span>
-              <input
-                name="olympiadStartsAt"
-                type="datetime-local"
-                className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-900 outline-none focus:border-blue-400"
-              />
-            </label>
-            <label className="block">
-              <span className="mb-2 block text-[11px] font-medium uppercase tracking-wide text-slate-400">
-                Closes
-              </span>
-              <input
-                name="olympiadEndsAt"
-                type="datetime-local"
-                className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-900 outline-none focus:border-blue-400"
-              />
-            </label>
-          </div>
-        </div>
-
-        <div className="grid gap-4 sm:grid-cols-2">
-          <label className="block">
-            <span className="mb-2 flex items-center gap-2 text-xs font-medium uppercase tracking-widest text-slate-400">
-              <Repeat2 className="h-4 w-4" />
-              Attempts per user
-            </span>
-            <div className="flex items-center gap-3 rounded-2xl border border-slate-100 bg-slate-50 px-5 py-4">
-              <input
-                name="maxAttempts"
+            <Field label="Test time" htmlFor={`${fieldId}-duration`} className="mt-3 max-w-xs">
+              <Input
+                id={`${fieldId}-duration`}
+                name="durationMinutes"
                 type="number"
-                min={MIN_TEST_MAX_ATTEMPTS}
-                max={MAX_TEST_MAX_ATTEMPTS}
+                min={1}
+                max={360}
                 step={1}
-                value={maxAttempts}
-                onChange={(event) => setMaxAttempts(event.target.value)}
+                defaultValue={120}
                 required
-                className="w-24 bg-transparent text-lg font-semibold text-slate-900 outline-none"
+                suffix="minutes"
               />
-              <span className="text-sm font-semibold text-slate-500">attempts</span>
-            </div>
-            <span className="mt-2 block text-xs font-medium text-slate-400">
-              Section rule: {sectionAttempts(defaultCategory)}. Change it here to override this test only.
-            </span>
+            </Field>
+          )}
+        </fieldset>
+
+        <Field
+          label="Attempts per student"
+          htmlFor={`${fieldId}-attempts`}
+          hint={`The course allows ${courseAttempts(defaultCategory)}. Change it to set a limit for this test only.`}
+        >
+          <Input
+            id={`${fieldId}-attempts`}
+            name="maxAttempts"
+            type="number"
+            min={MIN_TEST_MAX_ATTEMPTS}
+            max={MAX_TEST_MAX_ATTEMPTS}
+            step={1}
+            value={maxAttempts}
+            onChange={(event) => setMaxAttempts(event.target.value)}
+            required
+            suffix="attempts"
+          />
+        </Field>
+
+        {/* Siblings need keys of their own: with one shared key React lost
+            track of the old code field, which stayed in the form and sent
+            the last test's code with the next upload. */}
+        <AccessCodeField
+          key={`code-${resetKey}`}
+          hint="Students enter it once before the test opens. You can add, change or remove it later."
+        />
+
+        <OlympiadWindowFields
+          key={`olympiad-${resetKey}`}
+          className="sm:col-span-2"
+          hint="Both empty for an ordinary test. With a window, the test opens only inside it, entry closes one test length before the end, and a ranking by solved questions, then time, appears once it is over. Times are Tashkent time."
+        />
+
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-2 sm:col-span-2">
+          <label className="inline-flex items-center gap-2 text-sm text-mist-700">
+            <input name="isVisible" type="checkbox" value="true" defaultChecked className={checkboxClass} />
+            Show in Practice
           </label>
-
-          <AccessCodeField
-            key={accessCodeFieldKey}
-            hint="Students enter it once before the test opens. You can still add, change or remove it later."
-          />
-        </div>
-        
-        <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-2xl border border-slate-100">
-          <input 
-            id="isFree" 
-            name="isFree" 
-            type="checkbox" 
-            value="true"
-            className="w-5 h-5 rounded-lg border-slate-300 text-blue-600 focus:ring-blue-500" 
-          />
-          <label htmlFor="isFree" className="text-sm font-semibold text-slate-700">Set as Free Test</label>
-        </div>
-
-        <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-2xl border border-slate-100">
-          <input
-            id="isVisible"
-            name="isVisible"
-            type="checkbox"
-            value="true"
-            defaultChecked
-            className="w-5 h-5 rounded-lg border-slate-300 text-blue-600 focus:ring-blue-500"
-          />
-          <Eye className="h-5 w-5 text-slate-400" />
-          <label htmlFor="isVisible" className="text-sm font-semibold text-slate-700">
-            Show in Practice Center
+          <label className="inline-flex items-center gap-2 text-sm text-mist-700">
+            <input name="isFree" type="checkbox" value="true" className={checkboxClass} />
+            Free without a subscription
           </label>
         </div>
-      </div>
 
-      {/* File Uploads */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="space-y-2">
-          <label className="block text-xs font-medium text-slate-400 uppercase tracking-widest mb-2">LaTeX File (.tex)</label>
-          <div className="relative group">
-            <input 
-              name="texFile" 
-              type="file" 
-              accept=".tex" 
-              required
-              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-            />
-            <div className="p-6 border-2 border-dashed border-slate-200 rounded-2xl group-hover:border-blue-400 group-hover:bg-blue-50 transition-all text-center">
-              <FileText className="w-8 h-8 text-slate-400 group-hover:text-blue-500 mx-auto mb-2" />
-              <span className="text-xs font-medium text-slate-500">Select main.tex</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="space-y-2">
-          <label className="block text-xs font-medium text-slate-400 uppercase tracking-widest mb-2">Images (.png, .jpg)</label>
-          <div className="relative group">
-            <input 
-              name="images" 
-              type="file" 
-              multiple 
-              accept="image/*"
-              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-            />
-            <div className="p-6 border-2 border-dashed border-slate-200 rounded-2xl group-hover:border-blue-400 group-hover:bg-blue-50 transition-all text-center">
-              <ImageIcon className="w-8 h-8 text-slate-400 group-hover:text-blue-500 mx-auto mb-2" />
-              <span className="text-xs font-medium text-slate-500">Select all PNGs</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <button 
-        type="submit" 
-        disabled={loading}
-        className="w-full py-5 rounded-2xl bg-slate-900 hover:bg-blue-600 text-white font-semibold text-lg transition-all transform active:scale-95 shadow-lg disabled:opacity-50 flex items-center justify-center gap-3"
-      >
-        {loading ? (
-          <>
-            <Loader2 className="w-6 h-6 animate-spin" />
-            {statusText}
-          </>
-        ) : (
-          <>
-            <Upload className="w-6 h-6" />
-            Upload and Create Test
-          </>
+        {result?.success && (
+          <Alert
+            tone="success"
+            className="sm:col-span-2"
+            action={
+              result.testId && (
+                // A button, as on the admin home's alerts: a bare link at
+                // the end of the line read as part of the sentence.
+                <Link
+                  href={`/admin/tests/${result.testId}`}
+                  prefetch={false}
+                  className={buttonClass({ variant: 'secondary', size: 'sm' })}
+                >
+                  Open it
+                  <ArrowUpRight className="h-4 w-4" />
+                </Link>
+              )
+            }
+          >
+            {result.title ? <>&ldquo;{result.title}&rdquo; is uploaded</> : 'The test is uploaded'}
+            {result.questionCount ? `, and its ${result.questionCount} questions are in the question bank.` : '.'}
+            {' '}The form is ready for the next one.
+          </Alert>
         )}
-      </button>
 
-      {result?.success && (
-        <div className="p-4 bg-emerald-50 border border-emerald-100 rounded-2xl flex items-center gap-3 text-emerald-700 font-semibold">
-          <CheckCircle2 className="w-5 h-5 text-emerald-500" />
-          Test uploaded successfully!
-        </div>
-      )}
+        {result?.error && (
+          <Alert tone="danger" className="sm:col-span-2">
+            {result.error}
+          </Alert>
+        )}
+      </CardBody>
 
-      {result?.error && (
-        <div className="p-4 bg-red-50 border border-red-100 rounded-2xl flex items-center gap-3 text-red-700 font-semibold">
-          <AlertCircle className="w-5 h-5 text-red-500" />
-          Error: {result.error}
-        </div>
-      )}
+      <CardFooter>
+        {/* Why the button cannot act yet, beside it. */}
+        {blocker && !loading && (
+          <p className="mr-auto text-sm text-mist-500">{blocker}</p>
+        )}
+        {/* Secondary beside the primary: a ghost Cancel in a footer read as a caption. */}
+        {onClose && (
+          <Button variant="secondary" onClick={onClose} disabled={loading}>
+            Cancel
+          </Button>
+        )}
+        <Button type="submit" disabled={loading || blocker !== null}>
+          {loading ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              {/* "Uploading images 3/12…" counts up: fixed-width digits keep the button still. */}
+              <span className="tabular-nums">{statusText}</span>
+            </>
+          ) : (
+            <>
+              <Upload className="h-4 w-4" />
+              Create test
+            </>
+          )}
+        </Button>
+      </CardFooter>
     </form>
   );
 }

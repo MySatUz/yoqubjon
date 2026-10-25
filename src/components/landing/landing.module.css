@@ -1,0 +1,278 @@
+/* Motion for the public landing, and only for it: AGENTS.md keeps the app
+   and the auth screens still (the sign-in card's slope is drawn static). It
+   lives beside the components instead of in globals.css because nothing else
+   moves like this. Every rule animates transform, opacity or a stroke offset —
+   nothing that makes the browser lay the page out again — loops pause off
+   screen, and each rule has a reduced-motion answer at the bottom of this
+   file.
+
+   The curves match the storyboard: enter for arrivals and lines being drawn,
+   move for things travelling, pop for dots and check marks. */
+
+/* ── Entrances and feedback ─────────────────────────────────────────── */
+
+.cardIn {
+  animation: card-in 320ms cubic-bezier(0.22, 1, 0.36, 1) 80ms both;
+}
+@keyframes card-in {
+  from { opacity: 0; transform: translateY(12px); }
+}
+
+.fadeUp {
+  animation: fade-up 220ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.fadeUpSlow {
+  animation: fade-up 300ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(8px); }
+}
+
+.fade {
+  animation: fade 160ms ease-out both;
+}
+@keyframes fade {
+  from { opacity: 0; }
+}
+
+.pop {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: pop 160ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes pop {
+  from { transform: scale(0.6); }
+}
+
+.pulse {
+  animation: pulse 300ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes pulse {
+  50% { transform: scale(1.12); }
+}
+
+/* ── Odometer digits ────────────────────────────────────────────────── */
+/* A countdown rolls downwards: the old digit leaves through the bottom and
+   the new one drops in from the top. */
+
+.rollOut {
+  animation: roll-out 180ms ease-out forwards;
+}
+.rollIn {
+  animation: roll-in 180ms ease-out;
+}
+@keyframes roll-out {
+  to { transform: translateY(100%); opacity: 0; }
+}
+@keyframes roll-in {
+  from { transform: translateY(-100%); opacity: 0; }
+}
+
+/* ── Lines drawn by scaling from their start ────────────────────────── */
+
+.segment {
+  transform-box: fill-box;
+  transform-origin: 0 50%;
+  transform: scaleX(0);
+  transition: transform 360ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.segmentOn {
+  transform: scaleX(1);
+}
+
+.drawX {
+  transform-box: fill-box;
+  transform-origin: 0 50%;
+  transform: scaleX(0);
+  animation: draw-x 360ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+.drawX + .drawX {
+  animation-delay: 80ms;
+}
+@keyframes draw-x {
+  to { transform: scaleX(1); }
+}
+
+/* The closing section's line (SlopeToGoal with `animate`): drawn once up to
+   800 the first time it is seen, then its end dot arrives. */
+.drawOnView {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+}
+.inView .drawOnView {
+  animation: draw-once 900ms cubic-bezier(0.22, 1, 0.36, 1) 120ms forwards;
+}
+@keyframes draw-once {
+  to { stroke-dashoffset: 0; }
+}
+
+.dotOnView {
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.inView .dotOnView {
+  animation: dot-in 200ms cubic-bezier(0.34, 1.56, 0.64, 1) 900ms forwards;
+}
+@keyframes dot-in {
+  from { opacity: 0; transform: scale(0.4); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+/* ── Hero backdrop: the slope line, looping ─────────────────────────── */
+
+.heroDraw {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: hero-draw 5.2s cubic-bezier(0.22, 1, 0.36, 1) 250ms infinite;
+}
+@keyframes hero-draw {
+  0% { stroke-dashoffset: 1; opacity: 1; }
+  32% { stroke-dashoffset: 0; }
+  82% { stroke-dashoffset: 0; opacity: 1; }
+  92% { stroke-dashoffset: 0; opacity: 0; }
+  100% { stroke-dashoffset: 1; opacity: 0; }
+}
+
+.heroGoal {
+  opacity: 0;
+  transform: translate(-100%, -50%);
+  animation: hero-goal 5.2s cubic-bezier(0.22, 1, 0.36, 1) 250ms infinite;
+}
+@keyframes hero-goal {
+  0%, 28% { opacity: 0; }
+  34%, 82% { opacity: 1; }
+  92%, 100% { opacity: 0; }
+}
+
+.heroGoalDot {
+  animation: hero-goal-dot 5.2s cubic-bezier(0.34, 1.56, 0.64, 1) 250ms infinite;
+}
+@keyframes hero-goal-dot {
+  0%, 30% { transform: scale(0.4); }
+  36% { transform: scale(1.35); }
+  42%, 100% { transform: scale(1); }
+}
+
+/* ── The hard branch: Module 1 → fork → harder Module 2 → 800 ───────── */
+
+.branchUpper {
+  transform-box: fill-box;
+  transform-origin: 0 50%;
+  transform: scaleX(0);
+}
+.inView .branchUpper {
+  transform: scaleX(1);
+  transition: transform 600ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* CSS pixels on an SVG element are user units, so these follow the viewBox. */
+.runner {
+  transform: translate(32px, 108px);
+}
+.inView .runner {
+  animation: travel 4.2s cubic-bezier(0.65, 0, 0.35, 1) 300ms infinite;
+}
+@keyframes travel {
+  0% { transform: translate(32px, 108px); opacity: 0; }
+  6% { opacity: 1; }
+  22% { transform: translate(108px, 108px); }
+  58%, 84% { transform: translate(288px, 32px); opacity: 1; }
+  94%, 100% { transform: translate(288px, 32px); opacity: 0; }
+}
+
+.ring {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.inView .ring {
+  animation: ring 4.2s cubic-bezier(0.34, 1.56, 0.64, 1) 300ms infinite;
+}
+@keyframes ring {
+  0%, 56% { transform: scale(1); }
+  62% { transform: scale(1.35); }
+  70%, 100% { transform: scale(1); }
+}
+
+/* "800" turns board green the moment the first run arrives, and stays so.
+   The palette's own variables: Tailwind emits both, as the app uses them. */
+.goal {
+  fill: var(--color-mist-500);
+  transition: fill 1ms 1.7s;
+}
+.inView .goal {
+  fill: var(--color-board-600);
+  font-weight: 600;
+}
+
+/* Loops stop while their element is off screen. */
+.paused,
+.paused * {
+  animation-play-state: paused !important;
+}
+
+/* ── Reduced motion: everything in its final place, nothing looping ──── */
+
+@media (prefers-reduced-motion: reduce) {
+  .cardIn,
+  .fadeUp,
+  .fadeUpSlow,
+  .fade,
+  .pop,
+  .pulse,
+  .rollOut,
+  .rollIn,
+  .heroGoalDot {
+    animation: none;
+  }
+
+  .segment {
+    transform: scaleX(1);
+    transition: none;
+  }
+
+  .drawX {
+    animation: none;
+    transform: none;
+  }
+
+  .drawOnView,
+  .inView .drawOnView,
+  .heroDraw {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
+
+  .dotOnView,
+  .inView .dotOnView {
+    animation: none;
+    opacity: 1;
+  }
+
+  .heroGoal {
+    animation: none;
+    opacity: 1;
+  }
+
+  .branchUpper,
+  .inView .branchUpper {
+    transform: none;
+    transition: none;
+  }
+
+  .runner,
+  .inView .runner {
+    animation: none;
+    transform: translate(288px, 32px);
+  }
+
+  .inView .ring {
+    animation: none;
+  }
+
+  .goal {
+    fill: var(--color-board-600);
+    font-weight: 600;
+    transition: none;
+  }
+}

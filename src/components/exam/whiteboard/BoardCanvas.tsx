@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createSurface, type Surface } from '@/components/exam/whiteboard/surface';
 import { currentInk, useBoardStore } from '@/components/exam/whiteboard/boardStore';
+import { fieldFocusClass } from '@/components/ui/Field';
 import {
   MAX_TEXT_LENGTH,
   nextStrokeId,
@@ -14,6 +15,8 @@ import {
 
 /** The cursor names the tool before any tooltip has time to. */
 const CURSORS: Record<BoardTool, string> = {
+  // Never shown: with the cursor picked, the canvas lets the pointer through.
+  cursor: 'auto',
   pen: 'crosshair',
   marker: 'crosshair',
   line: 'crosshair',
@@ -37,7 +40,10 @@ interface LabelDraft {
 interface BoardCanvasProps {
   /** `${attemptId}:${questionId}`. The parent keys this component by it. */
   pageKey: string;
-  /** The toolbar is open: presses draw. Closed, they go through to the question. */
+  /**
+   * The toolbar is open: presses draw, unless the cursor is picked. Closed,
+   * they go through to the question.
+   */
   interactive: boolean;
 }
 
@@ -50,6 +56,9 @@ export default function BoardCanvas({ pageKey, interactive }: BoardCanvasProps) 
   const tool = useBoardStore((state) => state.tool);
   const colorIndex = useBoardStore((state) => state.colorIndex);
   const width = useBoardStore((state) => state.width);
+  // The cursor hands the page back with the toolbar still open: the drawing
+  // stays on screen, and the presses reach the answers and buttons under it.
+  const drawing = interactive && tool !== 'cursor';
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -106,8 +115,8 @@ export default function BoardCanvas({ pageKey, interactive }: BoardCanvasProps) 
   }, [openLabel, pageKey]);
 
   useLayoutEffect(() => {
-    surfaceRef.current?.setInteractive(interactive);
-  }, [interactive]);
+    surfaceRef.current?.setInteractive(drawing);
+  }, [drawing]);
 
   // A label being typed when the question changes belongs to the question it
   // was typed on - this component's page, which the cleanup still closes over.
@@ -126,16 +135,17 @@ export default function BoardCanvas({ pageKey, interactive }: BoardCanvasProps) 
     <>
       {/* A canvas is a replaced element: without the explicit full width and
           height it keeps its intrinsic 300x150 and `inset-0` stops meaning
-          anything. Closed, it lets every press through to the answers. */}
+          anything. Closed, or on the cursor, it lets every press through to
+          the answers. */}
       <canvas
         ref={canvasRef}
         aria-hidden
         className={`absolute inset-0 z-10 block h-full w-full touch-none ${
-          interactive ? 'pointer-events-auto' : 'pointer-events-none'
+          drawing ? 'pointer-events-auto' : 'pointer-events-none'
         }`}
-        style={{ cursor: interactive ? CURSORS[tool] : undefined }}
+        style={{ cursor: drawing ? CURSORS[tool] : undefined }}
       />
-      {interactive && label && (
+      {drawing && label && (
         <input
           ref={inputRef}
           type="text"
@@ -156,7 +166,10 @@ export default function BoardCanvas({ pageKey, interactive }: BoardCanvasProps) 
               updateLabel(null);
             }
           }}
-          className="absolute z-20 min-w-[8ch] max-w-[24ch] -translate-y-1/2 rounded-lg border border-dashed border-slate-300 bg-white px-1 font-semibold leading-snug outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+          // The fields' focus (Field.tsx): a solid board edge, and
+          // `outline-hidden` rather than `outline-none`, so high-contrast mode
+          // still shows which field has the keyboard.
+          className={`absolute z-20 min-w-[8ch] max-w-[24ch] -translate-y-1/2 rounded-lg border border-dashed border-mist-300 bg-white px-1 font-semibold leading-snug focus:outline-hidden ${fieldFocusClass}`}
           style={{
             // Less the field's border and padding, so the committed label is
             // painted where the typed one stood instead of jumping left.

@@ -30,7 +30,18 @@ export interface ExamSubmissionInput {
   testId: string;
   answers: Record<string, string>;
   timeSpent: number;
+  /** The account that started the attempt in this browser; null for attempts saved before owners existed. */
+  ownerId: string | null;
 }
+
+/**
+ * The attempt was started by another account on this computer - one student
+ * signed out, the next signed in elsewhere in the same browser, and the first
+ * one's open exam tab finished. Saving it would file one student's answers
+ * under the other's name.
+ */
+const ATTEMPT_OF_ANOTHER_ACCOUNT_MESSAGE =
+  'This test was started by another account on this computer, so it was not saved. The page will reload.';
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   return (
@@ -45,7 +56,7 @@ export function parseExamSubmissionBody(body: unknown): ExamSubmissionInput {
     throw new ExamSubmissionError('Invalid request body', 400);
   }
 
-  const { testId, answers, timeSpent } = body;
+  const { testId, answers, timeSpent, ownerId } = body;
 
   if (typeof testId !== 'string' || testId.trim().length === 0 || testId.length > 160) {
     throw new ExamSubmissionError('Invalid test id', 400);
@@ -62,6 +73,10 @@ export function parseExamSubmissionBody(body: unknown): ExamSubmissionInput {
     timeSpent > MAX_EXAM_DURATION_SECONDS + EXAM_TIME_GRACE_SECONDS
   ) {
     throw new ExamSubmissionError('Invalid time spent', 400);
+  }
+
+  if (ownerId !== undefined && ownerId !== null && (typeof ownerId !== 'string' || ownerId.length > 160)) {
+    throw new ExamSubmissionError('Invalid owner', 400);
   }
 
   const normalizedAnswers: Record<string, string> = {};
@@ -86,6 +101,7 @@ export function parseExamSubmissionBody(body: unknown): ExamSubmissionInput {
     testId: testId.trim(),
     answers: normalizedAnswers,
     timeSpent,
+    ownerId: typeof ownerId === 'string' ? ownerId : null,
   };
 }
 
@@ -114,6 +130,10 @@ export async function createExamResult(
   userId: string,
   submission: ExamSubmissionInput
 ) {
+  if (submission.ownerId !== null && submission.ownerId !== userId) {
+    throw new ExamSubmissionError(ATTEMPT_OF_ANOTHER_ACCOUNT_MESSAGE, 409);
+  }
+
   // One read of the user row does three jobs: it decides the admin flag (same
   // two fields and the same predicate `isAdminUser` applies), it proves the
   // account still exists, and it supplies the email for the section-access
@@ -186,7 +206,10 @@ export async function createExamResult(
   }
 
   if (test.accessCode && !isAdmin && !await userEverUnlockedTest(userId, test.id)) {
-    throw new ExamSubmissionError('Access code required', 403);
+    // Shown to the student as is, in the exam's "not sent" dialog: the code
+    // was set on the test while they were sitting it, and entering it is the
+    // only way past.
+    throw new ExamSubmissionError('This test now needs a test code. Reload the page and enter the code from your teacher', 403);
   }
 
   let earnedCredit = 0;

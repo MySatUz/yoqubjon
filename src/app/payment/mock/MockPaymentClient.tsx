@@ -1,17 +1,28 @@
 'use client';
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { CreditCard, ShieldCheck, ArrowLeft, Loader2, CheckCircle2 } from 'lucide-react';
-import { PREMIUM_MONTHLY_AMOUNT_UZS, PREMIUM_PLAN_ID } from '@/lib/plans';
+import { ArrowLeft, Loader2, CheckCircle2 } from 'lucide-react';
+import { PREMIUM_PLAN, PREMIUM_PLAN_ID } from '@/lib/plans';
+import BrandMark from '@/components/layout/BrandMark';
+import { Button, buttonClass } from '@/components/ui/Button';
+import { cardClass } from '@/components/ui/Card';
+import { Alert } from '@/components/ui/Feedback';
+import { KeyValue } from '@/components/ui/Misc';
+import { cn } from '@/components/ui/cn';
 
 export default function MockPaymentClient() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<'idle' | 'success'>('idle');
+  // Shown in the card, not in alert(): a browser dialog is in no part of the
+  // design system and blocks the page until it is dismissed.
+  const [error, setError] = useState<string | null>(null);
 
   const handlePayment = async () => {
     setLoading(true);
+    setError(null);
 
     try {
       const response = await fetch('/api/webhooks/mock-payment', {
@@ -28,113 +39,81 @@ export default function MockPaymentClient() {
           router.push('/dashboard?payment=success');
         }, 2000);
       } else {
-        alert(data.error || 'Payment simulation failed');
+        setError(data.error || 'Payment simulation failed');
       }
     } catch {
-      alert('Payment simulation failed');
+      setError('Payment simulation failed');
     } finally {
       setLoading(false);
     }
   };
 
+  // Outside the app shell, so this page paints the canvas itself: mist-100,
+  // like the auth pages and the root error page, not the body's mist-50.
   if (status === 'success') {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl p-12 shadow-2xl border border-slate-200 max-w-md w-full text-center space-y-6">
-          <div className="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-6 scale-110 animate-bounce">
-            <CheckCircle2 className="w-10 h-10" />
-          </div>
-          <h1 className="text-3xl font-black text-slate-900">Payment Successful!</h1>
-          <p className="text-slate-500 font-medium">Your subscription has been activated. Redirecting to your dashboard...</p>
-          <div className="h-1 bg-slate-100 rounded-full overflow-hidden">
-            <div className="h-full bg-emerald-500"></div>
-          </div>
+      <div className="flex min-h-screen items-center justify-center bg-mist-100 px-4 py-10">
+        <div role="status" className={cn(cardClass, 'w-full max-w-sm p-6 text-center')}>
+          {/* A status icon: the status colour, no circle (AGENTS.md, Icons). */}
+          <CheckCircle2 className="mx-auto h-6 w-6 text-lime-700" aria-hidden />
+          <h1 className="mt-3 text-lg font-semibold text-mist-900">Payment successful</h1>
+          <p className="mt-1 text-sm text-mist-500">
+            {PREMIUM_PLAN.name} is active. Taking you to Practice…
+          </p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4 font-sans">
-      <div className="max-w-md w-full">
-        <div className="flex items-center justify-center gap-3 mb-8">
-          <div className="w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center">
-            <span className="text-white font-semibold text-xl">M</span>
-          </div>
-          <span className="text-2xl font-semibold text-slate-900 tracking-tight">
-            MYSATuz <span className="text-blue-600">Pay</span>
-          </span>
+    <div className="flex min-h-screen items-center justify-center bg-mist-100 px-4 py-10">
+      <div className="w-full max-w-sm space-y-6">
+        <div className="flex items-center justify-center gap-2.5">
+          <BrandMark />
+          <span className="text-lg font-semibold tracking-tight text-mist-900">MYSATuz Pay</span>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden">
-          <div className="bg-slate-900 p-8 text-white">
-            <p className="text-[10px] font-medium uppercase tracking-[0.2em] text-slate-400 mb-2">Order Summary</p>
-            <div className="flex justify-between items-end">
-              <div>
-                <h2 className="text-xl font-semibold">Premium Pro</h2>
-                <p className="text-slate-400 text-sm">Monthly Subscription</p>
-              </div>
-              <div className="text-right">
-                <p className="text-3xl font-black text-blue-400">
-                  {PREMIUM_MONTHLY_AMOUNT_UZS.toLocaleString()} <span className="text-xs">UZS</span>
-                </p>
-              </div>
-            </div>
+        <div className={cardClass}>
+          {/* The plan's own name and line (src/lib/plans.ts), as the landing
+              and the subscription page show them. No price: the amount is
+              shown only in the manual payment details while sales are open
+              (the owner's rule), and this test page charges nothing. */}
+          <div className="border-b border-mist-100 px-5 py-4">
+            <h1 className="text-base font-semibold text-mist-900">{PREMIUM_PLAN.name}</h1>
+            <p className="mt-0.5 text-sm text-mist-500">{PREMIUM_PLAN.summary}</p>
           </div>
 
-          <div className="p-8 space-y-6">
-            <div className="space-y-4">
-              <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex items-center gap-4">
-                <div className="p-2 bg-white rounded-lg shadow-sm">
-                  <CreditCard className="w-6 h-6 text-slate-600" />
-                </div>
-                <div className="flex-1">
-                  <p className="text-xs font-medium text-slate-400 uppercase tracking-widest">Card Holder</p>
-                  <p className="text-sm font-semibold text-slate-900">MOCK TEST USER</p>
-                </div>
-              </div>
+          <dl className="px-5 py-4">
+            <KeyValue label="Card holder" value="MOCK TEST USER" />
+          </dl>
 
-              <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex items-center gap-4">
-                <div className="p-2 bg-white rounded-lg shadow-sm">
-                  <ShieldCheck className="w-6 h-6 text-blue-600" />
-                </div>
-                <div className="flex-1">
-                  <p className="text-xs font-medium text-slate-400 uppercase tracking-widest">Security</p>
-                  <p className="text-sm font-semibold text-slate-900">Development simulation</p>
-                </div>
-              </div>
-            </div>
+          <div className="space-y-2 border-t border-mist-100 px-5 py-4">
+            {error && <Alert tone="danger">{error}</Alert>}
 
-            <button
-              onClick={handlePayment}
-              disabled={loading}
-              className="w-full bg-blue-600 hover:bg-blue-500 text-white py-5 rounded-2xl font-semibold text-lg transition-all shadow-lg flex items-center justify-center gap-3 active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed"
-            >
+            <Button size="lg" block onClick={handlePayment} disabled={loading}>
               {loading ? (
                 <>
-                  <Loader2 className="w-6 h-6 animate-spin" />
-                  Processing...
+                  <Loader2 className="h-4 w-4 motion-safe:animate-spin" aria-hidden />
+                  Processing…
                 </>
               ) : (
-                'Confirm Payment'
+                'Confirm test payment'
               )}
-            </button>
+            </Button>
 
-            <button
-              onClick={() => router.back()}
-              className="w-full text-slate-400 font-semibold text-sm hover:text-slate-600 flex items-center justify-center gap-2"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Cancel and Return
-            </button>
+            {/* Secondary, not ghost: outside a toolbar a bare grey label did
+                not read as a button. A link, not router.back(): nothing in
+                the app links here, so this page is opened by its URL, often
+                in a fresh tab, where "back" went nowhere. */}
+            <Link href="/dashboard/subscription" className={buttonClass({ variant: 'secondary', block: true })}>
+              <ArrowLeft className="h-4 w-4" />
+              Cancel and return
+            </Link>
           </div>
 
-          <div className="p-4 bg-slate-50 border-t border-slate-100 text-center">
-            <p className="text-[10px] font-medium text-slate-400 uppercase tracking-widest flex items-center justify-center gap-2">
-              <ShieldCheck className="w-3 h-3" />
-              Mock transaction for local testing only
-            </p>
-          </div>
+          <p className="border-t border-mist-100 px-5 py-3 text-center text-xs text-mist-500">
+            Development simulation: a mock transaction for local testing only.
+          </p>
         </div>
       </div>
     </div>

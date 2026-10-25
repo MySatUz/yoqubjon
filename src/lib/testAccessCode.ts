@@ -23,7 +23,7 @@ export function normalizeAccessCode(value: unknown) {
   if (!code) return null;
 
   if (!ACCESS_CODE_PATTERN.test(code)) {
-    throw new Error(`Access code must be exactly ${ACCESS_CODE_LENGTH} digits`);
+    throw new Error(`A test code must be exactly ${ACCESS_CODE_LENGTH} digits`);
   }
 
   return code;

@@ -2,6 +2,8 @@ import { NextResponse, after } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import {
+  MANUAL_RECEIPT_MAX_SIZE,
+  MANUAL_RECEIPT_TYPES,
   createManualReceiptSignedUrl,
   isTelegramPaymentConfigured,
   notifyManualPaymentTelegram,
@@ -17,12 +19,16 @@ export const maxDuration = 60;
 const MANUAL_PAYMENT_DAILY_REQUEST_LIMIT = 5;
 const MANUAL_PAYMENT_RATE_LIMIT_WINDOW_MS = 24 * 60 * 60 * 1000;
 
+// ManualPaymentForm shows a 4xx `error` to the student as it is, so each one
+// is a sentence for them. A 5xx is never shown; its detail stays in the log.
+const SERVER_ERROR_MESSAGE = 'The payment request could not be saved. Try again in a minute.';
+
 export async function POST(req: Request) {
   try {
     const session = await auth();
 
     if (!session?.user?.id || !session.user.email) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: 'Your session has ended. Sign in again to send the request.' }, { status: 401 });
     }
 
     const userId = session.user.id;
@@ -60,28 +66,28 @@ export async function POST(req: Request) {
 
     if (!subscriptionSettings.isEnabled) {
       return NextResponse.json(
-        { error: 'Subscription purchases are temporarily unavailable' },
+        { error: 'New Premium subscriptions are paused for now.' },
         { status: 503 }
       );
     }
 
     if (activeSubscription) {
       return NextResponse.json(
-        { error: 'Subscription is already active' },
+        { error: 'Your subscription is already active.' },
         { status: 400 }
       );
     }
 
     if (pendingRequest) {
       return NextResponse.json(
-        { error: 'A payment request is already waiting for review' },
+        { error: 'A payment request is already waiting for review.' },
         { status: 409 }
       );
     }
 
     if (recentRequestCount >= MANUAL_PAYMENT_DAILY_REQUEST_LIMIT) {
       return NextResponse.json(
-        { error: 'Too many payment requests. Please try again later.' },
+        { error: 'Too many payment requests in the last 24 hours. Try again later.' },
         { status: 429 }
       );
     }
@@ -89,9 +95,27 @@ export async function POST(req: Request) {
     const formData = await req.formData();
     const receipt = formData.get('receipt');
 
-    if (!(receipt instanceof File)) {
+    if (!(receipt instanceof File) || receipt.size <= 0) {
       return NextResponse.json(
-        { error: 'Receipt file is required' },
+        { error: 'Choose the receipt file to upload.' },
+        { status: 400 }
+      );
+    }
+
+    // uploadManualReceipt refuses these too, but by throwing, which lands in
+    // the 500 path and tells the student only to try again. They can fix
+    // these themselves, so they get the reason. No number in the size one:
+    // the form states the lower limit the host allows (ManualPaymentForm).
+    if (receipt.size > MANUAL_RECEIPT_MAX_SIZE) {
+      return NextResponse.json(
+        { error: 'The receipt file is too large. Try a screenshot or a PDF.' },
+        { status: 400 }
+      );
+    }
+
+    if (!MANUAL_RECEIPT_TYPES.has(receipt.type)) {
+      return NextResponse.json(
+        { error: 'Upload the receipt as a PNG, JPG, WebP or PDF file.' },
         { status: 400 }
       );
     }
@@ -123,6 +147,14 @@ export async function POST(req: Request) {
     const userEmail = session.user.email;
     const userName = manualRequest.payerName || session.user.name;
 
+    if (!isTelegramPaymentConfigured()) {
+      // Saved, but no admin is pinged: without this line nothing says why a
+      // request sits unseen until someone opens the admin queue.
+      console.warn('Manual payment saved; Telegram notification is not configured', {
+        requestId: manualRequest.id,
+      });
+    }
+
     // Signing the receipt URL and calling the Telegram API used to block the
     // response; both now run after it is sent. The request is already persisted,
     // so a failing/slow Telegram never delays or fails the submission.
@@ -151,20 +183,16 @@ export async function POST(req: Request) {
       }
     });
 
+    // No `notification` field any more: ManualPaymentForm shows one
+    // confirmation whatever happens to the admin's Telegram ping, and the
+    // send runs after this response anyway.
     return NextResponse.json({
       success: true,
       requestId: manualRequest.id,
-      // Kept for `ManualPaymentForm`, which branches on this field. Since the
-      // send now happens after the response, `ok` means "queued" and `skipped`
-      // still reports a server without Telegram credentials. The delivery
-      // failure branch in the client can no longer be reached.
-      notification: { ok: true, skipped: !isTelegramPaymentConfigured() },
     });
   } catch (error) {
+    // A storage or database message is for the log, not for the student.
     console.error('Manual payment request failed:', error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Payment request failed' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: SERVER_ERROR_MESSAGE }, { status: 500 });
   }
 }

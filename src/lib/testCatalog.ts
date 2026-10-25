@@ -100,7 +100,22 @@ export function formatCategoryLabel(category: TestCategory | null | undefined) {
     .split(/[_-]+/)
     .filter(Boolean)
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(' ') || 'Practice section';
+    .join(' ') || 'Course';
+}
+
+/**
+ * Filler that code stored as the description of a course nobody described:
+ * "section" until 2026-10, and `createTestCollection` (src/app/admin/actions.ts)
+ * still writes "course". It is not the admin's words and tells a student
+ * nothing, so it reads as no description - here for the catalog, and on the
+ * course's Settings, which shows the field empty.
+ */
+const STORED_FILLER_DESCRIPTIONS = new Set(['Practice tests in this section.', 'Practice tests in this course.']);
+
+/** A course's stored description as the admin wrote it; '' for none or the stored filler. */
+export function readCourseDescription(stored: string | null | undefined) {
+  const text = stored?.trim() ?? '';
+  return STORED_FILLER_DESCRIPTIONS.has(text) ? '' : text;
 }
 
 export function getTestCollections(rows: CollectionVisibilityRow[]) {
@@ -117,7 +132,8 @@ export function getTestCollections(rows: CollectionVisibilityRow[]) {
       return {
         value: category,
         label: row.label?.trim() || defaults?.label || formatCategoryLabel(category),
-        description: row.description?.trim() || defaults?.description || 'Practice tests in this section.',
+        // A course without a description shows none: no filler under every course name.
+        description: readCourseDescription(row.description) || defaults?.description || '',
         visible: row.visible,
         position: row.position ?? defaults?.position ?? 1000,
         maxAttempts: row.maxAttempts ?? defaults?.maxAttempts ?? DEFAULT_TEST_MAX_ATTEMPTS,
@@ -201,7 +217,8 @@ export function getDefaultTestDescription(category: TestCategory | null) {
     return 'Standard Digital SAT practice module.';
   }
 
-  return 'Practice module for this section.';
+  // A test in an admin's own course has no stock line; its own description or nothing.
+  return '';
 }
 
 export function getTestDescription(test: CatalogTest) {

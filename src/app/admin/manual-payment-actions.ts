@@ -1,6 +1,6 @@
 'use server';
 
-import { refresh } from 'next/cache';
+import { revalidatePath } from 'next/cache';
 import { requireAdmin } from '@/lib/admin';
 import {
   activateManualSubscription,
@@ -15,6 +15,23 @@ function getRequestId(formData: FormData) {
   return requestId.trim();
 }
 
+/**
+ * Said back to the admin: a decision that failed (a request another admin, or
+ * the Telegram bot, reviewed a moment earlier) used to leave the buttons on
+ * screen with no word of what happened.
+ */
+type PaymentDecisionResult = { success: true } | { success: false; error: string };
+
+/**
+ * The queue is on the Subscription page, under #payments (the admin Payments
+ * page is gone). In a server action this re-renders that page in the same
+ * response, so the decision buttons leave the screen without a reload; the
+ * student's own copy of the page is fresh on their next visit.
+ */
+function revalidatePaymentQueue() {
+  revalidatePath('/dashboard/subscription');
+}
+
 function getAdminNote(formData: FormData) {
   const note = formData.get('adminNote');
   if (typeof note !== 'string') return null;
@@ -22,7 +39,7 @@ function getAdminNote(formData: FormData) {
   return trimmed ? trimmed.slice(0, 500) : null;
 }
 
-export async function approveManualPaymentRequest(formData: FormData) {
+export async function approveManualPaymentRequest(formData: FormData): Promise<PaymentDecisionResult> {
   try {
     const session = await requireAdmin();
     const adminUserId = session?.user?.id;
@@ -37,17 +54,19 @@ export async function approveManualPaymentRequest(formData: FormData) {
       adminNote,
     });
 
-    // These run as `<form action={...}>` on `/admin/payments`, a page that
-    // `revalidatePath('/admin')` did not cover: the decision buttons stayed on
-    // screen until a manual reload. `refresh()` re-renders the page that
-    // submitted the form, in the same response.
-    refresh();
+    revalidatePaymentQueue();
+    return { success: true };
   } catch (error) {
     console.error('Approve manual payment failed:', error);
+    // The usual failure is a request another admin or the Telegram bot has
+    // just reviewed: the refreshed page shows it as it now stands, instead of
+    // leaving it marked pending beside the error.
+    revalidatePaymentQueue();
+    return { success: false, error: error instanceof Error ? error.message : 'Could not approve the payment' };
   }
 }
 
-export async function rejectManualPaymentRequest(formData: FormData) {
+export async function rejectManualPaymentRequest(formData: FormData): Promise<PaymentDecisionResult> {
   try {
     const session = await requireAdmin();
     const adminUserId = session?.user?.id;
@@ -62,8 +81,11 @@ export async function rejectManualPaymentRequest(formData: FormData) {
       adminNote,
     });
 
-    refresh();
+    revalidatePaymentQueue();
+    return { success: true };
   } catch (error) {
     console.error('Reject manual payment failed:', error);
+    revalidatePaymentQueue();
+    return { success: false, error: error instanceof Error ? error.message : 'Could not reject the payment' };
   }
 }

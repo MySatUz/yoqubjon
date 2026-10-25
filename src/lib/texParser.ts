@@ -1,6 +1,12 @@
 import katex from 'katex';
 import { MAX_MODULE_COUNT } from '@/lib/examModules';
 import { formatAnswerLetters, parseAnswerLetters } from '@/lib/resultAnswers';
+import {
+  parseDifficultyTag,
+  parseDomainTag,
+  type BankDifficulty,
+  type BankDomain,
+} from '@/lib/questionBank';
 
 export interface ParsedQuestion {
   order: number;
@@ -8,6 +14,19 @@ export interface ParsedQuestion {
   options: string[];
   correctAnswer: string;
   image?: string;
+  /**
+   * The question bank's tags, `\domain{algebra}` and `\difficulty{2}` inside
+   * the question block. Both are optional: the import preview asks for the
+   * missing ones. The raw text is kept beside the parsed value so the
+   * preview can say what the file wrote when it names nothing the bank knows
+   * ("Unknown domain 'calculus'").
+   */
+  domainTag?: string;
+  difficultyTag?: string;
+  /** Null when there is no tag or the tag names no domain. */
+  domain: BankDomain | null;
+  /** Null when there is no tag or the tag is not 1-3 / easy-hard. */
+  difficulty: BankDifficulty | null;
 }
 
 export interface ParsedTex {
@@ -315,12 +334,21 @@ export function parseTexFile(texContent: string): ParsedTex {
 
     const correctAnswer = normalizeLatexText(extractTagContent(questionBlock, 'answer') || "");
 
-    const question = {
+    // Empty braces count as no tag, so `\domain{}` left in a template asks
+    // for a domain instead of reporting an unknown one.
+    const domainTag = extractTagContent(questionBlock, 'domain')?.trim() || undefined;
+    const difficultyTag = extractTagContent(questionBlock, 'difficulty')?.trim() || undefined;
+
+    const question: ParsedQuestion = {
       order: order++,
       content,
       options,
       correctAnswer,
-      image
+      image,
+      domainTag,
+      difficultyTag,
+      domain: parseDomainTag(domainTag),
+      difficulty: parseDifficultyTag(difficultyTag),
     };
 
     validateQuestion(question);

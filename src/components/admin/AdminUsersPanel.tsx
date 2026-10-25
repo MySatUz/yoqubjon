@@ -1,8 +1,15 @@
 'use client';
 
-import React, { type ReactNode, useState } from 'react';
+import React, { useState } from 'react';
 import { grantAdminRole, revokeAdminRole } from '@/app/admin/admin-user-actions';
-import { AlertCircle, CheckCircle2, Search, Shield, ShieldMinus, ShieldPlus, Users } from 'lucide-react';
+import { Loader2, Search, ShieldMinus, ShieldPlus } from 'lucide-react';
+import { Card, CardBody, CardHeader } from '@/components/ui/Card';
+import { Button } from '@/components/ui/Button';
+import { useConfirm } from '@/components/ui/Dialog';
+import { inputClass } from '@/components/ui/Field';
+import { Badge } from '@/components/ui/Badge';
+import { Alert } from '@/components/ui/Feedback';
+import { listRowClass } from '@/components/ui/List';
 
 interface AdminUser {
   id: string;
@@ -14,27 +21,26 @@ interface AdminUser {
 interface AdminUsersPanelProps {
   users: AdminUser[];
   ownerEmail: string;
-  userCount: number;
-  userDirectory: ReactNode;
-  initialShowUsers?: boolean;
 }
 
 type ActionResult = { success?: boolean; error?: string } | null;
 
-export default function AdminUsersPanel({
-  users,
-  ownerEmail,
-  userCount,
-  userDirectory,
-  initialShowUsers = false,
-}: AdminUsersPanelProps) {
+/**
+ * The owner's card for giving and removing admin access. It used to carry
+ * a toggle that showed or hid the user directory below it; the Users page now
+ * leads with the directory and puts this card under it.
+ */
+export default function AdminUsersPanel({ users, ownerEmail }: AdminUsersPanelProps) {
   const [grantResult, setGrantResult] = useState<ActionResult>(null);
   const [busyEmail, setBusyEmail] = useState<string | null>(null);
   const [emailQuery, setEmailQuery] = useState('');
-  const [showUsers, setShowUsers] = useState(initialShowUsers);
+  const { confirm, dialog } = useConfirm();
   const normalizedQuery = emailQuery.trim().toLowerCase();
   const visibleUsers = users.filter((user) => user.role === 'ADMIN' || user.email.toLowerCase() === ownerEmail);
-  const suggestedUsers = normalizedQuery.length >= 2
+  // Closed once the field holds exactly the address that was picked: the list
+  // would otherwise stay open over the button, offering the same one user.
+  const isQueryPicked = users.some((user) => user.email.toLowerCase() === normalizedQuery);
+  const suggestedUsers = normalizedQuery.length >= 2 && !isQueryPicked
     ? users
         .filter((user) => {
           const email = user.email.toLowerCase();
@@ -56,8 +62,15 @@ export default function AdminUsersPanel({
     if (result.success) setEmailQuery('');
   }
 
-  async function handleRevoke(email: string) {
-    if (!confirm(`Remove admin access for ${email}?`)) return;
+  async function handleRevoke(user: AdminUser) {
+    const { email } = user;
+    const isSure = await confirm({
+      title: `Remove admin access for ${user.name || email}?`,
+      description: `${email} can no longer open the admin pages. The account and its results stay; you can give admin access again later.`,
+      confirmLabel: 'Remove admin',
+      tone: 'danger',
+    });
+    if (!isSure) return;
 
     const formData = new FormData();
     formData.set('email', email);
@@ -69,141 +82,103 @@ export default function AdminUsersPanel({
   }
 
   return (
-    <div className="space-y-6">
-      <section className="rounded-2xl border border-blue-100 bg-white p-8 shadow-lg">
-      <div className="mb-6 flex items-start justify-between gap-4">
-        <div>
-          <div className="mb-2 flex items-center gap-2 text-xs font-medium uppercase tracking-widest text-blue-600">
-            <Shield className="h-4 w-4" />
-            Owner controls
-          </div>
-          <h2 className="text-2xl font-semibold tracking-tight text-slate-900">Admin access</h2>
-        </div>
+    <Card as="section">
+      <CardHeader
+        title="Admin access"
+        description="Admins manage courses, tests, users and payments. Only the owner can give or remove admin access."
+      />
 
-        <button
-          type="button"
-          onClick={() => setShowUsers((current) => !current)}
-          className={`inline-flex items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-semibold transition ${
-            showUsers
-              ? 'bg-blue-600 text-white shadow-lg'
-              : 'border border-slate-200 bg-slate-50 text-slate-700 hover:border-blue-200 hover:text-blue-700'
-          }`}
-        >
-          <Users className="h-5 w-5" />
-          Users
-          <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${
-            showUsers ? 'bg-white/20 text-white' : 'bg-white text-slate-500'
-          }`}>
-            {userCount}
-          </span>
-        </button>
-      </div>
+      <CardBody className="space-y-4">
+        <form action={handleGrant} className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_auto]">
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-mist-400" />
+            <input
+              name="email"
+              type="email"
+              required
+              value={emailQuery}
+              onChange={(event) => setEmailQuery(event.target.value)}
+              placeholder="Search by email or name"
+              aria-label="Email of the user to make admin"
+              autoComplete="off"
+              className={inputClass({ className: 'pl-9' })}
+            />
 
-      <form action={handleGrant} className="mb-6 grid gap-3 md:grid-cols-[1fr_auto]">
-        <div className="relative">
-          <Search className="pointer-events-none absolute left-5 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
-          <input
-            name="email"
-            type="email"
-            required
-            value={emailQuery}
-            onChange={(event) => setEmailQuery(event.target.value)}
-            placeholder="Search by email or name"
-            autoComplete="off"
-            className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-4 pl-12 pr-5 font-semibold text-slate-900 transition-all focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-500/10"
-          />
+            {suggestedUsers.length > 0 && (
+              <div className="absolute inset-x-0 top-full z-20 mt-1 rounded-2xl border border-mist-200 bg-white p-1 shadow-lg">
+                {suggestedUsers.map((user) => {
+                  const isOwner = user.email.toLowerCase() === ownerEmail;
+                  const isAdmin = user.role === 'ADMIN' || isOwner;
 
-          {suggestedUsers.length > 0 && (
-            <div className="absolute left-0 right-0 top-[calc(100%+0.5rem)] z-20 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
-              {suggestedUsers.map((user) => {
-                const isOwner = user.email.toLowerCase() === ownerEmail;
-                const isAdmin = user.role === 'ADMIN' || isOwner;
-
-                return (
-                  <button
-                    key={user.id}
-                    type="button"
-                    onClick={() => setEmailQuery(user.email)}
-                    className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-blue-50"
-                  >
-                    <span className="min-w-0">
-                      <span className="block truncate text-sm font-semibold text-slate-900">{user.name || user.email}</span>
-                      <span className="block truncate text-xs font-medium text-slate-500">{user.email}</span>
-                    </span>
-                    {isAdmin && (
-                      <span className="shrink-0 rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-medium uppercase text-blue-700">
-                        {isOwner ? 'Owner' : 'Admin'}
+                  return (
+                    <button
+                      key={user.id}
+                      type="button"
+                      onClick={() => setEmailQuery(user.email)}
+                      className="flex w-full items-center justify-between gap-3 rounded-xl px-3 py-2 text-left transition-colors hover:bg-mist-50 focus-visible:bg-mist-50 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-board-600"
+                    >
+                      <span className="min-w-0">
+                        <span className="block truncate text-sm font-medium text-mist-900">{user.name || user.email}</span>
+                        <span className="block truncate text-xs text-mist-500">{user.email}</span>
                       </span>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          )}
-        </div>
-        <button
-          type="submit"
-          disabled={busyEmail !== null || !emailQuery.trim()}
-          className="inline-flex items-center justify-center gap-2 rounded-2xl bg-blue-600 px-6 py-4 font-semibold text-white shadow-lg transition-all hover:bg-blue-700 disabled:opacity-50"
-        >
-          <ShieldPlus className="h-5 w-5" />
-          Make admin
-        </button>
-      </form>
+                      {isAdmin && <Badge tone="accent">{isOwner ? 'Owner' : 'Admin'}</Badge>}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+          <Button type="submit" disabled={busyEmail !== null || !emailQuery.trim()}>
+            <ShieldPlus className="h-4 w-4" />
+            Make admin
+          </Button>
+        </form>
 
-      {grantResult?.success && (
-        <div className="mb-4 flex items-center gap-2 rounded-2xl border border-emerald-100 bg-emerald-50 p-4 font-semibold text-emerald-700">
-          <CheckCircle2 className="h-5 w-5" />
-          Admin access updated.
-        </div>
-      )}
+        {grantResult?.success && <Alert tone="success">Admin access updated.</Alert>}
 
-      {grantResult?.error && (
-        <div className="mb-4 flex items-center gap-2 rounded-2xl border border-red-100 bg-red-50 p-4 font-semibold text-red-700">
-          <AlertCircle className="h-5 w-5" />
-          {grantResult.error}
-        </div>
-      )}
+        {grantResult?.error && <Alert tone="danger">{grantResult.error}</Alert>}
+      </CardBody>
 
-      <div className="grid gap-3">
+      <ul className="divide-y divide-mist-100 border-t border-mist-100">
         {visibleUsers.map((user) => {
           const isOwner = user.email.toLowerCase() === ownerEmail;
           return (
-            <div key={user.id} className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 md:flex-row md:items-center md:justify-between">
-              <div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="font-semibold text-slate-900">{user.name || user.email}</span>
-                  <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium uppercase ${user.role === 'ADMIN' || isOwner ? 'bg-blue-100 text-blue-700' : 'bg-slate-200 text-slate-600'}`}>
-                    {isOwner ? 'Owner' : user.role}
-                  </span>
+            <li key={user.id} className={listRowClass}>
+              <div className="min-w-0 flex-1">
+                <div className="flex min-w-0 items-center gap-2">
+                  <span className="min-w-0 truncate text-sm font-medium text-mist-900">{user.name || user.email}</span>
+                  {/* Only admins and the owner are listed here. */}
+                  <Badge tone="accent">{isOwner ? 'Owner' : 'Admin'}</Badge>
                 </div>
-                <p className="text-sm font-semibold text-slate-500">{user.email}</p>
+                {user.name && <p className="mt-0.5 truncate text-xs text-mist-500">{user.email}</p>}
               </div>
 
+              {/* Outlined like the other row actions, red only on hover and focus. */}
               {user.role === 'ADMIN' && !isOwner && (
-                <button
-                  type="button"
-                  onClick={() => handleRevoke(user.email)}
+                <Button
+                  variant="danger-secondary"
+                  size="sm"
+                  onClick={() => handleRevoke(user)}
                   disabled={busyEmail === user.email}
-                  className="inline-flex items-center justify-center gap-2 rounded-2xl border border-red-100 bg-white px-4 py-3 text-sm font-semibold text-red-600 transition-all hover:bg-red-50 disabled:opacity-50"
+                  aria-label={`Remove admin access for ${user.name || user.email}`}
                 >
-                  <ShieldMinus className="h-4 w-4" />
+                  {busyEmail === user.email
+                    ? <Loader2 className="h-4 w-4 animate-spin" />
+                    : <ShieldMinus className="h-4 w-4" />}
                   Remove admin
-                </button>
+                </Button>
               )}
-            </div>
+            </li>
           );
         })}
 
         {visibleUsers.length === 0 && (
-          <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-6 text-center text-sm font-semibold text-slate-400">
-            No admins yet. Search for a registered user above to grant access.
-          </div>
+          <li className="px-5 py-6 text-center text-sm text-mist-500">
+            No admins yet. Search for a user above to give admin access.
+          </li>
         )}
-      </div>
-      </section>
-
-      {showUsers && userDirectory}
-    </div>
+      </ul>
+      {dialog}
+    </Card>
   );
 }

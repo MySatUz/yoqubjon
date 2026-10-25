@@ -8,7 +8,8 @@ export async function cancelActiveSubscription() {
   const session = await auth();
 
   if (!session?.user?.id) {
-    return { success: false, error: 'Unauthorized' };
+    // Shown to the student as it is (SubscriptionCheckout).
+    return { success: false, error: 'Your session has ended. Sign in again to cancel.' };
   }
 
   const result = await prisma.subscription.updateMany({

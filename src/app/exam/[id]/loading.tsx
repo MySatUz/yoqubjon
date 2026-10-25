@@ -1,35 +1,31 @@
+import { Skeleton } from '@/components/ui/Feedback';
+import { ModuleTransitionSkeleton } from '@/components/exam/ModuleTransition';
+
+/**
+ * Mirrors what a test opens on: the h-14 TopNav (module and title, centred
+ * clock, the two tools) over the module's start screen - a new attempt waits
+ * there for Start (see `ModuleTransition`), and that is how most tests open.
+ * Same heights and the same card, so nothing jumps when it arrives.
+ */
 export default function Loading() {
   return (
-    <main className="flex h-screen flex-col bg-slate-50">
-      <div className="flex h-16 items-center justify-between border-b border-slate-200 bg-white px-4 sm:px-6">
-        <div className="h-8 w-32 animate-pulse rounded-xl bg-slate-200" />
-        <div className="h-9 w-28 animate-pulse rounded-xl bg-blue-100" />
-      </div>
+    <main className="flex h-dvh flex-col overflow-hidden bg-mist-100">
+      <p className="sr-only">Loading the test</p>
 
-      <div className="flex-1 overflow-hidden bg-white px-4 py-8 sm:px-10">
-        <div className="mx-auto flex h-full max-w-4xl flex-col">
-          <div className="mb-8 h-4 w-28 animate-pulse rounded-full bg-blue-100" />
-          <div className="space-y-4">
-            <div className="h-7 w-11/12 animate-pulse rounded-xl bg-slate-200" />
-            <div className="h-7 w-10/12 animate-pulse rounded-xl bg-slate-200" />
-            <div className="h-7 w-8/12 animate-pulse rounded-xl bg-slate-200" />
-          </div>
-
-          <div className="mt-auto grid gap-4 border-t border-slate-200 pt-8 sm:grid-cols-2">
-            <div className="h-24 animate-pulse rounded-2xl border border-slate-200 bg-slate-50" />
-            <div className="h-24 animate-pulse rounded-2xl border border-slate-200 bg-slate-50" />
-            <div className="h-24 animate-pulse rounded-2xl border border-slate-200 bg-slate-50" />
-            <div className="h-24 animate-pulse rounded-2xl border border-slate-200 bg-slate-50" />
-          </div>
+      <div className="flex h-14 shrink-0 items-center justify-between gap-2 border-b border-mist-200 bg-white px-2 sm:px-4 lg:px-6">
+        <div className="space-y-1.5">
+          <Skeleton className="h-4 w-24" />
+          <Skeleton className="h-3 w-32 sm:w-44" />
+        </div>
+        <Skeleton className="h-9 w-20" />
+        <div className="flex items-center gap-1">
+          {/* The two tools: icons, named from `xl` (see TopNav). */}
+          <Skeleton className="h-9 w-9 pointer-coarse:h-10 max-xl:pointer-coarse:w-10 xl:w-28" />
+          <Skeleton className="h-9 w-9 pointer-coarse:h-10 max-xl:pointer-coarse:w-10 xl:w-32" />
         </div>
       </div>
 
-      <div className="h-20 border-t border-slate-200 bg-white px-4 py-4">
-        <div className="mx-auto flex max-w-4xl justify-between">
-          <div className="h-10 w-24 animate-pulse rounded-xl bg-slate-200" />
-          <div className="h-10 w-24 animate-pulse rounded-xl bg-blue-100" />
-        </div>
-      </div>
+      <ModuleTransitionSkeleton />
     </main>
   );
 }

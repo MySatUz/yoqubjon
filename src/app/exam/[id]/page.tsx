@@ -1,14 +1,71 @@
+import { cache } from 'react';
+import type { Metadata } from 'next';
 import { prisma } from '@/lib/prisma';
 import ExamRunner from '@/components/exam/ExamRunner';
+import ReferenceSheet from '@/components/exam/ReferenceSheet';
+import { cookies } from 'next/headers';
 import { notFound, redirect } from 'next/navigation';
 import { auth } from '@/auth';
 import { buildExamModules, getTotalDurationSeconds } from '@/lib/examModules';
-import { canStartOlympiadAttempt, readOlympiadWindow } from '@/lib/olympiad';
+import {
+  canStartOlympiadAttempt,
+  getOlympiadStatus,
+  readOlympiadWindow,
+  type OlympiadWindow,
+} from '@/lib/olympiad';
+import { olympiadReturnCookie } from '@/components/exam/olympiadReturn';
 import { getViewerAccess } from '@/lib/studentView';
 import { userHasActiveSectionAccess } from '@/lib/sectionAccess';
 import { getExamQuestionsHtml } from '@/lib/examQuestions';
 import { userHasUnlockedTest } from '@/lib/testAccessCode';
 import AccessCodeGate from '@/components/exam/AccessCodeGate';
+
+/**
+ * The test row, read once per request: `generateMetadata` and the page both
+ * need it. Uncached across requests - `visible` and `maxAttempts` gate access
+ * and have to be read fresh.
+ */
+const getExamTest = cache((id: string) =>
+  prisma.test.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      title: true,
+      isFree: true,
+      visible: true,
+      maxAttempts: true,
+      collectionCategory: true,
+      durationSeconds: true,
+      moduleDurations: true,
+      olympiadStartsAt: true,
+      olympiadEndsAt: true,
+      accessCode: true,
+    },
+  })
+);
+
+/**
+ * The tab says which test is open - with several open, "MYSATuz" in every
+ * tab told them apart by nothing. A hidden test's title stays out of it: the
+ * page itself is a 404 for everyone but an admin.
+ */
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const { id } = await params;
+  const test = await getExamTest(id);
+  return { title: test?.visible ? test.title : 'Test' };
+}
+
+/**
+ * A student who was already on this test - its start screen or halfway
+ * through - when the olympiad's last start time passed, back after a reload.
+ * The gate below is for starting an attempt, not for finishing one: they are
+ * let back in until the window closes (see `olympiadReturn`).
+ */
+async function isReturningToOlympiad(olympiad: OlympiadWindow, testId: string, userId: string) {
+  if (getOlympiadStatus(olympiad) !== 'running') return false;
+  const cookieStore = await cookies();
+  return cookieStore.get(olympiadReturnCookie(testId))?.value === userId;
+}
 
 export default async function DynamicExamPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -32,22 +89,7 @@ export default async function DynamicExamPage({ params }: { params: Promise<{ id
   // itself stays uncached: `visible` and `maxAttempts` gate access and have to
   // be read fresh.
   const [test, viewer, attemptsUsed, subscription, questions] = await Promise.all([
-    prisma.test.findUnique({
-      where: { id },
-      select: {
-        id: true,
-        title: true,
-        isFree: true,
-        visible: true,
-        maxAttempts: true,
-        collectionCategory: true,
-        durationSeconds: true,
-        moduleDurations: true,
-        olympiadStartsAt: true,
-        olympiadEndsAt: true,
-        accessCode: true,
-      },
-    }),
+    getExamTest(id),
     getViewerAccess(userId),
     prisma.result.count({
       where: {
@@ -81,13 +123,15 @@ export default async function DynamicExamPage({ params }: { params: Promise<{ id
   // A competition test only opens inside its window, and closes one full test
   // length before the end so nobody works an attempt that would not be counted.
   // The olympiad page explains which of those two it is; admins bypass it so a
-  // test can still be checked before the window opens.
+  // test can still be checked before the window opens, and a student already
+  // in comes back to their attempt after a reload.
   const olympiadWindow = readOlympiadWindow(test);
 
   if (
     olympiadWindow &&
     !isAdmin &&
-    !canStartOlympiadAttempt(olympiadWindow, getTotalDurationSeconds(test))
+    !canStartOlympiadAttempt(olympiadWindow, getTotalDurationSeconds(test)) &&
+    !(await isReturningToOlympiad(olympiadWindow, id, userId))
   ) {
     redirect(`/olympiad/${id}`);
   }
@@ -129,5 +173,15 @@ export default async function DynamicExamPage({ params }: { params: Promise<{ id
 
   // The whiteboard is for running a lesson on this screen. An admin in student
   // view does not get it, since that view is meant to look like a student's.
-  return <ExamRunner testId={id} modules={modules} canDraw={isAdmin} />;
+  return (
+    <ExamRunner
+      testId={id}
+      title={test.title}
+      modules={modules}
+      canDraw={isAdmin}
+      userId={userId}
+      olympiadEndsAtMs={olympiadWindow ? olympiadWindow.endsAt.getTime() : null}
+      referenceSheet={<ReferenceSheet />}
+    />
+  );
 }

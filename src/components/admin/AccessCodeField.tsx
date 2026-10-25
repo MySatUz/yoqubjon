@@ -1,8 +1,9 @@
 'use client';
 
-import { useId, useState } from 'react';
-import { KeyRound } from 'lucide-react';
+import { useId, useRef, useState } from 'react';
 import { ACCESS_CODE_LENGTH, generateAccessCode } from '@/lib/accessCodeFormat';
+import { Button } from '@/components/ui/Button';
+import { Field, inputClass } from '@/components/ui/Field';
 
 type AccessCodeFieldProps = {
   initialCode?: string | null;
@@ -12,29 +13,33 @@ type AccessCodeFieldProps = {
 };
 
 /**
- * The optional start code, shared by the upload form and the test editor so
+ * The optional test code, shared by the upload form and the test editor so
  * both read and behave the same. Controlled, unlike the fields around it,
  * because "Generate" and "Remove" have to write into the input.
  */
 export default function AccessCodeField({ initialCode, hint, className = 'block' }: AccessCodeFieldProps) {
   const [code, setCode] = useState(initialCode ?? '');
+  const inputRef = useRef<HTMLInputElement>(null);
   // Several tests can be open in the list at once, so the id cannot be fixed.
   const inputId = useId();
 
   return (
-    <div className={className}>
-      <label
-        htmlFor={inputId}
-        className="mb-2 flex items-center gap-2 text-xs font-medium uppercase tracking-widest text-slate-400"
-      >
-        <KeyRound className="h-4 w-4" />
-        Start code
-        <span className="normal-case tracking-normal text-slate-400">
-          — {ACCESS_CODE_LENGTH} digits, empty for no code
-        </span>
-      </label>
+    <Field
+      label={
+        <>
+          Test code
+          {/* Text the admin reads, so mist-500: mist-400 is for icons. */}
+          <span className="font-normal text-mist-500"> · {ACCESS_CODE_LENGTH} digits, optional</span>
+        </>
+      }
+      htmlFor={inputId}
+      hint={hint}
+      className={className}
+    >
       <div className="flex flex-wrap items-center gap-2">
+        {/* Field finds the input by its id inside this row and points it at the hint. */}
         <input
+          ref={inputRef}
           id={inputId}
           name="accessCode"
           value={code}
@@ -46,26 +51,27 @@ export default function AccessCodeField({ initialCode, hint, className = 'block'
           pattern={`\\d{${ACCESS_CODE_LENGTH}}`}
           title={`Exactly ${ACCESS_CODE_LENGTH} digits`}
           placeholder="No code"
-          className="w-36 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold tabular-nums tracking-widest text-slate-900 outline-none transition placeholder:font-medium placeholder:tracking-normal placeholder:text-slate-400 focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+          // The base class is w-full; max-w caps it without a second width class.
+          className={inputClass({ className: 'max-w-36 tabular-nums tracking-widest placeholder:tracking-normal' })}
         />
-        <button
-          type="button"
-          onClick={() => setCode(generateAccessCode())}
-          className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-xs font-semibold text-slate-700 transition hover:border-blue-200 hover:text-blue-600"
-        >
+        <Button variant="secondary" onClick={() => setCode(generateAccessCode())}>
           Generate
-        </button>
+        </Button>
+        {/* Outlined like Generate beside it: a ghost "Remove" read as a
+            word, not a button. It goes away with the code, so focus moves to
+            the now empty field. */}
         {code && (
-          <button
-            type="button"
-            onClick={() => setCode('')}
-            className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-xs font-semibold text-slate-700 transition hover:border-red-200 hover:text-red-600"
+          <Button
+            variant="secondary"
+            onClick={() => {
+              setCode('');
+              inputRef.current?.focus();
+            }}
           >
             Remove
-          </button>
+          </Button>
         )}
       </div>
-      <p className="mt-2 text-xs text-slate-500">{hint}</p>
-    </div>
+    </Field>
   );
 }

@@ -1,7 +1,7 @@
 import { cache } from 'react';
-import { unstable_cache } from 'next/cache';
+import { revalidateTag, unstable_cache } from 'next/cache';
 import { prisma } from '@/lib/prisma';
-import { getTestCollections } from '@/lib/testCatalog';
+import { DEFAULT_TEST_COLLECTION_OPTIONS, getTestCollections } from '@/lib/testCatalog';
 
 /**
  * Server-side reader for the `TestCollectionVisibility` table.
@@ -52,3 +52,27 @@ export const getCollectionVisibilityRows = cache(
 export const getCachedTestCollections = cache(async () =>
   getTestCollections(await getCollectionVisibilityRows())
 );
+
+/**
+ * While the table is empty the built-in courses are shown in its place
+ * (`getTestCollections`), but nothing can be stored against them: access
+ * entries and settings need a row. Writing all of them before the first change
+ * keeps them together - creating or changing one alone would make the table
+ * non-empty and the other built-in courses would vanish. Server actions only.
+ */
+export async function storeDefaultCoursesIfEmpty() {
+  if (await prisma.testCollectionVisibility.count() > 0) return;
+
+  await prisma.testCollectionVisibility.createMany({
+    data: DEFAULT_TEST_COLLECTION_OPTIONS.map((option) => ({
+      category: option.value,
+      label: option.label,
+      description: option.description,
+      visible: option.visible,
+      position: option.position,
+      maxAttempts: option.maxAttempts,
+    })),
+    skipDuplicates: true,
+  });
+  revalidateTag(TEST_COLLECTIONS_CACHE_TAG, { expire: 0 });
+}

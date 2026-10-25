@@ -4,11 +4,11 @@ import type { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { parseTexFile } from '@/lib/texParser';
 import { getSupabaseAdmin } from '@/lib/supabase';
-import { refresh, revalidateTag } from 'next/cache';
+import { refresh, revalidatePath, revalidateTag } from 'next/cache';
+import { redirect } from 'next/navigation';
 import { requireAdmin } from '@/lib/admin';
 import { TEST_COLLECTIONS_CACHE_TAG } from '@/lib/testCollections';
 import { examQuestionsCacheTag } from '@/lib/examQuestions';
-import { formatAnswerLetters, parseAnswerLetters } from '@/lib/resultAnswers';
 import {
   EXAM_DURATION_SECONDS,
   MAX_EXAM_DURATION_SECONDS,
@@ -30,16 +30,26 @@ import {
   resolveExamModules,
   type ExamFormatInput,
 } from '@/lib/examModules';
+import {
+  QUESTION_IMAGE_BUCKET,
+  buildBankRows,
+  readOptionalText,
+  readSharedQuestionFields,
+  readTexUpload,
+  readUploadedImages,
+  removeFolderImages,
+  removeUnreferencedImages,
+  resolveImportTags,
+  writeTestQuestionThrough,
+} from '@/lib/questionBankServer';
 
-const MAX_TEX_FILE_SIZE = 2 * 1024 * 1024;
 const MAX_MODULE_QUESTION_COUNT = 200;
 const MAX_IMAGE_FILE_SIZE = 5 * 1024 * 1024;
 const ALLOWED_IMAGE_TYPES = new Set(['image/png', 'image/jpeg', 'image/jpg', 'image/webp']);
-const QUESTION_IMAGE_BUCKET = 'questions';
-const STORAGE_LIST_PAGE_SIZE = 1000;
 const TEST_ID_PATTERN = /^[0-9a-f-]{36}$/i;
 const MAX_SECTION_LABEL_LENGTH = 80;
 const MAX_SECTION_DESCRIPTION_LENGTH = 180;
+const MAX_TEST_TITLE_LENGTH = 200;
 const MIN_DURATION_MINUTES = Math.ceil(MIN_EXAM_DURATION_SECONDS / 60);
 const MAX_DURATION_MINUTES = Math.floor(MAX_EXAM_DURATION_SECONDS / 60);
 
@@ -70,83 +80,9 @@ function readBooleanField(formData: FormData, fieldName: string, defaultValue = 
   return values.includes('true');
 }
 
-function normalizeQuestionOptions(values: FormDataEntryValue[]) {
-  const options = values
-    .filter((value): value is string => typeof value === 'string')
-    .map((value) => value.trim())
-    .filter(Boolean);
-
-  if (options.length === 1) {
-    throw new Error('Use at least two options or remove all options for a grid-in answer');
-  }
-
-  return options;
-}
-
-/**
- * Checks the answer key against the options and returns the form to store.
- *
- * Two or more letters make the question multi-select, exactly as `\answer{B, C}`
- * does in a `.tex` file, and the stored key is sorted and de-spaced so `C, B`
- * and `B,C` are the same key. Anything that is not a list of option letters is
- * a grid-in value and passes through untouched - `1,000` stays a number.
- */
-function normalizeQuestionAnswer(options: string[], correctAnswer: string) {
-  const letters = parseAnswerLetters(correctAnswer);
-  const isMultiSelect = letters !== null && letters.length > 1;
-
-  if (isMultiSelect && options.length === 0) {
-    throw new Error('Several correct answers need options to choose from. Use one value for a grid-in answer.');
-  }
-
-  if (!letters || options.length === 0) return correctAnswer;
-
-  if (new Set(letters).size !== letters.length) {
-    throw new Error('The correct answer repeats an option letter');
-  }
-
-  for (const letter of letters) {
-    if (letter.charCodeAt(0) - 65 >= options.length) {
-      throw new Error(`Correct answer is ${letter}, but only ${options.length} options are present`);
-    }
-  }
-
-  return isMultiSelect ? formatAnswerLetters(letters) : correctAnswer;
-}
-
 function sanitizeFileName(fileName: string) {
   const normalized = fileName.trim().replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 120);
   return normalized || `${crypto.randomUUID()}.bin`;
-}
-
-type UploadedImage = {
-  name: string;
-  publicUrl: string;
-};
-
-function readUploadedImages(value: FormDataEntryValue | null) {
-  if (typeof value !== 'string' || !value) return [];
-
-  const parsed = JSON.parse(value) as UploadedImage[];
-  if (!Array.isArray(parsed)) {
-    throw new Error('Invalid uploaded image metadata');
-  }
-
-  return parsed.map((image) => {
-    if (
-      typeof image?.name !== 'string' ||
-      typeof image?.publicUrl !== 'string' ||
-      !image.name ||
-      !image.publicUrl
-    ) {
-      throw new Error('Invalid uploaded image metadata');
-    }
-
-    return {
-      name: image.name,
-      publicUrl: image.publicUrl,
-    };
-  });
 }
 
 /**
@@ -160,7 +96,8 @@ function readUploadedImages(value: FormDataEntryValue | null) {
  *
  * The existence check is the important part: `testId` can arrive from the form,
  * and if it names a test that is already stored, these images belong to it and
- * must not be touched.
+ * must not be touched. `removeFolderImages` also keeps any file a bank
+ * question or a test row still shows.
  */
 async function discardFailedUpload(testId: string) {
   try {
@@ -171,35 +108,32 @@ async function discardFailedUpload(testId: string) {
 
     if (existing) return;
 
-    await removeTestImages(testId);
+    await removeFolderImages(testId);
   } catch (error) {
     console.warn(`Could not clean up the failed upload of test ${testId}:`, error);
   }
 }
 
+/**
+ * Creates a test from a `.tex` file and puts its questions in the question
+ * bank at the same time: one BankQuestion per question, tagged with the domain
+ * and difficulty chosen in the import preview, and the test's own rows linked
+ * to them (`bankQuestionId`). The test keeps its rows, so the exam reads them
+ * as before; deleting the test later leaves the bank questions in place.
+ */
 export async function uploadTest(formData: FormData) {
   // Read inside the try, but needed by the catch: without it a failure cannot
   // tell which folder the images went to.
   let uploadedTestId: string | null = null;
 
   try {
-    await requireAdmin();
+    const session = await requireAdmin();
 
     const title = typeof formData.get('title') === 'string'
       ? (formData.get('title') as string).trim()
       : '';
     const isFree = formData.get('isFree') === 'true';
     const visible = readBooleanField(formData, 'isVisible', true);
-    const collection = await resolveCollectionCategory(formData.get('testCategory'));
-    const testCategory = collection.category;
-    const examFormat = normalizeExamFormat(formData);
-    const maxAttempts = normalizeTestMaxAttempts(
-      formData.get('maxAttempts'),
-      collection.maxAttempts
-    );
-    const texFile = formData.get('texFile') as File;
-    const imageFiles = formData.getAll('images') as File[];
-    const uploadedImages = readUploadedImages(formData.get('uploadedImages'));
     const requestedTestId = formData.get('testId');
 
     // Remembered before anything can throw: the images were uploaded under this
@@ -209,20 +143,30 @@ export async function uploadTest(formData: FormData) {
       uploadedTestId = requestedTestId;
     }
 
+    const collection = await resolveCollectionCategory(formData.get('testCategory'));
+    const testCategory = collection.category;
+    const examFormat = normalizeExamFormat(formData);
+    const maxAttempts = normalizeTestMaxAttempts(
+      formData.get('maxAttempts'),
+      collection.maxAttempts
+    );
+    const imageFiles = formData.getAll('images') as File[];
+    const testId = uploadedTestId ?? crypto.randomUUID();
+    const uploadedImages = readUploadedImages(formData.get('uploadedImages'), testId);
+
     // Empty means no code. Only read once the id above is known, so a rejected
     // code still lets the catch clear away the images uploaded for this test.
     const accessCode = normalizeAccessCode(formData.get('accessCode'));
 
-    if (!texFile || !(texFile instanceof File) || texFile.size === 0 || !title) {
+    if (!title) {
       throw new Error('Title and .tex file are required');
     }
-
-    if (!texFile.name.toLowerCase().endsWith('.tex') || texFile.size > MAX_TEX_FILE_SIZE) {
-      throw new Error('Upload a valid .tex file up to 2MB');
+    if (title.length > MAX_TEST_TITLE_LENGTH) {
+      throw new Error(`Test title must be at most ${MAX_TEST_TITLE_LENGTH} characters`);
     }
 
-    const texContent = await texFile.text();
-    const { questions: parsedQuestions, moduleIndexes } = parseTexFile(texContent);
+    const texFile = await readTexUpload(formData.get('texFile'));
+    const { questions: parsedQuestions, moduleIndexes } = parseTexFile(texFile.text);
 
     if (parsedQuestions.length === 0) {
       throw new Error('No questions found in the .tex file');
@@ -236,6 +180,8 @@ export async function uploadTest(formData: FormData) {
       throw new Error(`Question ${invalidQuestion.order} is missing content or answer`);
     }
 
+    const tags = resolveImportTags(parsedQuestions, formData.get('questionTags'));
+
     const examModules = resolveExamModules({
       questionCount: parsedQuestions.length,
       markerModules: moduleIndexes,
@@ -244,73 +190,93 @@ export async function uploadTest(formData: FormData) {
 
     const olympiadWindow = normalizeOlympiadWindow(formData, examModules.durationSeconds);
 
-    const testId = uploadedTestId ?? crypto.randomUUID();
-
-    const supabase = getSupabaseAdmin();
     const imageMap: Record<string, string> = {};
     for (const image of uploadedImages) {
       imageMap[image.name] = image.publicUrl;
     }
 
-    await Promise.all(imageFiles.map(async (image) => {
-      if (!(image instanceof File) || image.size === 0) return;
+    // The older path, with the files in the form itself. The admin form now
+    // uploads straight to storage through signed URLs and sends only names.
+    const directImages = imageFiles.filter((image) => image instanceof File && image.size > 0);
+    if (directImages.length > 0) {
+      const supabase = getSupabaseAdmin();
 
-      if (image.size > MAX_IMAGE_FILE_SIZE || !ALLOWED_IMAGE_TYPES.has(image.type)) {
-        throw new Error(`Invalid image file: ${image.name}`);
-      }
+      await Promise.all(directImages.map(async (image, index) => {
+        if (image.size > MAX_IMAGE_FILE_SIZE || !ALLOWED_IMAGE_TYPES.has(image.type)) {
+          throw new Error(`Invalid image file: ${image.name}`);
+        }
 
-      const filePath = `${testId}/${sanitizeFileName(image.name)}`;
+        // As the signed-upload route names them: names that sanitize alike
+        // ('Рис.png', 'Фиг.png') must not land on one path, and a collision
+        // fails rather than replacing another question's picture.
+        const filePath = `${testId}/direct-${index + 1}-${sanitizeFileName(image.name)}`;
 
-      const { error } = await supabase.storage
-        .from(QUESTION_IMAGE_BUCKET)
-        .upload(filePath, image, {
-          upsert: true,
-          contentType: image.type
-        });
+        const { error } = await supabase.storage
+          .from(QUESTION_IMAGE_BUCKET)
+          .upload(filePath, image, {
+            upsert: false,
+            contentType: image.type
+          });
 
-      if (error) {
-        throw new Error(`Error uploading image ${image.name}: ${error.message}`);
-      }
+        if (error) {
+          throw new Error(`Error uploading image ${image.name}: ${error.message}`);
+        }
 
-      const { data: { publicUrl } } = supabase.storage
-        .from(QUESTION_IMAGE_BUCKET)
-        .getPublicUrl(filePath);
-      
-      imageMap[image.name] = publicUrl;
-    }));
+        const { data: { publicUrl } } = supabase.storage
+          .from(QUESTION_IMAGE_BUCKET)
+          .getPublicUrl(filePath);
+
+        imageMap[image.name] = publicUrl;
+      }));
+    }
 
     const missingImageQuestion = parsedQuestions.find((q) => q.image && !imageMap[q.image]);
     if (missingImageQuestion?.image) {
       throw new Error(`Missing image for question ${missingImageQuestion.order}: ${missingImageQuestion.image}`);
     }
 
-    await prisma.test.create({
-      data: {
-        id: testId,
-        title,
-        description: encodeTestDescription(testCategory),
-        isFree,
-        visible,
-        durationSeconds: examModules.durationSeconds,
-        moduleDurations: examModules.moduleDurations,
-        maxAttempts,
-        accessCode,
-        ...olympiadWindow,
-        collectionCategory: testCategory,
-        questions: {
-          createMany: {
-            data: parsedQuestions.map((q, index) => ({
-              content: q.content,
-              options: q.options,
-              correctAnswer: q.correctAnswer,
-              order: q.order,
-              moduleIndex: examModules.moduleIndexes[index],
-              imageUrl: q.image ? imageMap[q.image] || null : null
-            })),
+    const bankRows = buildBankRows({
+      questions: parsedQuestions,
+      tags,
+      imageMap,
+      source: texFile.name,
+      createdById: session?.user?.id ?? null,
+    });
+
+    // One transaction: a test whose bank questions failed to save, or bank
+    // questions without the test they were imported with, is never left behind.
+    await prisma.$transaction([
+      prisma.bankQuestion.createMany({ data: bankRows }),
+      prisma.test.create({
+        data: {
+          id: testId,
+          title,
+          description: encodeTestDescription(testCategory),
+          isFree,
+          visible,
+          durationSeconds: examModules.durationSeconds,
+          moduleDurations: examModules.moduleDurations,
+          maxAttempts,
+          accessCode,
+          ...olympiadWindow,
+          collectionCategory: testCategory,
+          questions: {
+            createMany: {
+              data: parsedQuestions.map((q, index) => ({
+                content: q.content,
+                options: q.options,
+                correctAnswer: q.correctAnswer,
+                order: q.order,
+                moduleIndex: examModules.moduleIndexes[index],
+                imageUrl: bankRows[index].imageUrl ?? null,
+                bankQuestionId: bankRows[index].id,
+              })),
+            },
           },
         },
-      }
-    });
+        select: { id: true },
+      }),
+    ]);
 
     // A re-uploaded test may reuse an existing id, so the pre-rendered question
     // HTML for that id has to go. `{ expire: 0 }` = the very next exam start
@@ -321,7 +287,7 @@ export async function uploadTest(formData: FormData) {
     // action and ships the new RSC payload in this same response, which removes
     // the extra `router.refresh()` round-trip the client used to make.
     refresh();
-    return { success: true, testId };
+    return { success: true, testId, questionCount: parsedQuestions.length };
 
   } catch (error: unknown) {
     console.error('Upload error:', error);
@@ -335,66 +301,9 @@ export async function uploadTest(formData: FormData) {
 }
 
 /**
- * Removes every image a test uploaded. They live under `${testId}/`, and
- * Supabase Storage has no "delete folder" call, so the prefix is listed and its
- * objects are removed by path.
- *
- * A storage failure must not fail the delete itself: the rows are already gone
- * by the time this runs, and reporting an error for a test that no longer
- * exists would only confuse the admin. Leftovers are logged instead.
+ * Deletes a test, its results and its question rows. Bank questions stay:
+ * the rows were copies, and `Question.bankQuestionId` is the only link.
  */
-async function removeTestImages(testId: string) {
-  const supabase = getSupabaseAdmin();
-  const paths: string[] = [];
-  let offset = 0;
-
-  for (;;) {
-    const { data, error } = await supabase.storage
-      .from(QUESTION_IMAGE_BUCKET)
-      .list(testId, { limit: STORAGE_LIST_PAGE_SIZE, offset });
-
-    if (error) {
-      console.warn(`Could not list images of test ${testId}: ${error.message}`);
-      return;
-    }
-
-    if (!data || data.length === 0) break;
-
-    // Nested folders come back with a null `metadata`; a test only stores files.
-    paths.push(
-      ...data
-        .filter((entry) => entry.metadata)
-        .map((entry) => `${testId}/${entry.name}`)
-    );
-
-    if (data.length < STORAGE_LIST_PAGE_SIZE) break;
-    offset += STORAGE_LIST_PAGE_SIZE;
-  }
-
-  if (paths.length === 0) return;
-
-  const { error } = await supabase.storage.from(QUESTION_IMAGE_BUCKET).remove(paths);
-
-  if (error) {
-    console.warn(`Could not remove ${paths.length} images of test ${testId}: ${error.message}`);
-  }
-}
-
-/**
- * Expires the cached exam questions of a test and of every copy of it: a copy
- * shows the same questions, but caches them under its own id.
- */
-async function revalidateExamQuestions(testId: string) {
-  const copies = await prisma.test.findMany({
-    where: { questionSourceId: testId },
-    select: { id: true },
-  });
-
-  for (const id of [testId, ...copies.map((copy) => copy.id)]) {
-    revalidateTag(examQuestionsCacheTag(id), { expire: 0 });
-  }
-}
-
 export async function deleteTest(testId: string) {
   try {
     await requireAdmin();
@@ -402,12 +311,18 @@ export async function deleteTest(testId: string) {
     // A copy only borrows its questions, so deleting one leaves the original
     // alone. Deleting an original takes its copies with it: they would have
     // nothing left to show, and the database refuses to leave them behind.
-    const copyIds = await prisma.$transaction(async (tx) => {
+    const { copyIds, imageUrls } = await prisma.$transaction(async (tx) => {
       const copies = await tx.test.findMany({
         where: { questionSourceId: testId },
         select: { id: true },
       });
       const ids = copies.map((copy) => copy.id);
+      // A test built from the bank shows the bank's image files, which live
+      // outside its own folder; they are checked once the rows are gone.
+      const images = await tx.question.findMany({
+        where: { testId, imageUrl: { not: null } },
+        select: { imageUrl: true },
+      });
 
       if (ids.length > 0) {
         await tx.result.deleteMany({ where: { testId: { in: ids } } });
@@ -418,13 +333,16 @@ export async function deleteTest(testId: string) {
       await tx.question.deleteMany({ where: { testId } });
       await tx.test.delete({ where: { id: testId } });
 
-      return ids;
+      return { copyIds: ids, imageUrls: images.map((image) => image.imageUrl) };
     });
 
     // Deliberately after the rows: a failure here only orphans the images, while
     // the reverse order would leave a live test pointing at deleted files. A
-    // copy has no images of its own, so for one this finds nothing.
-    await removeTestImages(testId);
+    // copy has no images of its own, so for one this finds nothing. Files a
+    // bank question or another test still shows are kept: an imported test's
+    // pictures are its bank questions' pictures too.
+    await removeFolderImages(testId);
+    await removeUnreferencedImages(imageUrls);
 
     for (const id of [testId, ...copyIds]) {
       revalidateTag(examQuestionsCacheTag(id), { expire: 0 });
@@ -483,7 +401,7 @@ export async function copyTest(testId: string, formData: FormData) {
     }
 
     if (collection.category === source.collectionCategory && title === source.title.trim()) {
-      throw new Error('The copy would sit next to the original under the same title. Give it a new title or pick another section.');
+      throw new Error('The copy would sit next to the original under the same title. Give it a new title or pick another course.');
     }
 
     const keepOlympiadWindow = formData.get('keepOlympiadWindow') === 'true';
@@ -638,12 +556,12 @@ async function resolveCollectionCategory(value: FormDataEntryValue | null) {
   });
 
   if (collections.length === 0) {
-    throw new Error('Create at least one section before uploading tests');
+    throw new Error('Create at least one course before adding tests');
   }
 
   if (typeof value === 'string' && value.trim()) {
     if (!isTestCategory(value)) {
-      throw new Error('Selected section is invalid');
+      throw new Error('The chosen course is invalid');
     }
 
     const requestedCategory = normalizeCategoryId(value);
@@ -652,7 +570,7 @@ async function resolveCollectionCategory(value: FormDataEntryValue | null) {
       return { category: requestedCategory, maxAttempts: requested.maxAttempts };
     }
 
-    throw new Error('Selected section no longer exists');
+    throw new Error('The chosen course no longer exists');
   }
 
   const fallback = collections.find((collection) => collection.category === 'STANDARD')
@@ -673,9 +591,9 @@ function readSectionRename(formData: FormData, category: string) {
   const label = formData.get(`label_${category}`);
   if (label === null) return {};
 
-  const name = normalizeRequiredText(label, 'Section name');
+  const name = normalizeRequiredText(label, 'Course name');
   if (name.length > MAX_SECTION_LABEL_LENGTH) {
-    throw new Error(`Section name must be at most ${MAX_SECTION_LABEL_LENGTH} characters`);
+    throw new Error(`Course name must be at most ${MAX_SECTION_LABEL_LENGTH} characters`);
   }
 
   const descriptionField = formData.get(`description_${category}`);
@@ -684,7 +602,7 @@ function readSectionRename(formData: FormData, category: string) {
   // Empty falls back to the default description, as it does for a new section.
   const description = normalizeNullableText(descriptionField);
   if (description && description.length > MAX_SECTION_DESCRIPTION_LENGTH) {
-    throw new Error(`Section description must be at most ${MAX_SECTION_DESCRIPTION_LENGTH} characters`);
+    throw new Error(`Course description must be at most ${MAX_SECTION_DESCRIPTION_LENGTH} characters`);
   }
 
   return { label: name, description };
@@ -702,7 +620,7 @@ export async function updateSectionSettings(formData: FormData) {
     ));
 
     if (categories.length === 0) {
-      throw new Error('No sections to update');
+      throw new Error('No courses to update');
     }
 
     const existingCollections = await prisma.testCollectionVisibility.findMany({
@@ -711,7 +629,7 @@ export async function updateSectionSettings(formData: FormData) {
     });
 
     if (existingCollections.length === 0) {
-      throw new Error('No sections to update');
+      throw new Error('No courses to update');
     }
 
     const updates = existingCollections.flatMap((collection) => {
@@ -765,9 +683,9 @@ export async function createTestCollection(formData: FormData) {
   try {
     await requireAdmin();
 
-    const label = normalizeRequiredText(formData.get('sectionLabel'), 'Section name');
+    const label = normalizeRequiredText(formData.get('sectionLabel'), 'Course name');
     const description = normalizeNullableText(formData.get('sectionDescription'))
-      || 'Practice tests in this section.';
+      || 'Practice tests in this course.';
     const maxAttempts = normalizeTestMaxAttempts(formData.get('sectionMaxAttempts'));
     const existingCollections = await prisma.testCollectionVisibility.findMany({
       select: { category: true },
@@ -811,13 +729,13 @@ export async function deleteTestCollection(categoryValue: string) {
     await requireAdmin();
 
     if (!isTestCategory(categoryValue)) {
-      throw new Error('Invalid section');
+      throw new Error('Invalid course');
     }
 
     const category = normalizeCategoryId(categoryValue);
     const collectionCount = await prisma.testCollectionVisibility.count();
     if (collectionCount <= 1) {
-      throw new Error('Keep at least one section');
+      throw new Error('Keep at least one course');
     }
 
     await prisma.testCollectionVisibility.delete({
@@ -842,24 +760,30 @@ export async function updateTestDetails(testId: string, formData: FormData) {
     }
 
     const title = normalizeRequiredText(formData.get('title'), 'Test title');
+    // An empty course keeps the one the test has - none included. The editor
+    // offers "No course" only for a test without one (its course was
+    // deleted), and resolving empty to the default course moved such a test
+    // there on any save, open to that course's students.
+    const requestedCategory = formData.get('testCategory');
+    const changesCategory = typeof requestedCategory === 'string' && requestedCategory.trim() !== '';
     // Neither read depends on the other, so they share one round-trip. Errors
     // still surface in the original order: an invalid section rejects the whole
     // `Promise.all`, and only then is the test row inspected.
     const [collection, existingTest] = await Promise.all([
-      resolveCollectionCategory(formData.get('testCategory')),
+      changesCategory ? resolveCollectionCategory(requestedCategory) : null,
       prisma.test.findUnique({
         where: { id: testId },
         select: {
           description: true,
           visible: true,
           moduleDurations: true,
+          collection: { select: { maxAttempts: true } },
         },
       }),
     ]);
-    const testCategory = collection.category;
     const maxAttempts = normalizeTestMaxAttempts(
       formData.get('maxAttempts'),
-      collection.maxAttempts
+      collection?.maxAttempts ?? existingTest?.collection?.maxAttempts
     );
     const isFree = formData.get('isFree') === 'true';
     // Empty clears the code. A changed code asks every student again, because an
@@ -904,8 +828,10 @@ export async function updateTestDetails(testId: string, formData: FormData) {
         maxAttempts,
         accessCode,
         ...normalizeOlympiadWindow(formData, durationSeconds),
-        collectionCategory: testCategory,
-        description: encodeTestDescription(testCategory, cleanTestDescription(existingTest.description)),
+        ...(collection && {
+          collectionCategory: collection.category,
+          description: encodeTestDescription(collection.category, cleanTestDescription(existingTest.description)),
+        }),
       },
     });
 
@@ -942,6 +868,11 @@ export async function updateTestVisibility(testId: string, visible: boolean) {
   }
 }
 
+/**
+ * Saves a question from the test editor. A question that came from the bank
+ * is written through: the bank question and every other test showing it get
+ * the same text, options, answer and image (src/lib/questionBankServer.ts).
+ */
 export async function updateQuestion(questionId: string, formData: FormData) {
   try {
     await requireAdmin();
@@ -950,44 +881,146 @@ export async function updateQuestion(questionId: string, formData: FormData) {
       throw new Error('Invalid question id');
     }
 
-    const content = normalizeRequiredText(formData.get('content'), 'Question text');
-    const correctAnswer = normalizeRequiredText(formData.get('correctAnswer'), 'Correct answer');
-    const options = normalizeQuestionOptions(formData.getAll('options'));
-    const explanation = normalizeNullableText(formData.get('explanation'));
-    const imageUrl = normalizeNullableText(formData.get('imageUrl'));
-    const videoUrl = normalizeNullableText(formData.get('videoUrl'));
-
-    const storedAnswer = normalizeQuestionAnswer(options, correctAnswer);
-
-    const existingQuestion = await prisma.question.findUnique({
-      where: { id: questionId },
-      select: { testId: true },
-    });
-
-    if (!existingQuestion) {
-      throw new Error('Question not found');
-    }
-
-    await prisma.question.update({
-      where: { id: questionId },
-      data: {
-        content,
-        options,
-        correctAnswer: storedAnswer,
-        explanation,
-        imageUrl,
-        videoUrl,
-      },
-    });
+    const fields = readSharedQuestionFields(formData);
 
     // Edited question text has to reach the exam page immediately, so the
-    // pre-rendered HTML for its test - and for every copy showing it - is
-    // expired here.
-    await revalidateExamQuestions(existingQuestion.testId);
+    // pre-rendered HTML of every test showing it - and of their copies - is
+    // expired inside.
+    await writeTestQuestionThrough(questionId, fields, {
+      explanation: readOptionalText(formData.get('explanation')),
+      videoUrl: readOptionalText(formData.get('videoUrl')),
+    });
     refresh();
     return { success: true };
   } catch (error: unknown) {
     console.error('Update Question Error:', error);
     return { success: false, error: error instanceof Error ? error.message : 'Update failed' };
   }
+}
+
+export type BuildTestInput = {
+  course: string;
+  title: string;
+  /** One block on one timer, or two or more modules with a timer each. */
+  format: 'single' | 'modular';
+  /** Minutes per module, in order; one entry for a one-block test. */
+  minutes: number[];
+  /** Bank question ids per module, in the order they will be asked. */
+  modules: string[][];
+  maxAttempts: number | string;
+  visible: boolean;
+  isFree: boolean;
+};
+
+/**
+ * Builds a test in a course from bank questions, chosen by hand or at random
+ * on /admin/bank/build. The test gets rows of its own, copies of the bank text
+ * linked by `bankQuestionId`, exactly like an imported test, so everything
+ * downstream reads it the same way. Timers are stored as `uploadTest` stores
+ * them. Lands on the new test's editor.
+ */
+export async function createTestFromBank(input: BuildTestInput) {
+  let testId: string;
+
+  try {
+    await requireAdmin();
+
+    const title = normalizeRequiredText(typeof input?.title === 'string' ? input.title : null, 'Test title');
+    if (title.length > MAX_TEST_TITLE_LENGTH) {
+      throw new Error(`Test title must be at most ${MAX_TEST_TITLE_LENGTH} characters`);
+    }
+
+    const collection = await resolveCollectionCategory(typeof input?.course === 'string' ? input.course : null);
+    const modular = input?.format === 'modular';
+    const modules = Array.isArray(input?.modules) ? input.modules : [];
+    const minutes = Array.isArray(input?.minutes) ? input.minutes : [];
+
+    if (modular ? modules.length < 2 || modules.length > MAX_MODULE_COUNT : modules.length !== 1) {
+      throw new Error(modular
+        ? `A test can have between 2 and ${MAX_MODULE_COUNT} modules`
+        : 'A one-block test has one list of questions');
+    }
+    if (minutes.length !== modules.length) {
+      throw new Error('Set a time for each module');
+    }
+
+    const durations = minutes.map((value) => normalizeDurationSeconds(String(value)));
+    const durationSeconds = durations.reduce((total, duration) => total + duration, 0);
+    if (durationSeconds > MAX_EXAM_DURATION_SECONDS) {
+      throw new Error(`Total test time must not exceed ${MAX_DURATION_MINUTES} minutes`);
+    }
+
+    const seen = new Set<string>();
+    modules.forEach((ids, index) => {
+      const label = modular ? `Module ${index + 1}` : 'The test';
+      if (!Array.isArray(ids) || ids.length === 0) {
+        throw new Error(`${label} has no questions`);
+      }
+      if (ids.length > MAX_MODULE_QUESTION_COUNT) {
+        throw new Error(`${label} has more than ${MAX_MODULE_QUESTION_COUNT} questions`);
+      }
+      for (const id of ids) {
+        if (typeof id !== 'string' || !TEST_ID_PATTERN.test(id)) {
+          throw new Error('A chosen question is not in the bank');
+        }
+        if (seen.has(id)) {
+          throw new Error('A question is chosen twice. Each question can appear once in a test.');
+        }
+        seen.add(id);
+      }
+    });
+
+    const bankRows = await prisma.bankQuestion.findMany({
+      where: { id: { in: [...seen] } },
+      select: { id: true, content: true, options: true, correctAnswer: true, imageUrl: true },
+    });
+    if (bankRows.length !== seen.size) {
+      throw new Error('Some chosen questions were deleted from the bank. Choose them again.');
+    }
+    const bankById = new Map(bankRows.map((row) => [row.id, row]));
+
+    let order = 0;
+    const questions: Prisma.QuestionCreateManyTestInput[] = modules.flatMap((ids, index) => ids.map((id) => {
+      const bank = bankById.get(id)!;
+      order += 1;
+      return {
+        content: bank.content,
+        options: bank.options ?? [],
+        correctAnswer: bank.correctAnswer,
+        imageUrl: bank.imageUrl,
+        order,
+        moduleIndex: index + 1,
+        bankQuestionId: bank.id,
+      };
+    }));
+
+    const test = await prisma.test.create({
+      data: {
+        title,
+        description: encodeTestDescription(collection.category),
+        isFree: input.isFree === true,
+        visible: input.visible === true,
+        // As `uploadTest` stores them: one block runs on durationSeconds alone,
+        // modules keep one duration each and the total beside them.
+        durationSeconds,
+        moduleDurations: modular ? durations : [],
+        maxAttempts: normalizeTestMaxAttempts(input.maxAttempts, collection.maxAttempts),
+        collectionCategory: collection.category,
+        questions: { createMany: { data: questions } },
+      },
+      select: { id: true },
+    });
+    testId = test.id;
+
+    revalidateTag(examQuestionsCacheTag(testId), { expire: 0 });
+    // The course's test list and the bank's "used in" counts are on other
+    // pages: this clears the client's cached copies of every admin page.
+    revalidatePath('/admin', 'layout');
+  } catch (error: unknown) {
+    console.error('Create Test From Bank Error:', error);
+    return { success: false as const, error: error instanceof Error ? error.message : 'The test was not created' };
+  }
+
+  // Outside the try: `redirect` throws to navigate.
+  redirect(`/admin/tests/${testId}`);
 }

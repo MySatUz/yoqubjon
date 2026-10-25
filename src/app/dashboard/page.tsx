@@ -1,24 +1,34 @@
 import React, { Suspense } from 'react';
+import type { Metadata } from 'next';
 import { auth } from "@/auth";
 import Link from 'next/link';
 import { prisma } from '@/lib/prisma';
-import { ArrowRight, History, CheckCircle2 } from 'lucide-react';
-import {
-  sortCatalogTests,
-  findCategoryByQuery,
-  getTestCollections,
-  type TestCategory,
-} from '@/lib/testCatalog';
+import { sortCatalogTests, getTestCategory, getTestCollections } from '@/lib/testCatalog';
 import { getCollectionVisibilityRows } from '@/lib/testCollections';
 import PracticeCatalog from '@/components/dashboard/PracticeCatalog';
 import { getViewerAccess } from '@/lib/studentView';
-import { getActiveSectionAccessCategories } from '@/lib/sectionAccess';
+import { getActiveSectionAccessGrants } from '@/lib/sectionAccess';
+import {
+  buildPracticeOverview,
+  countMistakes,
+  getLastResultIds,
+  type LastResultReview,
+} from '@/lib/courseProgress';
+import { getShownQuestions } from '@/lib/questionSource';
+import { getReviewOpensAt } from '@/lib/olympiad';
+import { PREMIUM_PLAN } from '@/lib/plans';
+import { readSalesOpen } from '@/app/dashboard/salesOpen';
+import CourseOverview from '@/components/dashboard/CourseOverview';
+import PracticeHomeSkeleton from '@/components/dashboard/PracticeHomeSkeleton';
+import { Page } from '@/components/ui/Page';
+import { Alert } from '@/components/ui/Feedback';
+import { buttonClass } from '@/components/ui/Button';
+
+export const metadata: Metadata = { title: 'Practice' };
 
 /**
- * The shell (banners + "Recent Activity" heading + target card) depends only on
- * `searchParams`, so it is flushed immediately. The two data-bound regions sit
- * behind their own `<Suspense>` boundaries: the catalog must not wait for the
- * attempt history and vice versa.
+ * The notices depend only on `searchParams`, so they are flushed immediately;
+ * the catalog sits behind its own `<Suspense>` boundary.
  *
  * `auth()` and the "Unauthorized" branch stay ABOVE every boundary on purpose —
  * once a fallback renders, the response headers are already sent and the status
@@ -32,7 +42,6 @@ export default async function DashboardPage(props: {
   const isSuccess = searchParams.payment === 'success';
   const attemptLimitReached = searchParams.attemptLimit === 'reached';
   const limitedTestId = typeof searchParams.test === 'string' ? searchParams.test : null;
-  const requestedSet = searchParams.set;
 
   if (!session?.user?.id) {
     return <div>Unauthorized</div>;
@@ -42,84 +51,109 @@ export default async function DashboardPage(props: {
   const userEmail = session.user.email;
 
   return (
-    <div className="py-10 px-4 sm:px-6 lg:px-8">
+    <Page>
       {isSuccess && (
-        <div className="mb-8 p-4 bg-emerald-500 text-white rounded-2xl font-semibold flex items-center justify-between shadow-lg">
-          <div className="flex items-center gap-3">
-            <CheckCircle2 className="w-6 h-6" />
-            <span>Welcome to Premium! Your account has been upgraded.</span>
-          </div>
-          <Link href="/dashboard" className="text-xs bg-white/20 hover:bg-white/30 px-3 py-1 rounded-lg transition-colors">Dismiss</Link>
-        </div>
+        <Alert
+          tone="success"
+          title={`${PREMIUM_PLAN.name} is active`}
+          action={
+            // Outlined, like every alert action: bare text beside the message
+            // did not read as something to press.
+            <Link href="/dashboard" className={buttonClass({ variant: 'secondary', size: 'sm' })}>
+              Dismiss
+            </Link>
+          }
+        >
+          Every Premium test is open to you now.
+        </Alert>
       )}
       {attemptLimitReached && (
-        <div className="mb-8 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 font-semibold text-amber-800">
-          The attempt limit for this test has been reached.
-          {/* Every attempt stays reviewable, so point at them. */}
-          <Link
-            href={limitedTestId ? `/dashboard/results?test=${encodeURIComponent(limitedTestId)}` : '/dashboard/results'}
-            className="text-sm font-semibold text-blue-600 hover:text-blue-700"
-          >
-            Review your attempts
-          </Link>
-        </div>
+        <Alert
+          action={
+            // Every attempt stays reviewable, so point at them.
+            <Link
+              href={limitedTestId ? `/dashboard/results?test=${encodeURIComponent(limitedTestId)}` : '/dashboard/results'}
+              className={buttonClass({ variant: 'secondary', size: 'sm' })}
+            >
+              Review your attempts
+            </Link>
+          }
+        >
+          You have used every attempt at this test.
+        </Alert>
       )}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          <Suspense fallback={<CatalogFallback />}>
-            <PracticeCatalogSection
-              userId={userId}
-              userEmail={userEmail}
-              requestedSet={requestedSet}
-            />
-          </Suspense>
 
-          {/* Right Sidebar: Recent Activity */}
-          <div className="lg:col-span-1">
-            <h2 className="text-xl font-semibold text-slate-900 mb-6 flex items-center gap-2">
-              <History className="w-5 h-5 text-blue-600" />
-              Recent Activity
-            </h2>
-
-            <div className="space-y-4">
-              <Suspense fallback={<RecentActivityFallback />}>
-                <RecentActivity userId={userId} />
-              </Suspense>
-            </div>
-
-            <div className="mt-8 p-6 bg-slate-900 rounded-2xl text-white">
-              <div>
-                <h3 className="font-semibold text-lg mb-2">Target Score: 800</h3>
-                <p className="text-slate-400 text-xs font-medium leading-relaxed mb-4">
-                  Keep working through timed practice sets and review your latest attempts to reach your goal.
-                </p>
-                <Link
-                  href="/dashboard/profile"
-                  className="text-xs font-medium text-blue-400 hover:text-blue-300 transition-colors uppercase tracking-widest"
-                >
-                  View Progress →
-                </Link>
-              </div>
-            </div>
-          </div>
-        </div>
-    </div>
+      <Suspense fallback={<PracticeHomeSkeleton />}>
+        {/* The open collection (`?set=`) is read by the catalog itself, from
+            the URL, so a switch between collections never waits on this. */}
+        <PracticeCatalogSection userId={userId} userEmail={userEmail} />
+      </Suspense>
+    </Page>
   );
+}
+
+const REVIEW_QUESTION_FIELDS = { id: true, order: true, correctAnswer: true } as const;
+
+/**
+ * Mistakes and whether the review is open, for the course cards' last
+ * results. The keys are read here, on the server, and only the count leaves
+ * it. A failed read costs the cards their count ("Open the review"), not the
+ * whole Practice page.
+ */
+async function readLastResultReviews(
+  userId: string,
+  resultIds: string[],
+  isAdmin: boolean
+): Promise<Map<string, LastResultReview>> {
+  if (resultIds.length === 0) return new Map();
+
+  try {
+    const rows = await prisma.result.findMany({
+      where: { id: { in: resultIds }, userId },
+      select: {
+        id: true,
+        answers: true,
+        test: {
+          select: {
+            olympiadStartsAt: true,
+            olympiadEndsAt: true,
+            questions: { select: REVIEW_QUESTION_FIELDS },
+            // An attempt at a copy is graded against its original's questions.
+            questionSource: { select: { questions: { select: REVIEW_QUESTION_FIELDS } } },
+          },
+        },
+      },
+    });
+
+    return new Map(
+      rows.map((row) => [
+        row.id,
+        {
+          mistakes: countMistakes(getShownQuestions(row.test), row.answers),
+          closed: !isAdmin && getReviewOpensAt(row.test) !== null,
+        },
+      ])
+    );
+  } catch (error) {
+    console.error('Practice: could not read the last results for the course cards', error);
+    return new Map();
+  }
 }
 
 async function PracticeCatalogSection({
   userId,
   userEmail,
-  requestedSet,
 }: {
   userId: string;
   userEmail?: string | null;
-  requestedSet: string | string[] | undefined;
 }) {
-  const [attemptCounts, tests, subscription, viewer, visibilityRows, sectionAccessCategories] = await Promise.all([
+  const [attemptCounts, tests, subscription, viewer, visibilityRows, sectionAccessGrants, recentResults, questionCounts, salesOpen] = await Promise.all([
+    // The best attempt rides along for the card's "Best 600".
     prisma.result.groupBy({
       by: ['testId'],
       where: { userId },
       _count: { _all: true },
+      _max: { score: true, correctCount: true },
     }),
     prisma.test.findMany({
       orderBy: { createdAt: 'asc' },
@@ -136,6 +170,7 @@ async function PracticeCatalogSection({
         createdAt: true,
         olympiadStartsAt: true,
         olympiadEndsAt: true,
+        questionSourceId: true,
       },
     }),
     prisma.subscription.findFirst({
@@ -147,8 +182,21 @@ async function PracticeCatalogSection({
     }),
     getViewerAccess(userId),
     getCollectionVisibilityRows(),
-    getActiveSectionAccessCategories(userId, userEmail),
+    getActiveSectionAccessGrants(userId, userEmail),
+    // For the course cards: newest first, enough to cover a 1-3 month course.
+    prisma.result.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'desc' },
+      take: 300,
+      select: { id: true, testId: true, score: true, correctCount: true, createdAt: true },
+    }),
+    // Question counts decide which results are full-length enough to plot.
+    prisma.question.groupBy({ by: ['testId'], _count: { _all: true } }),
+    // While an admin has paused sales, a locked card must not offer an unlock
+    // that ends on a page with nothing to buy.
+    readSalesOpen('Practice'),
   ]);
+  const sectionAccessCategories = sectionAccessGrants.map((grant) => grant.category);
 
   // An admin in student view gets the student's catalog: no hidden tests or
   // sections, no PDF button, the usual attempt counts.
@@ -157,6 +205,14 @@ async function PracticeCatalogSection({
   const attemptsUsedByTest = new Map(
     attemptCounts.map((attempt) => [attempt.testId, attempt._count._all])
   );
+  // The highest score and the most answers right come from the same attempt:
+  // on one test the score follows the count of right answers.
+  const bestByTest = new Map(
+    attemptCounts.map((attempt) => [
+      attempt.testId,
+      attempt._max.score === null ? null : { score: attempt._max.score, correct: attempt._max.correctCount },
+    ])
+  );
   const collections = getTestCollections(visibilityRows);
   const sectionAccessSet = new Set(sectionAccessCategories);
   const dashboardCollections = collections.map((collection) => (
@@ -164,142 +220,69 @@ async function PracticeCatalogSection({
       ? { ...collection, visible: true }
       : collection
   ));
-  const activeCategory: TestCategory | null = findCategoryByQuery(dashboardCollections, requestedSet);
-  const visibleActiveCategory = activeCategory && dashboardCollections.some((collection) => (
-    collection.value === activeCategory && collection.visible
-  ))
-    ? activeCategory
-    : null;
   const sortedTests = sortCatalogTests(
     tests.filter((test) => canDownloadPdf || test.visible)
   );
 
+  // A copy shows its original's questions, so it counts them too.
+  const ownQuestionCount = new Map(questionCounts.map((row) => [row.testId, row._count._all]));
+  const visibleCollectionsForOverview = dashboardCollections.filter((collection) => collection.visible);
+  const overviewInput = {
+    collections: visibleCollectionsForOverview,
+    tests: sortedTests.map((test) => {
+      const category = getTestCategory(test);
+      return {
+        id: test.id,
+        title: test.title,
+        category,
+        attemptsUsed: attemptsUsedByTest.get(test.id) ?? 0,
+        maxAttempts: canDownloadPdf ? Number.POSITIVE_INFINITY : test.maxAttempts,
+        questionCount: ownQuestionCount.get(test.questionSourceId ?? test.id) ?? 0,
+        canAccess: canDownloadPdf || test.isFree || isPremium || Boolean(category && sectionAccessCategories.includes(category)),
+        isFree: test.isFree,
+        isOlympiad: test.olympiadStartsAt !== null,
+        durationSeconds: test.durationSeconds,
+        moduleDurations: test.moduleDurations,
+      };
+    }),
+    results: recentResults,
+    grants: sectionAccessGrants,
+  };
+  // The cards' "Review N questions" counts as the result page does, so it
+  // needs the answers of the one last result per card - two rows at most.
+  const reviews = await readLastResultReviews(userId, getLastResultIds(overviewInput), viewer.isAdmin);
+  const overview = buildPracticeOverview({ ...overviewInput, reviews });
+
   return (
     <PracticeCatalog
-      initialCategory={visibleActiveCategory}
       tests={sortedTests.map((test) => ({
         ...test,
         attemptsUsed: attemptsUsedByTest.get(test.id) ?? 0,
+        questionCount: ownQuestionCount.get(test.questionSourceId ?? test.id) ?? 0,
+        best: bestByTest.get(test.id) ?? null,
         createdAt: test.createdAt.toISOString(),
         olympiadStartsAt: test.olympiadStartsAt?.toISOString() ?? null,
         olympiadEndsAt: test.olympiadEndsAt?.toISOString() ?? null,
       }))}
       collections={dashboardCollections}
       isPremium={isPremium}
+      salesOpen={salesOpen}
       isAdmin={canDownloadPdf}
       accessibleCategories={sectionAccessCategories}
       canDownloadPdf={canDownloadPdf}
+      overview={
+        overview.courses.length > 0 || overview.startHere ? (
+          <CourseOverview overview={overview} userId={userId} />
+        ) : null
+      }
+      // A new student has nothing to pick up yet: their card is "Start here".
+      description={
+        overview.courses.length > 0
+          ? 'Pick up where you left off, or open any course below.'
+          : overview.startHere
+            ? 'Start with the test below, or open any course.'
+            : undefined
+      }
     />
-  );
-}
-
-async function RecentActivity({ userId }: { userId: string }) {
-  const results = await prisma.result.findMany({
-    where: { userId },
-    select: {
-      id: true,
-      testId: true,
-      score: true,
-      createdAt: true,
-      test: {
-        select: {
-          title: true,
-        },
-      },
-    },
-    orderBy: { createdAt: 'desc' },
-    take: 20
-  });
-
-  const seenTestIds = new Set<string>();
-  const recentResults = results
-    .filter((result) => {
-      if (seenTestIds.has(result.testId)) return false;
-      seenTestIds.add(result.testId);
-      return true;
-    })
-    .slice(0, 5);
-
-  if (recentResults.length === 0) {
-    return (
-      <div className="bg-white rounded-2xl p-8 border border-dashed border-slate-300 text-center">
-        <p className="text-slate-400 text-sm font-medium">No tests completed yet. Start your first practice!</p>
-      </div>
-    );
-  }
-
-  return (
-    <>
-      {recentResults.map((res) => (
-        <Link
-          key={res.id}
-          href={`/dashboard/results/${res.id}`}
-          className="block bg-white p-5 rounded-2xl border border-slate-200 shadow-sm hover:border-blue-300 hover:shadow-sm transition-all group"
-        >
-          <div className="flex justify-between items-start mb-3">
-            <span className="text-[10px] font-medium text-slate-400 uppercase tracking-widest">
-              {new Date(res.createdAt).toLocaleDateString()}
-            </span>
-            <span className="text-lg font-semibold text-blue-600 group-hover:scale-110 transition-transform">
-              {res.score}
-            </span>
-          </div>
-          <h4 className="text-sm font-semibold text-slate-900 mb-1 group-hover:text-blue-600 transition-colors">
-            {res.test.title}
-          </h4>
-          <div className="flex items-center gap-2 mt-3">
-            <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-blue-600 rounded-full"
-                style={{ width: `${(res.score / 800) * 100}%` }}
-              ></div>
-            </div>
-            <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-          </div>
-        </Link>
-      ))}
-      {/* This list keeps one attempt per test and five tests at most, so an
-          attempt drops off it after a retake or five other tests. Every one
-          of them is still on the results page. */}
-      <Link
-        href="/dashboard/results"
-        className="flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-600 transition hover:border-blue-200 hover:text-blue-600"
-      >
-        All results
-        <ArrowRight className="h-4 w-4" />
-      </Link>
-    </>
-  );
-}
-
-/**
- * Same geometry as the catalog column of `PageLoadingSkeleton variant="practice"`,
- * minus the page padding the shell already provides.
- */
-function CatalogFallback() {
-  return (
-    <div className="lg:col-span-3">
-      <header className="mb-10">
-        <div className="h-10 w-72 max-w-full animate-pulse rounded-2xl bg-slate-200" />
-        <div className="mt-3 h-6 w-[26rem] max-w-full animate-pulse rounded-full bg-slate-100" />
-      </header>
-
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
-        {[0, 1, 2].map((i) => (
-          <div key={i} className="h-80 animate-pulse rounded-2xl border border-slate-200 bg-white" />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-/** Same card heights as the sidebar column of `PageLoadingSkeleton variant="practice"`. */
-function RecentActivityFallback() {
-  return (
-    <>
-      {[0, 1, 2].map((i) => (
-        <div key={i} className="h-28 animate-pulse rounded-2xl border border-slate-200 bg-white" />
-      ))}
-    </>
   );
 }

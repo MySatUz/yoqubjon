@@ -1,6 +1,9 @@
 import React, { Suspense } from 'react';
+import AdminMobileNav from '@/components/admin/courses/AdminMobileNav';
 import AppShellFrame from '@/components/layout/AppShellFrame';
-import ShellAdminNav from '@/components/layout/ShellAdminNav';
+import { getShellCanManageTests } from '@/components/layout/shell-data';
+import ShellAdminNav, { ShellSubscriptionNav } from '@/components/layout/ShellAdminNav';
+import { ShellSubscriptionLink } from '@/components/layout/ShellNav';
 import StudentViewBanner from '@/components/layout/StudentViewBanner';
 import {
   ShellUserAvatar,
@@ -19,14 +22,25 @@ import {
  *
  * NOT a security boundary. Layouts do not re-render on every navigation and are
  * skipped entirely for client-side transitions between sibling pages, so each
- * `/admin/**` page keeps its own `requireAdminPage()` call. The "Admin Panel"
- * nav entry is still gated by <ShellAdminNav>, which checks `isAdminUser()`
- * itself, so a non-admin who reaches the 404 rendered inside this layout does
- * not see an admin link.
+ * `/admin/**` page keeps its own `requireAdminPage()` call. The admin nav
+ * entries are still gated by <ShellAdminNav> and the phone's row below, which
+ * check `isAdminUser()` themselves, so a non-admin who reaches the 404 rendered
+ * inside this layout does not see an admin link.
  *
  * Anonymous access is handled above this point by src/proxy.ts (`/admin/:path*`
  * is in the matcher), so no redirect happens after streaming has started.
  */
+
+/**
+ * The phone's row of admin places, for admins only: like the sidebar's group,
+ * it must not show on the 404 a student gets inside this layout. Streamed, with
+ * no placeholder, for the same reason as <ShellAdminNav>.
+ */
+async function AdminMobileNavIsland() {
+  if (!(await getShellCanManageTests())) return null;
+  return <AdminMobileNav />;
+}
+
 export default function AdminLayout({
   children,
 }: {
@@ -54,12 +68,20 @@ export default function AdminLayout({
           <ShellAdminNav variant="mobile" />
         </Suspense>
       }
+      subscriptionNav={
+        <Suspense fallback={<ShellSubscriptionLink />}>
+          <ShellSubscriptionNav />
+        </Suspense>
+      }
       banner={
         <Suspense fallback={null}>
           <StudentViewBanner />
         </Suspense>
       }
     >
+      <Suspense fallback={null}>
+        <AdminMobileNavIsland />
+      </Suspense>
       {children}
     </AppShellFrame>
   );

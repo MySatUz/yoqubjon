@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { questionsShownBy } from '@/lib/questionSource';
 import { renderMathHtml } from '@/lib/renderMathHtml';
 import { isMultiSelectKey } from '@/lib/resultAnswers';
+import { optionAsMath } from '@/components/exam/optionMath';
 
 /**
  * Question content for the exam page, with all maths already rendered to HTML.
@@ -64,7 +65,9 @@ async function readExamQuestionsHtml(testId: string): Promise<ExamQuestionHtml[]
   return questions.map((question) => ({
     id: question.id,
     contentHtml: renderMathHtml(question.content),
-    optionsHtml: readOptions(question.options).map((option) => renderMathHtml(option)),
+    // A choice that is only a number is set in KaTeX, like the numbers in the
+    // stem above it and like the printable sheet (see `optionAsMath`).
+    optionsHtml: readOptions(question.options).map((option) => renderMathHtml(optionAsMath(option))),
     multiSelect: isMultiSelectKey(question.correctAnswer),
     imageUrl: question.imageUrl,
     moduleIndex: question.moduleIndex,
@@ -76,14 +79,15 @@ async function readExamQuestionsHtml(testId: string): Promise<ExamQuestionHtml[]
  * built per test - the documented way to get a per-argument tag. `testId` is a
  * closure variable, so it also goes into `keyParts`, as the docs require.
  *
- * The `v2` part retires every entry written before `multiSelect` existed. An
- * old entry has no such field, and `undefined` there would silently render a
- * multi-select question as single choice for up to an hour after deploy.
+ * The version part retires every entry written in an older shape, which
+ * would otherwise be served for up to an hour after a deploy: `v2` the ones
+ * without `multiSelect` (`undefined` there rendered a multi-select question as
+ * single choice), `v3` the ones whose numeric choices were still plain text.
  */
 function loadExamQuestionsHtml(testId: string) {
   return unstable_cache(
     () => readExamQuestionsHtml(testId),
-    ['exam-questions-html', 'v2', testId],
+    ['exam-questions-html', 'v3', testId],
     { tags: [examQuestionsCacheTag(testId)], revalidate: 3600 }
   )();
 }

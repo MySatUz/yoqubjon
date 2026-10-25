@@ -1,12 +1,35 @@
 "use client";
 
 import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Bookmark } from 'lucide-react';
 import { useExamStore } from '@/store/useExamStore';
-// KaTeX's stylesheet is still needed - only its JS is gone from this bundle.
+// KaTeX's stylesheet is still needed - its JS is not in this bundle, and is
+// only fetched for the grid-in answer preview (see `GridInField`).
 import 'katex/dist/katex.min.css';
 import Image from 'next/image';
 import dynamic from 'next/dynamic';
 import { clearPendingAnswerFlush, setPendingAnswerFlush } from '@/components/exam/pendingAnswer';
+import CalculatorWindow from '@/components/exam/CalculatorWindow';
+import { useColumnOffset, useSheetInset } from '@/components/exam/examWindows';
+import { MARKED_ICON_CLASS } from '@/components/exam/navigatorTones';
+import {
+  AnswerChoice,
+  GridInField,
+  MultiSelectHint,
+  QUESTION_IMAGE_HEIGHT,
+  QUESTION_IMAGE_SIZES,
+  QUESTION_IMAGE_WIDTH,
+  QuestionDiagram,
+  QuestionNumberTile,
+  questionColumnClass,
+  questionHeadClass,
+  questionScrollerClass,
+  questionStemClass,
+  questionSurfaceClass,
+  readGridInEdit,
+} from '@/components/exam/questionParts';
+import { buttonClass } from '@/components/ui/Button';
+import { cn } from '@/components/ui/cn';
 
 /**
  * Admin-only, so it is split out of the exam bundle: a student's exam never
@@ -30,65 +53,36 @@ interface Question {
 /** How long typing may stay local before it is written to the store. */
 const ANSWER_COMMIT_DELAY_MS = 200;
 
-/** Intrinsic size the question diagram is requested at. */
-const QUESTION_IMAGE_WIDTH = 800;
-const QUESTION_IMAGE_HEIGHT = 480;
-
-const questionImageSizes = (isCalculatorOpen: boolean) =>
-  isCalculatorOpen ? '(min-width: 768px) 28rem, 70vw' : '(min-width: 768px) 36rem, 80vw';
-
-interface AnswerChoiceProps {
-  letter: string;
-  optionHtml: string;
-  isSelected: boolean;
-  isMultiSelect: boolean;
-  isCompact: boolean;
-  onSelect: (letter: string) => void;
-}
-
 /**
- * Memoized so picking an answer only re-renders the two choices whose
- * selection state actually changed.
- *
- * A multi-select choice keeps every other treatment and only squares off its
- * letter box - `rounded-lg` against `rounded-xl` - which is the same
- * checkbox-against-radio cue the rest of the app uses, without inventing a
- * shape or a colour for it.
+ * The question's own flag, so it sits on the question rather than in the
+ * navigation. Still a checkbox, only drawn as Bluebook's bookmark: filled
+ * amber once flagged, the colour the navigator gives a flagged question.
+ * Outlined, not ghost: beside the question number it read as a caption.
+ * Its own subscription, so flagging re-renders this control and nothing else.
+ * (The store still calls it `markedForReview`, Bluebook's name.)
  */
-const AnswerChoice = memo(function AnswerChoice({
-  letter,
-  optionHtml,
-  isSelected,
-  isMultiSelect,
-  isCompact,
-  onSelect,
-}: AnswerChoiceProps) {
+const FlagQuestion = memo(function FlagQuestion({ questionId }: { questionId: string }) {
+  const isMarked = useExamStore((state) => Boolean(state.markedForReview[questionId]));
+  const toggleMarkForReview = useExamStore((state) => state.toggleMarkForReview);
+
   return (
-    <button
-      aria-pressed={isSelected}
-      onClick={() => onSelect(letter)}
-      className={`group flex items-center gap-4 p-5 rounded-2xl border-2 transition text-left ${
-        isSelected
-          ? 'border-emerald-600 bg-emerald-50 shadow-lg ring-4 ring-emerald-50 scale-[1.02]'
-          : 'border-slate-200 bg-white hover:border-emerald-300 hover:bg-slate-50 shadow-sm'
-      }`}
+    <label
+      className={buttonClass({
+        variant: 'secondary',
+        size: 'sm',
+        className:
+          'cursor-pointer has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-board-600',
+      })}
     >
-      <span className={`flex-shrink-0 w-10 h-10 border-2 flex items-center justify-center font-semibold transition ${
-        isMultiSelect ? 'rounded-lg' : 'rounded-xl'
-      } ${
-        isSelected
-          ? 'bg-emerald-600 border-emerald-600 text-white rotate-3'
-          : 'border-slate-200 text-slate-400 group-hover:border-emerald-300 group-hover:text-emerald-600'
-      }`}>
-        {letter}
-      </span>
-      <span
-        className={`font-semibold transition-[color,font-size] ${
-          isSelected ? 'text-emerald-900' : 'text-slate-800'
-        } ${isCompact ? 'text-base' : 'text-xl'}`}
-        dangerouslySetInnerHTML={{ __html: optionHtml }}
+      <input
+        type="checkbox"
+        checked={isMarked}
+        onChange={() => toggleMarkForReview(questionId)}
+        className="sr-only"
       />
-    </button>
+      <Bookmark className={cn('h-4 w-4', isMarked && MARKED_ICON_CLASS)} />
+      {isMarked ? 'Flagged' : 'Flag'}
+    </label>
   );
 });
 
@@ -138,6 +132,7 @@ function GridInAnswer({ questionId }: { questionId: string }) {
   const [syncedAnswer, setSyncedAnswer] = useState(storedAnswer);
   // Mirrors `draft` so a flush can read it without waiting for a render.
   const draftRef = useRef(draft);
+  const [problem, setProblem] = useState<string | null>(null);
 
   const updateDraft = useCallback((value: string) => {
     draftRef.current = value;
@@ -177,30 +172,38 @@ function GridInAnswer({ questionId }: { questionId: string }) {
     };
   }, [commitDraft]);
 
-  return (
-    <input
-      type="text"
-      value={draft}
-      onChange={(e) => updateDraft(e.target.value)}
-      onBlur={commitDraft}
-      placeholder="Enter value"
-      inputMode="decimal"
-      className="w-full rounded-2xl border-2 border-blue-300 bg-white px-4 py-3 text-center text-3xl font-black tracking-tight text-slate-900 shadow-sm transition-all placeholder:text-slate-200 focus:border-blue-600 focus:outline-none focus:ring-4 focus:ring-blue-100"
-    />
-  );
+  const handleChange = (raw: string) => {
+    const edit = readGridInEdit(raw, draftRef.current);
+    setProblem(edit.problem);
+    if (!edit.problem) updateDraft(edit.value);
+  };
+
+  return <GridInField value={draft} problem={problem} onChange={handleChange} onBlur={commitDraft} />;
 }
 
 export default function SplitScreen({
   questions,
   canDraw = false,
+  review = null,
 }: {
   questions: Question[];
   canDraw?: boolean;
+  /**
+   * "Check your work", shown in the question's place. Inside this component
+   * rather than instead of it, so the calculator window - and the graphs in
+   * it - stays where it is while the student reviews.
+   */
+  review?: React.ReactNode;
 }) {
   const currentQuestionIndex = useExamStore((state) => state.currentQuestionIndex);
   const setAnswer = useExamStore((state) => state.setAnswer);
   const toggleAnswerChoice = useExamStore((state) => state.toggleAnswerChoice);
+  const toggleCrossOut = useExamStore((state) => state.toggleCrossOut);
   const isCalculatorOpen = useExamStore((state) => state.isCalculatorOpen);
+  const setCalculatorOpen = useExamStore((state) => state.setCalculatorOpen);
+  // Where the open tool windows leave room for the question (see `examWindows`).
+  const columnOffset = useColumnOffset();
+  const sheetInset = useSheetInset();
 
   const hasQuestions = Boolean(questions && questions.length > 0);
   const safeQuestionIndex = hasQuestions ? Math.min(currentQuestionIndex, questions.length - 1) : 0;
@@ -223,6 +226,9 @@ export default function SplitScreen({
     () => new Set(currentAnswer.split(',').map((letter) => letter.trim()).filter(Boolean)),
     [currentAnswer]
   );
+  // The stored array itself, so a tick of the clock does not rebuild the set.
+  const crossedOut = useExamStore((state) => (question ? state.crossedOut[question.id] : undefined));
+  const crossedLetters = useMemo(() => new Set(crossedOut ?? []), [crossedOut]);
 
   const questionId = question?.id;
   const handleSelectChoice = useCallback(
@@ -233,6 +239,31 @@ export default function SplitScreen({
     },
     [isMultiSelect, questionId, setAnswer, toggleAnswerChoice]
   );
+  const handleToggleCrossOut = useCallback(
+    (letter: string) => {
+      if (questionId) toggleCrossOut(questionId, letter);
+    },
+    [questionId, toggleCrossOut]
+  );
+
+  // A new question starts at its top, not wherever the last one was scrolled
+  // to - the stem of a long question used to open half off screen.
+  const scrollerRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    scrollerRef.current?.scrollTo({ top: 0 });
+  }, [questionId]);
+
+  // Back from "Check your work", the student lands on the question they
+  // picked rather than on a button that has gone away.
+  const isReviewing = review !== null;
+  const questionHeadRef = useRef<HTMLDivElement>(null);
+  const wasReviewingRef = useRef(isReviewing);
+  useEffect(() => {
+    if (wasReviewingRef.current && !isReviewing) {
+      questionHeadRef.current?.focus({ preventScroll: true });
+    }
+    wasReviewingRef.current = isReviewing;
+  }, [isReviewing]);
 
   // Desmos is expensive to boot and keeps the student's graphs in its own
   // state, so once it has been opened it stays mounted and is only hidden.
@@ -241,7 +272,6 @@ export default function SplitScreen({
     setWasCalculatorOpened(true);
   }
 
-  const imageSizes = questionImageSizes(isCalculatorOpen);
   const nextImageUrl = hasQuestions
     ? questions[safeQuestionIndex + 1]?.imageUrl ?? null
     : null;
@@ -249,113 +279,85 @@ export default function SplitScreen({
   if (!question) return null;
 
   return (
-    <div className={`flex-1 flex overflow-hidden bg-white ${isCalculatorOpen ? 'flex-col md:flex-row' : 'flex-col'}`}>
-      {/* Question & Options Column */}
-      <div className={`flex-1 overflow-y-auto transition-[width,background-color,border-color] duration-500 ${isCalculatorOpen ? 'w-full md:w-[46%] border-b md:border-b-0 md:border-r border-slate-100 bg-slate-50/30' : 'w-full'}`}>
-        {/* The whiteboard's surface: the whole scrolling content, padding and
-            side margins included, at least a screen tall. The padding lives
-            here rather than on the scroller so the drawing reaches the edges,
-            and `isolate` keeps the canvas's z-index inside this box. */}
-        <div className="relative isolate flex min-h-full flex-col px-4 py-6 md:px-10 md:py-10">
-          <div className={`${isCalculatorOpen ? 'max-w-2xl' : 'max-w-4xl'} mx-auto w-full flex flex-1 flex-col`}>
-            {/* Question Content - the diagram leads, the stem follows it. The
-                stem is the part a student re-reads while working, so it belongs
-                next to the answer choices rather than above a figure that pushes
-                it off screen. */}
-            <div className="mb-10 flex-grow">
-              {question.imageUrl && (
-                <div className={`mb-6 rounded-2xl overflow-hidden border border-slate-200 bg-white p-3 shadow-sm mx-auto ${isCalculatorOpen ? 'max-w-md' : 'max-w-xl'}`}>
-                  {/* The diagram is on screen the moment the question is, so the
-                      default `loading="lazy"` only ever delays it. In Next 16
-                      `priority` is deprecated in favour of these two props. */}
-                  <Image
-                    src={question.imageUrl}
-                    alt="Question diagram"
-                    width={QUESTION_IMAGE_WIDTH}
-                    height={QUESTION_IMAGE_HEIGHT}
-                    loading="eager"
-                    fetchPriority="high"
-                    sizes={imageSizes}
-                    className={`mx-auto h-auto w-full object-contain ${isCalculatorOpen ? 'max-h-[250px]' : 'max-h-[340px]'}`}
-                  />
-                </div>
-              )}
+    <div className="flex flex-1 flex-col overflow-hidden bg-white">
+      {/* Which question this is, said whenever it changes: Next, Back and the
+          navigator all move to a new question without moving focus. */}
+      <p className="sr-only" role="status">
+        Question {safeQuestionIndex + 1} of {questions.length}
+      </p>
 
-              <div className="prose prose-slate max-w-none">
-                <div
-                  className={`${isCalculatorOpen ? 'text-base md:text-xl' : 'text-lg md:text-2xl'} font-medium text-slate-800 leading-relaxed transition-[font-size] duration-500`}
-                  dangerouslySetInnerHTML={{ __html: question.contentHtml }}
-                />
+      {review ?? (
+        <div ref={scrollerRef} className={questionScrollerClass}>
+          {/* A tool window open beside it moves the whole surface and never
+              resizes it: the question keeps its width and its type, the drawing
+              stays on the question it was made on, and the canvas is not
+              reallocated. A translation is also the one move that animates
+              without layout. */}
+          <div
+            style={{
+              translate: columnOffset ? `${columnOffset}px 0` : undefined,
+              // On a phone the calculator is a sheet over the lower part of the
+              // screen; this much more room at the foot lets the answers scroll
+              // up above it, and only when they would otherwise sit under it.
+              paddingBottom: sheetInset ? `calc(1.5rem + ${sheetInset}px)` : undefined,
+            }}
+            className={questionSurfaceClass}
+          >
+            <div className={questionColumnClass}>
+              <div ref={questionHeadRef} tabIndex={-1} className={questionHeadClass}>
+                <QuestionNumberTile number={safeQuestionIndex + 1} />
+                <FlagQuestion questionId={question.id} />
+              </div>
+
+              {/* The diagram leads and the stem follows it, with the choices
+                  straight after: the stem is the part a student re-reads while
+                  working, so it belongs next to the answers rather than above a
+                  figure that pushes it off screen. */}
+              {question.imageUrl && <QuestionDiagram src={question.imageUrl} />}
+
+              <div className={questionStemClass} dangerouslySetInnerHTML={{ __html: question.contentHtml }} />
+
+              {/* Options / Answer Input - one column, like the real test. */}
+              <div className="mt-6">
+                {isMultipleChoice ? (
+                  <div>
+                    {isMultiSelect && <MultiSelectHint />}
+                    <div className="grid gap-2">
+                      {question.optionsHtml.map((optionHtml: string, idx: number) => {
+                        const letter = String.fromCharCode(65 + idx);
+                        return (
+                          <AnswerChoice
+                            key={idx}
+                            letter={letter}
+                            optionHtml={optionHtml}
+                            isSelected={selectedLetters.has(letter)}
+                            isCrossedOut={crossedLetters.has(letter)}
+                            isMultiSelect={isMultiSelect}
+                            onSelect={handleSelectChoice}
+                            onToggleCrossOut={handleToggleCrossOut}
+                          />
+                        );
+                      })}
+                    </div>
+                  </div>
+                ) : (
+                  <GridInAnswer key={question.id} questionId={question.id} />
+                )}
               </div>
             </div>
-
-            {/* Options / Answer Input */}
-            <div className="mt-auto pt-8 border-t border-slate-200/60">
-              {isMultipleChoice ? (
-                <div className="max-w-4xl mx-auto">
-                  {isMultiSelect && (
-                    <p className="mb-4 text-center text-[10px] font-medium uppercase tracking-[0.2em] text-blue-600">
-                      Select all that apply
-                    </p>
-                  )}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {question.optionsHtml.map((optionHtml: string, idx: number) => {
-                      const letter = String.fromCharCode(65 + idx);
-                      return (
-                        <AnswerChoice
-                          key={idx}
-                          letter={letter}
-                          optionHtml={optionHtml}
-                          isSelected={selectedLetters.has(letter)}
-                          isMultiSelect={isMultiSelect}
-                          isCompact={isCalculatorOpen}
-                          onSelect={handleSelectChoice}
-                        />
-                      );
-                    })}
-                  </div>
-                </div>
-              ) : (
-                <div className="mx-auto max-w-sm rounded-2xl border border-blue-100 bg-blue-50 p-5 shadow-sm">
-                  <div className="flex flex-col items-center gap-3">
-                    <h4 className="mb-1 rounded-full border border-blue-100 bg-white px-4 py-1.5 text-[10px] font-medium uppercase tracking-[0.2em] text-blue-600">
-                      Student-Produced Response
-                    </h4>
-                    <div className="mx-auto w-full max-w-[220px]">
-                      <GridInAnswer key={question.id} questionId={question.id} />
-                    </div>
-                    <p className="text-center text-[11px] font-medium uppercase tracking-[0.18em] text-blue-500">
-                      Enter your answer above
-                    </p>
-                  </div>
-                </div>
-              )}
-            </div>
+            {canDraw && <Whiteboard questionId={question.id} />}
           </div>
-          {canDraw && <Whiteboard questionId={question.id} />}
-        </div>
-      </div>
-
-      {/* Calculator Panel - nothing is loaded until it is opened the first
-          time, and after that it is hidden rather than unmounted so reopening
-          is instant and the student's graphs survive. */}
-      {wasCalculatorOpened && (
-        <div
-          className={
-            isCalculatorOpen
-              ? 'h-[45vh] w-full md:h-auto md:w-[55%] flex flex-col bg-white animate-slide-in-right border-l border-slate-200 shadow-2xl'
-              : 'hidden'
-          }
-        >
-          <iframe
-            src="https://www.desmos.com/testing/collegeboard/graphing?lang=en"
-            className="flex-1 w-full border-none"
-            title="College Board Desmos Calculator"
-          />
         </div>
       )}
 
-      {nextImageUrl && <NextQuestionImage src={nextImageUrl} sizes={imageSizes} />}
+      {/* Calculator - nothing is loaded until it is opened the first time,
+          and after that the window is hidden rather than unmounted so
+          reopening is instant and the student's graphs survive. */}
+      {wasCalculatorOpened && (
+        <CalculatorWindow isOpen={isCalculatorOpen} onClose={() => setCalculatorOpen(false)} />
+      )}
+
+      {nextImageUrl && <NextQuestionImage src={nextImageUrl} sizes={QUESTION_IMAGE_SIZES} />}
     </div>
   );
 }

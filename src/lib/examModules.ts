@@ -91,7 +91,7 @@ export function formatModuleBadge(test: ModularTest) {
   const isUniform = minutes.every((value) => value === minutes[0]);
 
   return isUniform
-    ? `${durations.length} modules x ${minutes[0]} min`
+    ? `${durations.length} modules × ${minutes[0]} min`
     : `${minutes.join(' + ')} min`;
 }
 
@@ -161,7 +161,7 @@ export function resolveExamModules(input: {
 
     if (format.moduleDurations.length < 2) {
       throw new Error(
-        `The .tex file defines ${moduleCount} modules. Switch the test format to SAT modules, or remove the \\module markers.`
+        `The .tex file defines ${moduleCount} modules. Switch the test format to Modules, or remove the \\module markers.`
       );
     }
 

@@ -17,8 +17,8 @@ import BoardToolbar from '@/components/exam/whiteboard/BoardToolbar';
  * student's exam never downloads a byte of this folder.
  *
  * Closing the toolbar keeps the drawing on screen and lets every press through
- * to the answers; the canvas is only left out entirely when the question has
- * nothing drawn on it.
+ * to the answers - so does its cursor tool, with the toolbar still open; the
+ * canvas is only left out entirely when the question has nothing drawn on it.
  */
 export default function Whiteboard({ questionId }: { questionId: string }) {
   const attemptId = useExamStore((state) => state.attemptId);
@@ -45,7 +45,6 @@ export default function Whiteboard({ questionId }: { questionId: string }) {
       // The grid-in answer and the label field keep their own Ctrl+Z.
       const target = event.target instanceof Element ? event.target : null;
       if (target?.closest('input, textarea, select, [contenteditable="true"]')) return;
-      if (useExamStore.getState().isReferenceOpen) return;
 
       const key = event.key.toLowerCase();
       const { undo, redo } = useBoardStore.getState();

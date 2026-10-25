@@ -1,11 +1,18 @@
 'use client';
 
 import { useState, useTransition, type FormEvent } from 'react';
-import { CircleCheck, CreditCard, Crown, Loader2, LockKeyhole, Save } from 'lucide-react';
+import { AlertCircle, CircleCheck, Loader2 } from 'lucide-react';
 import {
   updateSubscriptionAvailability,
   updateSubscriptionPaymentSettings,
 } from '@/app/admin/subscription-settings-actions';
+import { Badge } from '@/components/ui/Badge';
+import { buttonClass, focusRingClass } from '@/components/ui/Button';
+import { Card } from '@/components/ui/Card';
+import { useConfirm } from '@/components/ui/Dialog';
+import { Alert } from '@/components/ui/Feedback';
+import { Field, inputClass } from '@/components/ui/Field';
+import { cn } from '@/components/ui/cn';
 
 type PaymentSettings = {
   cardHolder: string;
@@ -31,9 +38,24 @@ export default function SubscriptionAvailabilityControl({
   const [error, setError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const { confirm, dialog } = useConfirm();
 
-  function toggleAvailability() {
+  async function toggleAvailability() {
     const nextEnabled = !isEnabled;
+    // Closing stops every student's payments at once, so it is asked first;
+    // opening again needs no question.
+    if (!nextEnabled) {
+      const isSure = await confirm({
+        title: 'Close Premium sales?',
+        description: 'Students see that new subscriptions are paused instead of the card details, and cannot send payment requests until you open sales again. Requests already sent stay under Payment requests.',
+        confirmLabel: 'Close sales',
+        cancelLabel: 'Keep sales open',
+        // Not destructive, so not red, but an Enter pressed out of habit must
+        // not stop every student's payments.
+        initialFocus: 'cancel',
+      });
+      if (!isSure) return;
+    }
     setError(null);
     setIsEnabled(nextEnabled);
 
@@ -68,163 +90,159 @@ export default function SubscriptionAvailabilityControl({
     });
   }
 
+  // Rendered at the top of the student Subscription page, for admins only — the
+  // badge says so, since everything around it is what students see.
   return (
-    <section
-      className={`mb-6 overflow-hidden rounded-2xl border p-6 shadow-sm transition-colors sm:p-7 ${
-        isEnabled
-          ? 'border-emerald-200 bg-emerald-50/70'
-          : 'border-amber-200 bg-amber-50/80'
-      }`}
-    >
-      <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-start gap-4">
-          <span
-            className={`inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ${
-              isEnabled ? 'bg-emerald-600 text-white' : 'bg-amber-500 text-white'
-            }`}
-          >
-            {isEnabled ? <CircleCheck className="h-6 w-6" /> : <LockKeyhole className="h-6 w-6" />}
-          </span>
-          <div>
-            <p className="text-[10px] font-medium uppercase tracking-[0.24em] text-slate-500">
-              Subscription availability
-            </p>
-            <h2 className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">
-              {isEnabled ? 'Subscription section is open' : 'Subscription section is closed'}
+    <Card as="section">
+      <div className="flex items-center justify-between gap-4 px-5 py-4">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 className="text-base font-semibold text-mist-900">
+              {isEnabled ? 'Premium sales are open' : 'Premium sales are closed'}
             </h2>
-            <p className="mt-2 max-w-2xl text-sm font-semibold leading-relaxed text-slate-600">
-              {isEnabled
-                ? 'Students can see the transfer details and send payment receipts.'
-                : 'Students see a temporary closure notice. Card details and new payment requests are blocked.'}
-            </p>
+            <Badge tone="accent">Admins only</Badge>
           </div>
+          <p className="mt-0.5 text-sm text-mist-500">
+            {isEnabled
+              ? 'Students see the transfer details and can send payment receipts.'
+              : 'Students see that new subscriptions are paused. Card details and new payment requests are hidden.'}
+          </p>
         </div>
 
+        {/* The word beside the track makes the switch a target a finger can
+            find and says its state without colour; the switch's name stays
+            the same either way, its state is aria-checked. */}
         <button
           type="button"
           role="switch"
           aria-checked={isEnabled}
-          aria-label="Toggle subscription section"
+          aria-label="Premium sales open to students"
           disabled={isToggling}
-          onClick={toggleAvailability}
-          className={`relative inline-flex h-12 w-24 shrink-0 items-center rounded-full p-1.5 shadow-inner transition-colors focus:outline-none focus:ring-4 disabled:cursor-wait disabled:opacity-70 ${
-            isEnabled
-              ? 'bg-emerald-600 focus:ring-emerald-200'
-              : 'bg-slate-400 focus:ring-slate-200'
-          }`}
+          onClick={() => void toggleAvailability()}
+          className={cn(
+            'inline-flex h-8 shrink-0 items-center gap-2 rounded-lg text-sm font-medium text-mist-700 pointer-coarse:h-10',
+            focusRingClass,
+            // While saving, the spinner in the knob says so; no fade, which would
+            // turn the accent into an off-palette pastel.
+            'disabled:cursor-wait',
+          )}
         >
           <span
-            className={`inline-flex h-9 w-9 items-center justify-center rounded-full bg-white text-slate-500 shadow-sm transition-transform ${
-              isEnabled ? 'translate-x-12' : 'translate-x-0'
-            }`}
+            className={cn(
+              'inline-flex h-5 w-9 shrink-0 items-center rounded-full p-0.5 transition-colors',
+              isEnabled ? 'bg-board-600' : 'bg-mist-300',
+            )}
           >
-            {isToggling ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+            <span
+              className={cn(
+                'inline-flex h-4 w-4 items-center justify-center rounded-full bg-white text-mist-500 transition-transform',
+                isEnabled ? 'translate-x-4' : 'translate-x-0',
+              )}
+            >
+              {isToggling ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
+            </span>
           </span>
+          <span aria-hidden className="w-12 text-left">{isEnabled ? 'Open' : 'Closed'}</span>
         </button>
       </div>
 
       {error && (
-        <p className="mt-4 rounded-2xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
-          {error}
-        </p>
+        <div className="px-5 pb-4">
+          <Alert tone="danger">{error}</Alert>
+        </div>
       )}
 
       {canEditPaymentSettings && initialPaymentSettings && (
-        <div className="mt-7 border-t border-slate-900/10 pt-7">
-          <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
-            <div className="flex items-start gap-3">
-              <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-slate-900 text-white">
-                <CreditCard className="h-5 w-5" />
-              </span>
-              <div>
-                <h3 className="text-lg font-semibold tracking-tight text-slate-900">Payment details</h3>
-                <p className="mt-1 text-sm font-semibold text-slate-600">
-                  These values appear on the student subscription page and in new payment requests.
-                </p>
-              </div>
+        <div className="border-t border-mist-100 px-5 py-4">
+          <div className="mb-4 flex flex-wrap items-start justify-between gap-x-3 gap-y-1">
+            <div className="min-w-0">
+              <h3 className="text-sm font-semibold text-mist-900">Payment details</h3>
+              <p className="mt-0.5 text-sm text-mist-500">
+                These values appear on the student subscription page and in new payment requests.
+              </p>
             </div>
-            <span className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-3 py-1.5 text-[10px] font-medium uppercase tracking-widest text-white">
-              <Crown className="h-3.5 w-3.5 text-amber-300" />
-              Owner only
-            </span>
+            <Badge>Owner only</Badge>
           </div>
 
-          <form onSubmit={savePaymentSettings} className="grid gap-4 lg:grid-cols-2">
-            <label className="space-y-2">
-              <span className="text-[10px] font-medium uppercase tracking-widest text-slate-500">Card holder</span>
-              <input
-                name="cardHolder"
-                defaultValue={initialPaymentSettings.cardHolder}
-                required
-                maxLength={120}
-                autoComplete="off"
-                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
-              />
-            </label>
+          <form onSubmit={savePaymentSettings} className="space-y-4">
+            {/* Four across only at xl: at lg a quarter-width field clips a full card number. */}
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+              <Field label="Card holder" htmlFor="payment-card-holder">
+                <input
+                  id="payment-card-holder"
+                  name="cardHolder"
+                  defaultValue={initialPaymentSettings.cardHolder}
+                  required
+                  maxLength={120}
+                  autoComplete="off"
+                  className={inputClass()}
+                />
+              </Field>
 
-            <label className="space-y-2">
-              <span className="text-[10px] font-medium uppercase tracking-widest text-slate-500">Card number</span>
-              <input
-                name="cardNumber"
-                defaultValue={initialPaymentSettings.cardNumber}
-                required
-                maxLength={40}
-                inputMode="numeric"
-                autoComplete="off"
-                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 font-mono text-sm font-semibold tracking-wider text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
-              />
-            </label>
+              <Field label="Card number" htmlFor="payment-card-number">
+                <input
+                  id="payment-card-number"
+                  name="cardNumber"
+                  defaultValue={initialPaymentSettings.cardNumber}
+                  required
+                  maxLength={40}
+                  inputMode="numeric"
+                  autoComplete="off"
+                  className={inputClass({ className: 'font-mono tabular-nums' })}
+                />
+              </Field>
 
-            <label className="space-y-2">
-              <span className="text-[10px] font-medium uppercase tracking-widest text-slate-500">Card type</span>
-              <input
-                name="cardType"
-                defaultValue={initialPaymentSettings.cardType}
-                required
-                maxLength={30}
-                autoComplete="off"
-                placeholder="HUMO, Uzcard, Visa..."
-                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
-              />
-            </label>
+              <Field label="Card type" htmlFor="payment-card-type">
+                <input
+                  id="payment-card-type"
+                  name="cardType"
+                  defaultValue={initialPaymentSettings.cardType}
+                  required
+                  maxLength={30}
+                  autoComplete="off"
+                  placeholder="HUMO, Uzcard, Visa..."
+                  className={inputClass()}
+                />
+              </Field>
 
-            <label className="space-y-2">
-              <span className="text-[10px] font-medium uppercase tracking-widest text-slate-500">Monthly price (UZS)</span>
-              <input
-                name="amount"
-                type="number"
-                defaultValue={initialPaymentSettings.amount}
-                required
-                min={1000}
-                max={1000000000}
-                step={1000}
-                inputMode="numeric"
-                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
-              />
-            </label>
+              <Field label="Monthly price (UZS)" htmlFor="payment-amount">
+                <input
+                  id="payment-amount"
+                  name="amount"
+                  type="number"
+                  defaultValue={initialPaymentSettings.amount}
+                  required
+                  min={1000}
+                  max={1000000000}
+                  step={1000}
+                  inputMode="numeric"
+                  className={inputClass({ className: 'tabular-nums' })}
+                />
+              </Field>
+            </div>
 
-            <div className="flex flex-col gap-3 lg:col-span-2 sm:flex-row sm:items-center sm:justify-between">
-              <div className="min-h-6">
-                {saved && (
-                  <p className="inline-flex items-center gap-2 text-sm font-semibold text-emerald-700">
-                    <CircleCheck className="h-4 w-4" />
-                    Payment settings saved.
-                  </p>
-                )}
-                {saveError && <p className="text-sm font-semibold text-red-700">{saveError}</p>}
-              </div>
-              <button
-                type="submit"
-                disabled={isSaving}
-                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white shadow-lg transition hover:bg-blue-600 disabled:cursor-wait disabled:opacity-60"
-              >
-                {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+            <div className="flex flex-wrap items-center justify-end gap-3">
+              {saved && (
+                <p role="status" className="mr-auto inline-flex items-center gap-1.5 text-sm text-lime-800">
+                  <CircleCheck className="h-4 w-4" />
+                  Payment settings saved.
+                </p>
+              )}
+              {saveError && (
+                <p role="alert" className="mr-auto inline-flex items-center gap-1.5 text-sm text-red-600">
+                  <AlertCircle className="h-4 w-4" />
+                  {saveError}
+                </p>
+              )}
+              <button type="submit" disabled={isSaving} className={buttonClass()}>
+                {isSaving && <Loader2 className="h-4 w-4 animate-spin" />}
                 {isSaving ? 'Saving' : 'Save payment details'}
               </button>
             </div>
           </form>
         </div>
       )}
-    </section>
+      {dialog}
+    </Card>
   );
 }

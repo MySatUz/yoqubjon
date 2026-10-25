@@ -1,23 +1,36 @@
 import { cache, Suspense } from "react";
+import type { Metadata } from "next";
+import Link from "next/link";
+import { ChartNoAxesColumn, ChevronRight, Play } from "lucide-react";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { buildSectionResultSummaries, formatResultTime } from "@/lib/resultSections";
-import { getTestCollections } from "@/lib/testCatalog";
+import { formatDate } from "@/lib/formatDate";
+import { formatDuration } from "@/lib/olympiad";
+import { MIN_QUESTIONS_FOR_SCORE, hasScoreEstimate } from "@/lib/scoreDisplay";
+import { buildCollectionProgress } from "@/lib/courseProgress";
 import { getCollectionVisibilityRows } from "@/lib/testCollections";
-import { Award, BookOpen, Calendar, Crown, Mail, Target, TrendingUp, User } from "lucide-react";
-import Link from "next/link";
+import { getActiveSectionAccessCategories } from "@/lib/sectionAccess";
+import { getViewerAccess } from "@/lib/studentView";
+import { FREE_PLAN, PREMIUM_PLAN, PREMIUM_PLAN_ID } from "@/lib/plans";
+import { readSalesOpen } from "@/app/dashboard/salesOpen";
+import { getCategoryQueryValue, getTestCategory, getTestCollections } from "@/lib/testCatalog";
+import { Page, PageHeader } from "@/components/ui/Page";
+import { Card, CardHeader, cardClass } from "@/components/ui/Card";
+import { Stat, StatGroup } from "@/components/ui/Stat";
+import { Badge } from "@/components/ui/Badge";
+import { Avatar, Progress } from "@/components/ui/Misc";
+import { buttonClass } from "@/components/ui/Button";
+import { EmptyState, Skeleton } from "@/components/ui/Feedback";
+import { listRowClass, listRowInteractiveClass, rowChevronClass } from "@/components/ui/List";
+import { cn } from "@/components/ui/cn";
+import NameForm from "@/app/dashboard/profile/NameForm";
 
-/**
- * How many attempts the section history renders. The headline metrics below are
- * database aggregates over *all* attempts, so this cap only shortens the list —
- * it never changes a number on screen.
- */
-const HISTORY_LIMIT = 50;
+export const metadata: Metadata = { title: "Profile" };
 
-/**
- * Two regions need the same row, so the reads are memoized per request: React
- * `cache()` collapses them into a single Prisma call even though they now live
- * behind separate `<Suspense>` boundaries.
+/*
+ * Every read is memoized per request with React `cache()`, so the regions
+ * below that share one - the name, the progress - cost one Prisma call
+ * between them. The attempt-by-attempt history lives only in Results.
  */
 const getActiveSubscription = cache((userId: string) =>
   prisma.subscription.findFirst({
@@ -30,15 +43,91 @@ const getActiveSubscription = cache((userId: string) =>
   })
 );
 
-const getResultTotals = cache((userId: string) =>
-  prisma.result.aggregate({
-    where: { userId },
-    _count: { _all: true },
-    _avg: { score: true },
-    _max: { score: true },
-    _sum: { timeSpent: true },
-  })
-);
+/** From the database, not the session: the session keeps the name it was signed in with. */
+const getUserName = cache(async (userId: string) => {
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { name: true } });
+  return user?.name?.trim() || null;
+});
+
+/**
+ * The numbers on this page. Scores count attempts at tests of 10 or more
+ * questions only: a three-question check scores 200 or 800 on one answer, and
+ * averaged in it dragged a student's 600s down to "378".
+ */
+const getProgress = cache(async (userId: string, email: string | null | undefined) => {
+  const [results, tests, collectionRows, accessCategories, viewer] = await Promise.all([
+    // Light rows, newest first: every attempt counts, and even a heavy user has a few hundred.
+    prisma.result.findMany({
+      where: { userId },
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      select: { testId: true, score: true, timeSpent: true },
+    }),
+    prisma.test.findMany({
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        collectionCategory: true,
+        visible: true,
+        _count: { select: { questions: true } },
+        // A copy shows its original's questions and has none of its own.
+        questionSource: { select: { _count: { select: { questions: true } } } },
+      },
+    }),
+    getCollectionVisibilityRows(),
+    getActiveSectionAccessCategories(userId, email),
+    getViewerAccess(userId),
+  ]);
+
+  const testById = new Map(
+    tests.map((test) => [
+      test.id,
+      {
+        title: test.title,
+        visible: test.visible,
+        category: getTestCategory(test),
+        questionCount: test.questionSource?._count.questions ?? test._count.questions,
+      },
+    ])
+  );
+  const scored = results.filter((result) => hasScoreEstimate(testById.get(result.testId)?.questionCount ?? 0));
+  // Newest first, so a best reached twice is credited to the latest test.
+  const best = scored.reduce<(typeof scored)[number] | null>(
+    (top, result) => (!top || result.score > top.score ? result : top),
+    null
+  );
+
+  // Collections as the catalog shows them to this student: the link back to
+  // one only where the catalog would open it.
+  const accessSet = new Set(accessCategories);
+  const collections = getTestCollections(collectionRows);
+  const openable = new Set(
+    collections
+      .filter((collection) => collection.visible || accessSet.has(collection.value) || viewer.isAdmin)
+      .map((collection) => collection.value)
+  );
+  const byCollection = buildCollectionProgress({
+    collections,
+    tests: tests
+      .filter((test) => test.visible || viewer.isAdmin)
+      .map((test) => ({ id: test.id, ...testById.get(test.id)! })),
+    results,
+  }).map((progress) => ({
+    ...progress,
+    href: openable.has(progress.category) ? `/dashboard?set=${encodeURIComponent(getCategoryQueryValue(progress.category))}` : null,
+  }));
+
+  return {
+    attempts: results.length,
+    testsCompleted: new Set(results.map((result) => result.testId)).size,
+    totalSeconds: results.reduce((total, result) => total + result.timeSpent, 0),
+    scoredAttempts: scored.length,
+    average:
+      scored.length > 0 ? Math.round(scored.reduce((total, result) => total + result.score, 0) / scored.length) : null,
+    best: best ? { score: best.score, title: testById.get(best.testId)?.title ?? null } : null,
+    byCollection,
+  };
+});
 
 /**
  * `auth()` and the "Unauthorized" branch stay above every boundary: after a
@@ -51,296 +140,276 @@ export default async function ProfilePage() {
   if (!session?.user?.id) return <div>Unauthorized</div>;
 
   const userId = session.user.id;
-  const displayName = session.user.name || "MYSAT Student";
   const email = session.user.email;
 
   return (
-    <div className="px-4 py-10 sm:px-6 lg:px-8">
-      <header className="mb-8 flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <p className="text-[10px] font-medium uppercase tracking-[0.28em] text-blue-600">Student workspace</p>
-          <h1 className="mt-2 text-4xl font-black tracking-tight text-slate-900">Personal Cabinet</h1>
-          <p className="mt-2 font-medium text-slate-500">Your account, progress, subscription, and latest practice history.</p>
+    <Page>
+      <PageHeader
+        title="Profile"
+        description="Your account, your plan and how your practice is going. Every attempt is in Results."
+      />
+
+      <Suspense fallback={<ProfileCardFallback />}>
+        <ProfileCard userId={userId} sessionName={session.user.name} email={email} />
+      </Suspense>
+
+      <Suspense fallback={<StatsFallback />}>
+        <Stats userId={userId} email={email} />
+      </Suspense>
+
+      {/* items-start: the name card keeps its own height beside a long list. */}
+      <div className="@container">
+        <div className="grid grid-cols-1 items-start gap-6 @4xl:grid-cols-[minmax(0,1fr)_22rem]">
+          <Suspense fallback={<CollectionsFallback />}>
+            <CollectionsCard userId={userId} email={email} />
+          </Suspense>
+
+          <Card as="section" aria-labelledby="name-heading">
+            <CardHeader
+              title={<span id="name-heading">Your name</span>}
+              description="Shown on olympiad rankings. Practice results stay private."
+            />
+            <Suspense fallback={<NameFormFallback />}>
+              <NameSection userId={userId} sessionName={session.user.name} />
+            </Suspense>
+          </Card>
         </div>
-        <Link
-          href="/dashboard"
-          className="rounded-2xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white shadow-lg transition hover:bg-blue-600"
-        >
-          Continue Practice
-        </Link>
-      </header>
-
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.05fr_0.95fr]">
-        <Suspense fallback={<ProfileCardFallback />}>
-          <ProfileCard userId={userId} displayName={displayName} email={email} />
-        </Suspense>
-
-        <Suspense fallback={<StatsGridFallback />}>
-          <StatsGrid userId={userId} />
-        </Suspense>
-
-        <Suspense fallback={<SectionHistoryFallback />}>
-          <SectionHistory userId={userId} />
-        </Suspense>
-
-        <Suspense fallback={<SubscriptionBannerFallback />}>
-          <SubscriptionBanner userId={userId} />
-        </Suspense>
       </div>
-    </div>
+    </Page>
   );
 }
 
+/**
+ * The account in one row: who you are and which plan you are on. The plan used
+ * to be shown twice — a pill here and a dark banner at the bottom of the page —
+ * and the name and email twice more in tiles under the hero.
+ */
 async function ProfileCard({
   userId,
-  displayName,
+  sessionName,
   email,
 }: {
   userId: string;
-  displayName: string;
+  sessionName?: string | null;
   email?: string | null;
 }) {
-  const subscription = await getActiveSubscription(userId);
-  const isPremium = subscription?.planId === "PREMIUM";
-  const userInitial = displayName[0] || "U";
-
-  return (
-    <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-      <div className="bg-slate-900 p-8 text-white">
-        <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-5">
-            <div className="flex h-24 w-24 items-center justify-center rounded-2xl bg-blue-600 text-4xl font-black shadow-2xl">
-              {userInitial}
-            </div>
-            <div>
-              <p className="text-xs font-medium uppercase tracking-[0.22em] text-blue-300">Profile</p>
-              <h2 className="mt-2 text-3xl font-black tracking-tight">{displayName}</h2>
-              <p className="mt-1 text-sm font-semibold text-slate-300">{email}</p>
-            </div>
-          </div>
-          <div className={`rounded-2xl px-5 py-4 ${isPremium ? "bg-emerald-500/15 text-emerald-200" : "bg-white/10 text-slate-200"}`}>
-            <div className="flex items-center gap-2 text-sm font-semibold">
-              <Crown className="h-5 w-5" />
-              {isPremium ? "Premium active" : "Free Starter"}
-            </div>
-            <p className="mt-1 text-xs font-medium opacity-80">
-              {isPremium && subscription
-                ? `Until ${subscription.expiresAt.toLocaleDateString()}`
-                : "Upgrade when you are ready for full access."}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <div className="grid gap-4 p-6 sm:grid-cols-2">
-        <div className="flex items-center gap-3 rounded-2xl bg-slate-50 p-5">
-          <div className="rounded-2xl bg-white p-3 text-slate-400 shadow-sm">
-            <User className="h-5 w-5" />
-          </div>
-          <div>
-            <p className="text-[10px] font-medium uppercase tracking-widest text-slate-400">Full name</p>
-            <p className="text-base font-semibold text-slate-900">{displayName}</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-3 rounded-2xl bg-slate-50 p-5">
-          <div className="rounded-2xl bg-white p-3 text-slate-400 shadow-sm">
-            <Mail className="h-5 w-5" />
-          </div>
-          <div className="min-w-0">
-            <p className="text-[10px] font-medium uppercase tracking-widest text-slate-400">Email address</p>
-            <p className="truncate text-base font-semibold text-slate-900">{email}</p>
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-async function StatsGrid({ userId }: { userId: string }) {
-  const totals = await getResultTotals(userId);
-  // Headline metrics come from the aggregate, never from the truncated list.
-  const totalAttempts = totals._count._all;
-  const avgScore = totals._avg.score !== null ? Math.round(totals._avg.score) : 0;
-  const bestScore = totals._max.score ?? 0;
-  const formattedTime = formatResultTime(totals._sum.timeSpent ?? 0);
-
-  return (
-    <section className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-      {[
-        { label: "Average Score", value: avgScore, icon: Award },
-        { label: "Best Score", value: bestScore, icon: Target },
-        { label: "Tests Taken", value: totalAttempts, icon: BookOpen },
-        { label: "Total Practice", value: formattedTime, icon: TrendingUp },
-      ].map((stat) => {
-        const Icon = stat.icon;
-
-        return (
-          <div key={stat.label} className="rounded-2xl border border-slate-200 bg-white p-6">
-            <div className="mb-5 inline-flex rounded-xl bg-blue-50 p-3 text-blue-600">
-              <Icon className="h-6 w-6" />
-            </div>
-            <p className="text-[10px] font-medium uppercase tracking-widest text-slate-400">{stat.label}</p>
-            <p className="mt-2 text-3xl font-black text-slate-900 tabular-nums">{stat.value}</p>
-          </div>
-        );
-      })}
-    </section>
-  );
-}
-
-async function SectionHistory({ userId }: { userId: string }) {
-  const [userResults, totals, visibilityRows] = await Promise.all([
-    prisma.result.findMany({
-      where: { userId },
-      orderBy: { createdAt: "desc" },
-      take: HISTORY_LIMIT,
-      select: {
-        id: true,
-        testId: true,
-        score: true,
-        timeSpent: true,
-        createdAt: true,
-        test: {
-          select: {
-            id: true,
-            title: true,
-            description: true,
-            collectionCategory: true,
-            createdAt: true,
-          },
-        },
-      },
-    }),
-    getResultTotals(userId),
-    getCollectionVisibilityRows(),
+  const [subscription, name, salesOpen] = await Promise.all([
+    getActiveSubscription(userId),
+    getUserName(userId),
+    readSalesOpen("Profile"),
   ]);
-
-  const collections = getTestCollections(visibilityRows);
-  const sectionSummaries = buildSectionResultSummaries(userResults, collections);
-  const totalAttempts = totals._count._all;
-  const latestResult = userResults[0] || null;
-  const isHistoryTruncated = totalAttempts > userResults.length;
+  const isPremium = subscription?.planId === PREMIUM_PLAN_ID;
+  // "MYSAT Student" was neither the brand (MYSATuz) nor a name.
+  const displayName = name || sessionName || "Student";
 
   return (
-    <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm xl:col-span-2">
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <p className="text-[10px] font-medium uppercase tracking-[0.22em] text-blue-600">Section results</p>
-          <h2 className="mt-2 text-2xl font-semibold text-slate-900">Practice history by section</h2>
-          {isHistoryTruncated && (
-            <p className="mt-2 text-xs font-medium text-slate-400">
-              Showing your latest {userResults.length} of {totalAttempts} attempts.{' '}
-              <Link href="/dashboard/results" className="text-blue-600 hover:text-blue-700">
-                See all
-              </Link>
-            </p>
-          )}
+    <Card as="section" className="flex flex-col gap-4 px-5 py-4 sm:flex-row sm:items-center">
+      <div className="flex min-w-0 flex-1 items-center gap-3">
+        <Avatar name={displayName} size="lg" />
+        <div className="min-w-0">
+          <div className="flex min-w-0 items-center gap-2">
+            <h2 className="truncate text-base font-semibold text-mist-900">{displayName}</h2>
+            <Badge tone={isPremium ? "success" : "neutral"}>{isPremium ? PREMIUM_PLAN.name : FREE_PLAN.name}</Badge>
+          </div>
+          <p className="mt-0.5 truncate text-sm text-mist-500">{email}</p>
         </div>
-        {latestResult && (
-          <Link href={`/dashboard/results/${latestResult.id}`} className="rounded-2xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-blue-700">
-            Open Latest Result
-          </Link>
-        )}
       </div>
-
-      {totalAttempts === 0 ? (
-        <div className="rounded-2xl border border-dashed border-slate-200 p-8 text-center text-sm font-semibold text-slate-400">
-          No attempts yet. Start a module and this area will become your progress map.
-        </div>
-      ) : (
-        <div className="space-y-5">
-          {sectionSummaries.map((section) => (
-            <article key={section.categoryKey} className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-              <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                <div>
-                  <h3 className="text-xl font-semibold text-slate-900">{section.label}</h3>
-                  <p className="mt-1 max-w-2xl text-sm font-semibold leading-relaxed text-slate-500">
-                    {section.description}
-                  </p>
-                </div>
-                <div className="grid gap-2 text-xs font-medium text-slate-600 sm:grid-cols-4 lg:min-w-[34rem]">
-                  <span className="rounded-2xl bg-white px-3 py-2">{section.attempts} attempts</span>
-                  <span className="rounded-2xl bg-white px-3 py-2">{section.uniqueTests} tests</span>
-                  <span className="rounded-2xl bg-white px-3 py-2">{section.totalScore} total</span>
-                  <span className="rounded-2xl bg-white px-3 py-2">{section.bestScore} best</span>
-                </div>
-              </div>
-
-              <div className="mt-5 grid gap-3 md:grid-cols-2">
-                {section.results.map((result) => (
-                  <Link
-                    key={result.id}
-                    href={`/dashboard/results/${result.id}`}
-                    className="rounded-2xl border border-slate-200 bg-white p-5 transition hover:border-blue-200 hover:shadow-sm"
-                  >
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="min-w-0">
-                        <p className="truncate text-base font-semibold text-slate-900">{result.testTitle}</p>
-                        <p className="mt-1 text-xs font-medium text-slate-400">
-                          {new Date(result.createdAt).toLocaleDateString()} - {formatResultTime(result.timeSpent)}
-                        </p>
-                      </div>
-                      <span className="rounded-2xl bg-slate-900 px-3 py-2 text-sm font-semibold text-white">
-                        {result.score}
-                      </span>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            </article>
-          ))}
-        </div>
-      )}
-    </section>
-  );
-}
-
-async function SubscriptionBanner({ userId }: { userId: string }) {
-  const subscription = await getActiveSubscription(userId);
-  const isPremium = subscription?.planId === "PREMIUM";
-
-  return (
-    <section className="rounded-2xl bg-slate-900 p-8 text-white xl:col-span-2">
-      <div className="flex flex-col justify-between gap-6 md:flex-row md:items-center">
-        <div>
-          <h3 className="flex items-center gap-2 text-2xl font-semibold">
-            <Calendar className="h-6 w-6 text-blue-400" />
-            Subscription Status
-          </h3>
-          <p className="mt-2 max-w-2xl text-sm font-semibold leading-relaxed text-slate-300">
-            {isPremium
-              ? `Premium access is active until ${subscription?.expiresAt.toLocaleDateString()}.`
-              : "You are currently on the Free Starter plan. Upgrade when you want all modules and full review."}
-          </p>
-        </div>
-        <Link href="/dashboard/subscription" className="rounded-2xl bg-blue-600 px-8 py-4 text-center text-sm font-semibold text-white transition hover:bg-blue-500">
-          Manage Subscription
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 sm:justify-end">
+        <p className="text-sm text-mist-500">
+          {isPremium && subscription
+            ? `Active until ${formatDate(subscription.expiresAt)}`
+            : salesOpen
+              ? "Upgrade when you are ready for full access."
+              : // Paused by an admin: no nudge towards a plan nobody can buy.
+                "The tests marked Free are open to you."}
+        </p>
+        {/* A free account has no subscription to manage: it looks at plans. */}
+        <Link href="/dashboard/subscription" className={buttonClass({ variant: "secondary", size: "sm" })}>
+          {isPremium ? "Manage subscription" : "See plans"}
         </Link>
       </div>
-    </section>
+    </Card>
   );
 }
 
-/* Fallback geometry mirrors `PageLoadingSkeleton variant="profile"` block by block. */
+/**
+ * Tests and attempts are separate numbers: "Tests taken 44" used to count
+ * attempts. A new student gets one next step instead of a row of zeros.
+ */
+async function Stats({ userId, email }: { userId: string; email?: string | null }) {
+  const progress = await getProgress(userId, email);
 
-function ProfileCardFallback() {
-  return <div className="h-80 animate-pulse rounded-2xl border border-slate-200 bg-white" />;
+  if (progress.attempts === 0) {
+    return (
+      <EmptyState
+        icon={<ChartNoAxesColumn />}
+        title="No tests finished yet"
+        description="Your scores and your progress by course appear here after your first test."
+        action={
+          <Link href="/dashboard" className={buttonClass()}>
+            <Play className="h-4 w-4" />
+            Start a test
+          </Link>
+        }
+      />
+    );
+  }
+
+  // "Full test" is the word for a test long enough to score: shorter checks
+  // count as attempts but stay out of the two scores.
+  const fullTestsHint = `Full tests only (${MIN_QUESTIONS_FOR_SCORE}+ questions)`;
+
+  return (
+    <StatGroup>
+      <Stat
+        label="Average score"
+        value={progress.average ?? "—"}
+        hint={
+          progress.average === null
+            ? fullTestsHint
+            : `Over ${progress.scoredAttempts} full-test ${progress.scoredAttempts === 1 ? "attempt" : "attempts"}`
+        }
+      />
+      <Stat label="Best score" value={progress.best?.score ?? "—"} hint={progress.best?.title ?? fullTestsHint} />
+      <Stat label="Tests completed" value={progress.testsCompleted} />
+      <Stat label="Attempts" value={progress.attempts} />
+      <Stat label="Practice time" value={formatDuration(progress.totalSeconds)} />
+    </StatGroup>
+  );
 }
 
-function StatsGridFallback() {
+/** Where the student stands in each course they have practised in. */
+async function CollectionsCard({ userId, email }: { userId: string; email?: string | null }) {
+  const { byCollection } = await getProgress(userId, email);
+  if (byCollection.length === 0) return null;
+
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-      {[0, 1, 2, 3].map((i) => (
-        <div key={i} className="h-40 animate-pulse rounded-2xl border border-slate-200 bg-white" />
-      ))}
+    <Card as="section">
+      <CardHeader title="Progress by course" description="Tests finished at least once, and your best full-test score." />
+      <ul className="divide-y divide-mist-100">
+        {byCollection.map((collection) => {
+          const body = (
+            <>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-baseline justify-between gap-3">
+                  <p className="truncate text-sm font-medium text-mist-900">{collection.label}</p>
+                  <span className="shrink-0 text-xs tabular-nums text-mist-500">
+                    {collection.testsDone} of {collection.testsTotal} {collection.testsTotal === 1 ? "test" : "tests"}
+                  </span>
+                </div>
+                <Progress
+                  className="mt-2"
+                  value={collection.testsTotal > 0 ? (collection.testsDone / collection.testsTotal) * 100 : 0}
+                />
+              </div>
+              <div className="w-20 shrink-0 text-right">
+                {collection.best !== null ? (
+                  <>
+                    <p className="text-sm font-semibold tabular-nums text-mist-900">{collection.best}</p>
+                    <p className="text-xs text-mist-500">best</p>
+                  </>
+                ) : (
+                  <p className="text-xs text-mist-500">No score yet</p>
+                )}
+              </div>
+            </>
+          );
+
+          return (
+            <li key={collection.category}>
+              {collection.href ? (
+                <Link href={collection.href} className={cn(listRowInteractiveClass, "group")}>
+                  {body}
+                  <ChevronRight className={rowChevronClass} />
+                </Link>
+              ) : (
+                // A collection no longer open to this student: its history
+                // stays, the way into it does not.
+                <div className={listRowClass}>
+                  {body}
+                  <span className="w-4 shrink-0" />
+                </div>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+    </Card>
+  );
+}
+
+async function NameSection({ userId, sessionName }: { userId: string; sessionName?: string | null }) {
+  const name = await getUserName(userId);
+  return <NameForm name={name ?? sessionName ?? ""} />;
+}
+
+/*
+ * Fallbacks mirror the regions above block by block, so nothing jumps when a
+ * region streams in. loading.tsx draws the same shapes for the first paint.
+ */
+
+function ProfileCardFallback() {
+  return (
+    <div className={cn(cardClass, "flex flex-col gap-4 px-5 py-4 sm:flex-row sm:items-center")}>
+      <div className="flex min-w-0 flex-1 items-center gap-3">
+        <div className="h-12 w-12 shrink-0 animate-pulse rounded-full bg-mist-200/70" />
+        <div className="min-w-0 flex-1 space-y-2">
+          <Skeleton className="h-5 w-40 max-w-full" />
+          <Skeleton className="h-4 w-56 max-w-full" />
+        </div>
+      </div>
+      <Skeleton className="h-8 w-40 pointer-coarse:h-10" />
     </div>
   );
 }
 
-function SectionHistoryFallback() {
-  return <div className="h-72 animate-pulse rounded-2xl border border-slate-200 bg-white xl:col-span-2" />;
+function StatsFallback() {
+  return (
+    <StatGroup>
+      {[0, 1, 2, 3, 4].map((i) => (
+        // Same geometry as <Stat> with a hint: a 16px label line, a 28px (32px
+        // from sm) value, a 16px hint line.
+        <div key={i} className="bg-white px-4 py-3.5 sm:px-5">
+          <Skeleton className="h-4 w-24" />
+          <Skeleton className="mt-1 h-7 w-16 sm:h-8" />
+          <Skeleton className="mt-0.5 h-4 w-28 max-w-full" />
+        </div>
+      ))}
+    </StatGroup>
+  );
 }
 
-function SubscriptionBannerFallback() {
-  return <div className="h-44 animate-pulse rounded-2xl bg-slate-200 xl:col-span-2" />;
+function CollectionsFallback() {
+  return (
+    <div className={cardClass}>
+      <div className="space-y-1.5 border-b border-mist-100 px-5 py-4">
+        <Skeleton className="h-5 w-48" />
+        <Skeleton className="h-4 w-72 max-w-full" />
+      </div>
+      <div className="divide-y divide-mist-100">
+        {[0, 1].map((i) => (
+          <div key={i} className="flex items-center gap-4 px-4 py-3 sm:px-5">
+            <div className="min-w-0 flex-1 space-y-2.5">
+              <Skeleton className="h-4 w-40" />
+              <Skeleton className="h-1.5 w-full" />
+            </div>
+            <Skeleton className="h-8 w-12" />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function NameFormFallback() {
+  return (
+    <div className="space-y-4 p-5">
+      <div className="space-y-1.5">
+        <Skeleton className="h-5 w-12" />
+        <Skeleton className="h-9 w-full pointer-coarse:h-11" />
+        <Skeleton className="h-4 w-36" />
+      </div>
+      <Skeleton className="h-9 w-28 pointer-coarse:h-11" />
+    </div>
+  );
 }

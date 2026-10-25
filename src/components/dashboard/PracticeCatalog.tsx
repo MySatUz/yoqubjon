@@ -1,18 +1,44 @@
 'use client';
 
 import Link from 'next/link';
-import { ArrowLeft, ArrowRight, Atom, ClipboardList, FileDown, FolderKanban, Layers3, LayoutDashboard, Lock, Repeat2, Sparkles, Trophy } from 'lucide-react';
 import {
+  ArrowLeft,
+  Award,
+  CalendarCheck,
+  ChevronRight,
+  ClipboardList,
+  Clock3,
+  FileDown,
+  History,
+  Layers3,
+  ListOrdered,
+  Lock,
+  RotateCcw,
+  Trophy,
+} from 'lucide-react';
+import {
+  cleanTestDescription,
   findCategoryByQuery,
   getCategoryQueryValue,
   getTestCategory,
-  getTestDescription,
   type TestCategory,
   type TestCollectionOption,
 } from '@/lib/testCatalog';
-import { useEffect, useMemo, useState, useTransition } from 'react';
+import { useMemo, useState, useTransition, type ReactNode } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { formatModuleBadge } from '@/lib/examModules';
-import { getOlympiadStatus, readOlympiadWindow, type OlympiadStatus } from '@/lib/olympiad';
+import { formatDuration, getOlympiadStatus, readOlympiadWindow, type OlympiadStatus } from '@/lib/olympiad';
+import { formatDate } from '@/lib/formatDate';
+import { formatCorrectOf, hasScoreEstimate } from '@/lib/scoreDisplay';
+import { PREMIUM_PLAN } from '@/lib/plans';
+import { PageHeader, SectionHeading, backLinkClass } from '@/components/ui/Page';
+import { Card } from '@/components/ui/Card';
+import { Badge, type Tone } from '@/components/ui/Badge';
+import { buttonClass, iconButtonClass } from '@/components/ui/Button';
+import { EmptyState } from '@/components/ui/Feedback';
+import { List, listRowInteractiveClass, rowChevronClass } from '@/components/ui/List';
+import { Progress } from '@/components/ui/Misc';
+import { cn } from '@/components/ui/cn';
 
 type CatalogTest = {
   id: string;
@@ -23,6 +49,10 @@ type CatalogTest = {
   moduleDurations: number[];
   maxAttempts: number;
   attemptsUsed: number;
+  /** Questions the test shows (its original's, for a copy). */
+  questionCount: number;
+  /** This student's best attempt, or null before the first. */
+  best: { score: number; correct: number | null } | null;
   isFree: boolean;
   visible: boolean;
   createdAt: string;
@@ -42,48 +72,36 @@ function readCatalogOlympiad(test: CatalogTest) {
   });
 }
 
-const OLYMPIAD_BADGE: Record<OlympiadStatus, string> = {
-  upcoming: 'Upcoming',
-  running: 'Live now',
-  finished: 'Finished',
+/** Amber only for the one pending state, an olympiad that has not opened yet. */
+const OLYMPIAD_BADGE: Record<OlympiadStatus, { label: string; tone: Tone }> = {
+  upcoming: { label: 'Upcoming', tone: 'warning' },
+  running: { label: 'Live now', tone: 'accent' },
+  finished: { label: 'Finished', tone: 'neutral' },
 };
 
 type PracticeCatalogProps = {
-  initialCategory: TestCategory | null;
   tests: CatalogTest[];
   collections: TestCollectionOption[];
   isPremium: boolean;
+  /** False while an admin has paused sales: a locked card then offers no unlock. */
+  salesOpen: boolean;
   isAdmin: boolean;
   accessibleCategories: string[];
   canDownloadPdf: boolean;
+  /** The course cards (CourseOverview), shown above the courses on the catalog's first view. */
+  overview?: ReactNode;
+  /** The first view's line under "Practice": it depends on what `overview` shows. */
+  description?: string;
 };
-
-function readCategoryFromUrl(collections: TestCollectionOption[]) {
-  if (typeof window === 'undefined') return null;
-
-  const set = new URLSearchParams(window.location.search).get('set') ?? undefined;
-  return findCategoryByQuery(collections, set);
-}
 
 function categoryToQuery(category: TestCategory | null) {
   return category ? `?set=${encodeURIComponent(getCategoryQueryValue(category))}` : '';
 }
 
-function getCollectionIcon(category: string) {
-  if (category === 'PLANCK') return Atom;
-  if (category === 'ADVANCED') return Sparkles;
-  if (category === 'STANDARD') return Layers3;
-  return FolderKanban;
-}
-
-function formatDuration(seconds: number) {
-  const minutes = Math.max(1, Math.round(seconds / 60));
-  if (minutes >= 60 && minutes % 60 === 0) {
-    const hours = minutes / 60;
-    return `${hours} ${hours === 1 ? 'hour' : 'hours'}`;
-  }
-
-  return `${minutes} min`;
+/** The limit as what is left, not as a fraction that reads like a score. */
+function formatAttemptsLeft(left: number) {
+  if (left <= 0) return 'No attempts left';
+  return `${left} ${left === 1 ? 'attempt' : 'attempts'} left`;
 }
 
 /**
@@ -111,9 +129,9 @@ function StartPracticeLink({ testId }: { testId: string }) {
       onMouseEnter={showIntent}
       onFocus={showIntent}
       onPointerDown={showIntent}
-      className="inline-flex items-center justify-center w-full py-4 px-6 rounded-2xl text-sm font-semibold text-white bg-slate-900 hover:bg-blue-600 transition-[background-color,transform] duration-200 active:scale-95 shadow-lg"
+      className={buttonClass()}
     >
-      Start Practice Module
+      Start test
     </Link>
   );
 }
@@ -121,32 +139,35 @@ function StartPracticeLink({ testId }: { testId: string }) {
 /**
  * Every attempt stays reviewable whatever happens to the card - the limit is
  * reached, the subscription runs out - so the way back to them is on the card
- * itself, not only in the dashboard's short Recent Activity list.
+ * itself. Outlined: as a ghost button it read as a plain caption under Start.
  */
 function PastResultsLink({ testId, attemptsUsed }: { testId: string; attemptsUsed: number }) {
   return (
     <Link
       href={`/dashboard/results?test=${encodeURIComponent(testId)}`}
-      className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-6 py-3 text-sm font-semibold text-slate-600 transition-[color,border-color] duration-200 hover:border-blue-200 hover:text-blue-600"
+      title="Review past attempts"
+      className={buttonClass({ variant: 'secondary' })}
     >
-      <ClipboardList className="h-4 w-4" />
-      Review past attempts
-      <span className="tabular-nums text-slate-400">({attemptsUsed})</span>
+      <History className="h-4 w-4" />
+      <span className="tabular-nums">
+        {attemptsUsed} {attemptsUsed === 1 ? 'attempt' : 'attempts'}
+      </span>
     </Link>
   );
 }
 
 export default function PracticeCatalog({
-  initialCategory,
   tests,
   collections,
   isPremium,
+  salesOpen,
   isAdmin,
   accessibleCategories,
   canDownloadPdf,
+  overview,
+  description: homeDescription,
 }: PracticeCatalogProps) {
   const [isPending, startTransition] = useTransition();
-  const [activeCategory, setActiveCategory] = useState<TestCategory | null>(initialCategory);
   const visibleCollections = useMemo(
     () => collections.filter((collection) => collection.visible),
     [collections]
@@ -156,11 +177,13 @@ export default function PracticeCatalog({
     [accessibleCategories]
   );
 
-  useEffect(() => {
-    const handlePopState = () => setActiveCategory(readCategoryFromUrl(visibleCollections));
-    window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
-  }, [visibleCollections]);
+  // The URL is the only record of the open collection. A copy in state kept
+  // the collection open when a link came back to this same page - the
+  // sidebar's Practice, the course card's "Open the course" - because a
+  // change of search params alone does not remount the page. Next feeds
+  // pushState and Back into useSearchParams, so all of them land here.
+  const searchParams = useSearchParams();
+  const activeCategory = findCategoryByQuery(visibleCollections, searchParams.get('set') ?? undefined);
 
   const testsByCategory = useMemo(() => {
     const grouped = new Map<TestCategory, CatalogTest[]>();
@@ -187,178 +210,195 @@ export default function PracticeCatalog({
   const effectiveActiveCategory = activeCollection?.value ?? null;
   const visibleTests = effectiveActiveCategory ? testsByCategory.get(effectiveActiveCategory) ?? [] : [];
 
+  // No server round trip: the catalog already holds every collection's tests.
   const switchCategory = (category: TestCategory | null) => {
     startTransition(() => {
-      setActiveCategory(category);
       window.history.pushState(null, '', `/dashboard${categoryToQuery(category)}`);
     });
   };
 
+  // The grids follow this column's width, not the viewport's: from md the
+  // sidebar takes 80-240px, so a viewport breakpoint would squeeze the cards.
+  // Three a row from 48rem: Start, the attempts link and the admin's PDF button
+  // fit on one line of a card that wide.
   return (
-    <div className="lg:col-span-3">
-      <header className="mb-10">
-        {effectiveActiveCategory ? (
-          <button
-            type="button"
-            onClick={() => switchCategory(null)}
-            className="mb-5 inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 transition hover:border-blue-200 hover:text-blue-600"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to collections
-          </button>
-        ) : null}
-        <h1 className="text-4xl font-black text-slate-900 tracking-tight">
-          {activeCollection ? activeCollection.label : 'Practice Center'}
-        </h1>
-        <p className="text-slate-500 mt-2 text-lg font-medium">
-          {activeCollection?.description || 'Choose a collection, then select the module you want to practice.'}
-        </p>
-      </header>
+    <div className="@container min-w-0 space-y-6">
+      <PageHeader
+        back={
+          effectiveActiveCategory ? (
+            <button type="button" onClick={() => switchCategory(null)} className={backLinkClass}>
+              <ArrowLeft className="h-4 w-4" />
+              Back to courses
+            </button>
+          ) : null
+        }
+        title={activeCollection ? activeCollection.label : 'Practice'}
+        description={activeCollection?.description || homeDescription || 'Choose a course, then a test.'}
+      />
+
+      {!effectiveActiveCategory && overview}
+      {!effectiveActiveCategory && overview && visibleCollections.length > 0 && (
+        // mb-3 replaces the 24px space-y step below the heading: it belongs to the list.
+        <SectionHeading title="All courses" className="mb-3" />
+      )}
 
       {!effectiveActiveCategory ? (
-        <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
-          {visibleCollections.map((collection) => {
-            const Icon = getCollectionIcon(collection.value);
-            const count = testsByCategory.get(collection.value)?.length ?? 0;
+        visibleCollections.length === 0 ? (
+          <EmptyState icon={<Layers3 />} title="No courses are open to you yet" />
+        ) : (
+          // Collections are records without actions of their own, so they are
+          // one List: the name, the whole description (it is what tells two
+          // collections apart), and how much of it the student has taken.
+          <List>
+            {visibleCollections.map((collection) => {
+              const collectionTests = testsByCategory.get(collection.value) ?? [];
+              const count = collectionTests.length;
+              const taken = collectionTests.filter((test) => test.attemptsUsed > 0).length;
 
-            return (
-              <button
-                key={collection.value}
-                type="button"
-                onClick={() => switchCategory(collection.value)}
-                disabled={isPending}
-                className="group relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-8 text-left shadow-sm transition-[transform,border-color] duration-300 hover:-translate-y-1 hover:border-blue-200 hover:shadow-2xl hover: disabled:cursor-wait disabled:opacity-80"
-              >
-                <div className="absolute right-0 top-0 h-40 w-40 rounded-bl-full bg-slate-50 transition-transform group-hover:scale-110"></div>
-                <div className="relative z-10">
-                  <div className="mb-8 flex items-start justify-between gap-4">
-                    {/* One treatment for every collection: the icon and the
-                        label carry the difference, not a rotating hue. */}
-                    <div className="rounded-2xl bg-blue-600 p-5 text-white">
-                      <Icon className="h-8 w-8" />
-                    </div>
-                    <span className="rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-medium uppercase tracking-widest text-slate-500">
-                      {count} {count === 1 ? 'test' : 'tests'}
+              return (
+                <li key={collection.value}>
+                  <button
+                    type="button"
+                    onClick={() => switchCategory(collection.value)}
+                    disabled={isPending}
+                    // No opacity while the switch is pending: a faded row reads
+                    // as broken, and the switch takes a frame, not a request.
+                    className={cn(listRowInteractiveClass, 'group w-full text-left disabled:cursor-wait')}
+                  >
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-sm font-medium text-mist-900">{collection.label}</span>
+                      {collection.description && (
+                        <span className="mt-0.5 line-clamp-2 text-xs text-mist-500 sm:line-clamp-1">
+                          {collection.description}
+                        </span>
+                      )}
                     </span>
-                  </div>
-                  <h2 className="text-3xl font-black tracking-tight text-slate-900">{collection.label}</h2>
-                  <p className="mt-3 min-h-14 text-base font-semibold leading-relaxed text-slate-500">
-                    {collection.description}
-                  </p>
-                  <div className="mt-8 inline-flex items-center gap-2 text-sm font-semibold text-blue-600">
-                    Open collection
-                    <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-                  </div>
-                </div>
-              </button>
-            );
-          })}
-
-          {visibleCollections.length === 0 && (
-            <div className="col-span-full rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 px-6 py-20 text-center">
-              <p className="font-semibold text-slate-400">No practice collections are available right now.</p>
-            </div>
-          )}
-        </div>
+                    <span className="w-24 shrink-0 text-right text-xs tabular-nums text-mist-500 sm:w-32">
+                      {taken > 0 ? (
+                        <>
+                          <Progress value={(taken / count) * 100} />
+                          <span className="mt-1 block">{taken} of {count} taken</span>
+                        </>
+                      ) : (
+                        `${count} ${count === 1 ? 'test' : 'tests'}`
+                      )}
+                    </span>
+                    <ChevronRight className={rowChevronClass} />
+                  </button>
+                </li>
+              );
+            })}
+          </List>
+        )
+      ) : visibleTests.length === 0 ? (
+        <EmptyState icon={<ClipboardList />} title="No tests in this course yet" description="Tests appear here when they are added." />
       ) : (
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+        // grid-cols-1 below @lg on purpose: without a template the implicit
+        // track is `auto` and grows to the longest unbroken line, which pushed
+        // the cards past the right edge of a phone.
+        <ul className="grid grid-cols-1 gap-4 @lg:grid-cols-2 @3xl:grid-cols-3">
           {visibleTests.map((test) => {
             const category = getTestCategory(test);
             const hasSectionAccess = Boolean(category && accessibleCategorySet.has(category));
             const canAccess = isAdmin || test.isFree || isPremium || hasSectionAccess;
             const attemptLimitReached = !isAdmin && test.attemptsUsed >= test.maxAttempts;
-            const canStart = canAccess && !attemptLimitReached;
+            // "Free" is the test's own mark (Test.isFree), not a plan; a paid
+            // test names the plan it comes with, as plans.ts spells it.
             const accessLabel = test.isFree
-              ? 'Free Access'
+              ? 'Free'
               : hasSectionAccess && !isPremium
-                ? 'Course Access'
-                : 'Premium';
-            const description = getTestDescription(test);
+                ? 'Course access'
+                : PREMIUM_PLAN.name;
+            // Only a description the test really has: the per-collection
+            // default repeated the collection's own description on every card.
+            const description = cleanTestDescription(test.description);
+            const moduleBadge = formatModuleBadge(test);
+            const olympiad = readCatalogOlympiad(test);
+            const olympiadStatus = olympiad ? getOlympiadStatus(olympiad) : null;
+            // A short check has no score worth comparing, so its best is a count.
+            const bestLabel = !test.best
+              ? null
+              : hasScoreEstimate(test.questionCount)
+                ? `Best ${test.best.score}`
+                : test.best.correct !== null
+                  ? `Best ${formatCorrectOf(test.best.correct, test.questionCount)}`
+                  : null;
 
+            // Compact card: title (+ one line of description), one line of
+            // facts, one row of actions. Access is the only pill; the rest are
+            // plain facts, so the card reads calmly.
             return (
-              <div
-                key={test.id}
-                className="bg-white rounded-2xl p-8 shadow-sm border border-slate-200 hover:shadow-lg hover: transition-[transform,border-color] duration-300 group relative overflow-hidden"
-              >
-                <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-bl-full -mr-16 -mt-16 transition-transform group-hover:scale-110"></div>
-
-                <div className="relative z-10">
-                  <div className="flex justify-between items-start mb-6">
-                    <div className={`p-4 rounded-2xl ${canStart ? 'bg-blue-600' : 'bg-slate-100'} text-white shadow-lg ${canStart ? '' : ''}`}>
-                      {canStart ? <LayoutDashboard className="w-6 h-6" /> : <Lock className="w-6 h-6 text-slate-400" />}
-                    </div>
-                    <div className="flex flex-col items-end gap-2">
-                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-[10px] font-medium uppercase tracking-widest border ${
-                        test.isFree
-                          ? 'bg-emerald-100 text-emerald-700 border-emerald-200'
-                          : 'bg-amber-100 text-amber-700 border-amber-200'
-                      }`}>
-                        {accessLabel}
-                      </span>
-                      <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[10px] font-medium uppercase tracking-widest text-slate-500">
-                        {formatDuration(test.durationSeconds)}
-                      </span>
-                      {formatModuleBadge(test) && (
-                        <span className="rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-[10px] font-medium uppercase tracking-widest text-blue-700">
-                          {formatModuleBadge(test)}
-                        </span>
-                      )}
-                      {(() => {
-                        const window = readCatalogOlympiad(test);
-                        if (!window) return null;
-                        const status = getOlympiadStatus(window);
-
-                        return (
-                          <span className={`inline-flex items-center gap-1 rounded-full border px-3 py-1 text-[10px] font-medium uppercase tracking-widest ${
-                            status === 'upcoming'
-                              ? 'border-amber-200 bg-amber-50 text-amber-700'
-                              : status === 'running'
-                                ? 'border-blue-200 bg-blue-50 text-blue-700'
-                                : 'border-slate-200 bg-white text-slate-500'
-                          }`}>
-                            <Trophy className="h-3 w-3" />
-                            {OLYMPIAD_BADGE[status]}
-                          </span>
-                        );
-                      })()}
-                      <span className={`inline-flex items-center gap-1 rounded-full border px-3 py-1 text-[10px] font-medium uppercase tracking-widest ${
-                        attemptLimitReached
-                          ? 'border-amber-200 bg-amber-100 text-amber-700'
-                          : 'border-slate-200 bg-white text-slate-500'
-                      }`}>
-                        <Repeat2 className="h-3 w-3" />
-                        {isAdmin ? 'Unlimited attempts' : `${test.attemptsUsed}/${test.maxAttempts} attempts`}
-                      </span>
-                    </div>
+              <Card as="li" key={test.id} className="flex min-w-0 flex-col gap-2.5 p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <h2 className="line-clamp-2 text-base font-semibold text-mist-900">{test.title}</h2>
+                    {description && <p className="mt-0.5 line-clamp-2 text-xs text-mist-500">{description}</p>}
                   </div>
+                  {!canAccess && <Lock className="mt-0.5 h-4 w-4 shrink-0 text-mist-500" role="img" aria-label="Locked" />}
+                </div>
 
-                  <h3 className="text-2xl font-semibold text-slate-900 mb-3">{test.title}</h3>
-                  <p className="text-slate-500 text-sm mb-8 font-medium leading-relaxed">
-                    {description}
-                  </p>
+                {/* Each fact is one unbreakable item with its own icon instead
+                    of a "·" between them: the line wraps between facts in a
+                    narrow card, and no separator is left hanging at either end. */}
+                <ul className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-mist-500">
+                  <li className="flex gap-1.5">
+                    <Badge tone={test.isFree ? 'accent' : 'neutral'}>{accessLabel}</Badge>
+                    {olympiadStatus && (
+                      <Badge tone={OLYMPIAD_BADGE[olympiadStatus].tone}>
+                        <Trophy />
+                        {OLYMPIAD_BADGE[olympiadStatus].label}
+                      </Badge>
+                    )}
+                  </li>
+                  {/* Both formats read right: "44 questions · 2 modules × 35 min"
+                      for a two-module test, "30 questions · 35 min" for one
+                      block on one timer. */}
+                  {test.questionCount > 0 && (
+                    <li className="inline-flex items-center gap-1 whitespace-nowrap tabular-nums">
+                      <ListOrdered className="h-3.5 w-3.5" aria-hidden />
+                      {test.questionCount} {test.questionCount === 1 ? 'question' : 'questions'}
+                    </li>
+                  )}
+                  <li className="inline-flex items-center gap-1 whitespace-nowrap tabular-nums">
+                    <Clock3 className="h-3.5 w-3.5" aria-hidden />
+                    {moduleBadge ?? formatDuration(test.durationSeconds)}
+                  </li>
+                  {/* A finished olympiad cannot be taken again, so attempts
+                      left would only read as an invitation it cannot keep. */}
+                  <li className="inline-flex items-center gap-1 whitespace-nowrap tabular-nums">
+                    {olympiad && olympiadStatus === 'finished' ? (
+                      <>
+                        <CalendarCheck className="h-3.5 w-3.5" aria-hidden />
+                        Ended {formatDate(olympiad.endsAt)}
+                      </>
+                    ) : (
+                      <>
+                        <RotateCcw className="h-3.5 w-3.5" aria-hidden />
+                        {isAdmin ? 'Unlimited attempts' : formatAttemptsLeft(test.maxAttempts - test.attemptsUsed)}
+                      </>
+                    )}
+                  </li>
+                  {bestLabel && (
+                    <li className="inline-flex items-center gap-1 whitespace-nowrap font-medium tabular-nums text-mist-700">
+                      <Award className="h-3.5 w-3.5" aria-hidden />
+                      {bestLabel}
+                    </li>
+                  )}
+                </ul>
 
+                <div className="mt-auto flex flex-wrap items-center gap-2 pt-1">
                   {canAccess ? (
-                    <div className="space-y-3">
-                      {attemptLimitReached ? (
-                        <button
-                          type="button"
-                          disabled
-                          className="inline-flex w-full cursor-not-allowed items-center justify-center rounded-2xl bg-slate-200 px-6 py-4 text-sm font-semibold text-slate-500"
-                        >
-                          Attempt limit reached
-                        </button>
-                      ) : readCatalogOlympiad(test) ? (
+                    <>
+                      {olympiad ? (
                         // An olympiad always goes through its own page first: the
                         // rules, the window and the ranking live there, and the
-                        // test itself is closed outside the window anyway.
-                        <Link
-                          href={`/olympiad/${test.id}`}
-                          className="inline-flex w-full items-center justify-center rounded-2xl bg-slate-900 px-6 py-4 text-sm font-semibold text-white shadow-lg transition-[background-color,transform] duration-200 hover:bg-blue-600 active:scale-95"
-                        >
-                          {getOlympiadStatus(readCatalogOlympiad(test)!) === 'finished'
-                            ? 'View results'
-                            : 'View olympiad'}
+                        // test itself is closed outside the window anyway. The
+                        // ranking stays worth opening after the last attempt.
+                        <Link href={`/olympiad/${test.id}`} className={buttonClass()}>
+                          {olympiadStatus === 'finished' ? 'See the ranking' : 'Open olympiad'}
                         </Link>
+                      ) : attemptLimitReached ? (
+                        <p className="text-sm font-medium text-mist-500">Attempt limit reached</p>
                       ) : (
                         <StartPracticeLink testId={test.id} />
                       )}
@@ -369,41 +409,39 @@ export default function PracticeCatalog({
                         <Link
                           href={`/exam/${test.id}/pdf`}
                           prefetch={false}
-                          className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-6 py-3 text-sm font-semibold text-slate-600 transition-[color,border-color] duration-200 hover:border-blue-200 hover:text-blue-600"
+                          aria-label="Download questions PDF"
+                          title="Download questions PDF"
+                          // md, level with Start and the attempts link beside it.
+                          className={iconButtonClass({ variant: 'secondary', className: 'ml-auto' })}
                         >
                           <FileDown className="h-4 w-4" />
-                          Download questions PDF
                         </Link>
                       )}
-                    </div>
+                    </>
                   ) : (
-                    <div className="space-y-4">
-                      <Link
-                        href="/dashboard/subscription"
-                        className="inline-flex items-center justify-center w-full py-4 px-6 rounded-2xl text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 transition-[background-color,transform] duration-200 active:scale-95 shadow-lg"
-                      >
-                        Unlock with Premium
-                      </Link>
-                      {test.attemptsUsed > 0 ? (
-                        <PastResultsLink testId={test.id} attemptsUsed={test.attemptsUsed} />
+                    <>
+                      {salesOpen ? (
+                        <Link
+                          href="/dashboard/subscription"
+                          className={buttonClass({ variant: 'secondary' })}
+                        >
+                          Unlock with {PREMIUM_PLAN.name}
+                        </Link>
                       ) : (
-                        <button disabled className="w-full py-3 text-xs font-medium text-slate-400 uppercase tracking-widest">
-                          Module Locked
-                        </button>
+                        // Paused by an admin: a calm fact beside the lock above,
+                        // never a link to a page with nothing to buy.
+                        <p className="text-sm text-mist-600">{PREMIUM_PLAN.name} is paused for now</p>
                       )}
-                    </div>
+                      {test.attemptsUsed > 0 && (
+                        <PastResultsLink testId={test.id} attemptsUsed={test.attemptsUsed} />
+                      )}
+                    </>
                   )}
                 </div>
-              </div>
+              </Card>
             );
           })}
-
-          {visibleTests.length === 0 && (
-            <div className="col-span-full py-20 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200 text-center">
-              <p className="text-slate-400 font-semibold">No tests available yet. Check back later!</p>
-            </div>
-          )}
-        </div>
+        </ul>
       )}
     </div>
   );

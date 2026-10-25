@@ -1,25 +1,47 @@
 @import "tailwindcss";
 
-/* The palette is Tailwind's own scale, narrowed to five families — see
-   AGENTS.md, "Design system". Components write `bg-blue-600` / `text-red-600`
-   directly; there is deliberately no parallel token vocabulary for them,
-   because the previous one (`--color-accent`, `--color-surface`, …) drifted out
-   of sync with the classes actually in use and nothing noticed.
-   What stays here is what CSS itself needs: the page ground, and the accent
-   that the component classes further down tint their shadows with. */
-:root {
-  --background: #f8fafc;   /* slate-50  */
-  --foreground: #0f172a;   /* slate-900 */
-  --accent: #2563eb;       /* blue-600 — keep in step with the classes  */
-}
+/* The palette is "Board" — see AGENTS.md, "Design system". Components write
+   `bg-board-600` / `text-mist-600` / `text-red-600` directly; there is
+   deliberately no parallel token vocabulary for them, because the previous one
+   (`--color-accent`, `--color-surface`, …) drifted out of sync with the classes
+   actually in use and nothing noticed.
+   Four of the five families are Tailwind's own scales (mist, lime, amber,
+   red). The accent is not: no Tailwind hue is the classroom-board green the
+   owner chose, so `board` is defined below as one more scale of the same
+   shape, 50–950, so it is used exactly like the built-in ones.
+   The few colours CSS itself needs below (page ground, text, selection,
+   scrollbar) read the scales' own variables, `var(--color-mist-900)` and so
+   on, never hex copies. */
 
 @theme inline {
-  --font-sans: var(--font-jakarta), sans-serif;
+  --font-sans: var(--font-fira-sans), "Segoe UI", Roboto, "Noto Sans", Arial, sans-serif;
 }
 
+/* Board: a deep classroom-board green. One hue (177.5) through the whole
+   scale; 600 is the accent (#0E6657 in the plan, white text 6.9:1), 700 its
+   hover and the text on 50, 950 the sidebar. */
+@theme {
+  --color-board-50: oklch(95.3% 0.018 177.5);
+  --color-board-100: oklch(90.5% 0.03 177.5);
+  --color-board-200: oklch(83.5% 0.046 177.5);
+  --color-board-300: oklch(74.5% 0.064 177.5);
+  --color-board-400: oklch(64% 0.079 177.5);
+  --color-board-500: oklch(54.5% 0.086 177.5);
+  --color-board-600: oklch(45.8% 0.081 177.5);
+  --color-board-700: oklch(38.8% 0.067 177.5);
+  --color-board-800: oklch(33.2% 0.056 177.5);
+  --color-board-900: oklch(30.5% 0.05 177.5);
+  --color-board-950: oklch(25.5% 0.044 177.5);
+}
+
+/* `collapsed:` — styles for the icon-only desktop sidebar. The attribute is set
+   on <html> by the shell's inline script and by SidebarToggle; see
+   src/components/layout/sidebarState.ts. */
+@custom-variant collapsed (&:where([data-sidebar="collapsed"] *));
+
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background: var(--color-mist-50);
+  color: var(--color-mist-900);
 }
 
 /* ═══════════════════════════════════════════════
@@ -33,166 +55,32 @@ body {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+  background: var(--color-mist-300);
   border-radius: 999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  background: var(--color-mist-400);
 }
 
 /* ═══════════════════════════════════════════════
-   ANIMATIONS
+   ANIMATION
    ═══════════════════════════════════════════════ */
-@keyframes fade-in-up {
-  from {
-    opacity: 0;
-    transform: translateY(24px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes fade-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@keyframes scale-in {
-  from {
-    opacity: 0;
-    transform: scale(0.92);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-@keyframes count-up {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-/* Exam calculator panel. Its slot is already reserved by the flex layout when
-   it opens, so the panel only translates inside it — `transform` is
-   compositable and costs no layout. The panel's container is
-   `overflow-hidden`, so the off-screen start position adds no scrollbar. */
-@keyframes slide-in-right {
-  from { transform: translateX(100%); }
-  to { transform: translateX(0); }
-}
-
-.animate-fade-in-up {
-  animation: fade-in-up 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
-
-.animate-fade-in {
-  animation: fade-in 0.5s ease forwards;
-}
-
-.animate-scale-in {
-  animation: scale-in 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
-
-.animate-count-up {
-  animation: count-up 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
-
-.animate-slide-in-right {
-  animation: slide-in-right 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
-
-/* Respect the OS "reduce motion" setting: no animation, and never leave
-   animated content stuck at the keyframe's initial opacity: 0. */
-@media (prefers-reduced-motion: reduce) {
-  .animate-fade-in-up,
-  .animate-fade-in,
-  .animate-scale-in,
-  .animate-count-up,
-  .animate-slide-in-right {
-    animation: none !important;
-    opacity: 1 !important;
-  }
-}
-
-/* Staggered delay helpers */
-.delay-100 { animation-delay: 0.1s; }
-.delay-200 { animation-delay: 0.2s; }
-.delay-300 { animation-delay: 0.3s; }
-.delay-400 { animation-delay: 0.4s; }
-.delay-500 { animation-delay: 0.5s; }
-.delay-600 { animation-delay: 0.6s; }
-.delay-700 { animation-delay: 0.7s; }
-.delay-800 { animation-delay: 0.8s; }
+/* No app-wide animations. Page content no longer fades or slides in, and
+   cards no longer lift on hover (.card-hover, .btn-primary and the fade/scale/
+   count-up utilities are gone): hover is a colour change, per AGENTS.md. The
+   exam calculator is a floating window now, so its slide-in went too; the
+   landing's motion lives in src/components/landing/landing.module.css. */
 
 /* The frosted-panel, gradient and noise-overlay utilities that used to live
-   here are gone. Panels are plain surfaces with a slate border; depth comes
-   from the elevation scale below, not from tinted translucency. */
-
-/* ═══════════════════════════════════════════════
-   INTERACTIVE CARD EFFECTS
-   ═══════════════════════════════════════════════ */
-/* `box-shadow` is not a compositable property: animating it repaints the whole
-   card on every frame. The shadow lives on an always-present pseudo-element
-   instead, and only its `opacity` is animated.
-   NB: the host element must not be `overflow: hidden`, or the pseudo-element's
-   outer shadow gets clipped away. */
-.card-hover {
-  position: relative;
-  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-}
-.card-hover::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  pointer-events: none;
-  opacity: 0;
-  box-shadow: 0 20px 40px -12px color-mix(in srgb, var(--foreground) 10%, transparent),
-              0 8px 16px -8px color-mix(in srgb, var(--foreground) 6%, transparent);
-  transition: opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-}
-.card-hover:hover {
-  transform: translateY(-4px);
-}
-.card-hover:hover::after {
-  opacity: 1;
-}
-
-/* ═══════════════════════════════════════════════
-   BUTTON INTERACTION
-   ═══════════════════════════════════════════════ */
-.btn-primary {
-  position: relative;
-  transition: transform 0.15s ease;
-}
-/* Hover shadow as an opacity fade — see the note on .card-hover. */
-.btn-primary::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  pointer-events: none;
-  opacity: 0;
-  box-shadow: 0 8px 24px -4px color-mix(in srgb, var(--accent) 35%, transparent);
-  transition: opacity 0.3s ease;
-}
-.btn-primary:hover {
-  transform: translateY(-1px);
-}
-.btn-primary:hover::before {
-  opacity: 1;
-}
-.btn-primary:active {
-  transform: translateY(0) scale(0.98);
-}
+   here are gone. Panels are plain surfaces with a mist border; depth comes
+   from the elevation scale in AGENTS.md, not from tinted translucency. */
 
 /* ═══════════════════════════════════════════════
    SELECTION
    ═══════════════════════════════════════════════ */
+/* board-100, a step of the scale rather than a mix; mist-900 text stays well
+   readable on it. */
 ::selection {
-  background: color-mix(in srgb, var(--accent) 15%, transparent);
-  color: var(--foreground);
+  background: var(--color-board-100);
+  color: var(--color-mist-900);
 }
