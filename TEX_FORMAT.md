@@ -1,6 +1,13 @@
 # TEX Question Import Format
 
-This project imports practice questions from `.tex` files using one canonical structure. The importer preserves LaTeX math and validates every math fragment with KaTeX before saving the test.
+This project imports practice questions from `.tex` files using one canonical structure. The importer preserves LaTeX math and validates every math fragment with KaTeX before saving.
+
+A file goes in through either of two doors, and both store every question in the question bank:
+
+- **Question bank → Upload questions** puts the questions in the bank only.
+- **A course → Tests → Import test** makes a test from the file, and also puts every question in the bank, linked to the test.
+
+So every question needs a domain and a difficulty (see [Question bank tags](#question-bank-tags)). A ready file to start from is [`TEX_TEMPLATE.tex`](TEX_TEMPLATE.tex).
 
 ## Supported structure
 
@@ -8,6 +15,8 @@ Each question must use a `question` environment:
 
 ```tex
 \begin{question}
+  \domain{advanced-math}
+  \difficulty{2}
   \content{The function \( f(x) = x^2 - 4x + 3 \). What is \( f(5) \)?}
   \image{example.png}
   \options{
@@ -20,6 +29,8 @@ Each question must use a `question` environment:
 \end{question}
 ```
 
+The order of the tags inside a block does not matter.
+
 ## Required tags
 
 - `\content{...}`: required. Main question text.
@@ -31,6 +42,45 @@ Each question must use a `question` environment:
 
 - `\image{file-name.png}`: optional. Image filename that matches one of the uploaded files.
 - `\options{...}`: optional. If omitted, the question is treated as a student-produced response.
+- `\domain{...}` and `\difficulty{...}`: optional in the file, but every question must have both before it is saved. A question without them is tagged on the import screen; see below.
+
+## Question bank tags
+
+Each question carries one SAT Math domain and one difficulty, the way the College Board's educator question bank sorts them. The bank is searched by them, and a test can be built from the bank by them. Students never see them.
+
+### `\domain{...}`
+
+Write the domain's value, its College Board name, or a short name:
+
+| Domain | You can write |
+|---|---|
+| Algebra | `algebra`, `alg` |
+| Advanced Math | `advanced-math`, `Advanced Math`, `advanced`, `am` |
+| Problem-Solving and Data Analysis | `problem-solving`, `Problem-Solving and Data Analysis`, `data analysis`, `psda` |
+| Geometry and Trigonometry | `geometry-trig`, `Geometry and Trigonometry`, `geometry`, `trigonometry`, `trig`, `gt` |
+
+Case does not matter, and neither do spaces, dashes, underscores, `&`, commas, dots or the word "and": `Geometry & Trig`, `geometry-and-trigonometry` and `GEOMETRY` are the same tag.
+
+### `\difficulty{...}`
+
+| Difficulty | You can write |
+|---|---|
+| Easy | `1`, `easy` |
+| Medium | `2`, `medium` |
+| Hard | `3`, `hard` |
+
+Case does not matter: `Hard` and `hard` are the same.
+
+### When a tag is missing or wrong
+
+- Nothing fails while the file is read. The import screen lists every question with a domain picker and a difficulty switch, already set from the file's tags.
+- A question with no tag, or with empty braces such as `\domain{}` left from the template, has them unset.
+- A tag that names nothing the bank knows is shown in red under the picker, for example "Unknown domain 'calculus'" or "Unknown difficulty '4'".
+- "Set the N questions without a domain to …" (and the same for difficulty) fills every unset question at once; the odd ones are then changed in their rows.
+- The import button stays off until every question has both.
+- A pick on the screen wins over what the file says.
+
+Tagging in the file saves that work, and the tags then travel with the file.
 
 ## Math formatting rules
 
@@ -210,6 +260,7 @@ For open numeric answers, omit `\options{...}`:
 - Keep prose outside math mode whenever possible.
 - Use plain answer values for grid-in questions, for example `12`, `96`, `\dfrac{292}{3}`.
 - Use `\%` for a literal percent sign. A plain `%` starts a comment and the importer ignores the rest of that line.
+- Use `\$` for a literal dollar sign, as in `costs \$40`. A plain `$` opens inline math.
 - Use `\{` and `\}` for literal braces inside text.
 
 ## Parser validation
@@ -220,8 +271,11 @@ The importer reads:
 2. optional `\image{...}`
 3. optional `\options{...}`
 4. `\answer{...}`
+5. optional `\domain{...}` and `\difficulty{...}`
 
-Before saving the test, it checks:
+Anything else inside a block (an explanation, a source note) is ignored. Explanations are written in the admin editor after the import, and students never see them.
+
+Before saving, it checks:
 
 - every question has content and an answer;
 - multiple-choice answers point to an existing option;
@@ -229,6 +283,7 @@ Before saving the test, it checks:
 - a list of answer letters belongs to a question that has options;
 - option blocks contain at least two options;
 - math delimiters are closed;
-- formulas are valid KaTeX.
+- formulas are valid KaTeX;
+- every question has a domain and a difficulty, from the file or picked on the import screen.
 
 If you keep to this format, the converter will stay predictable and the rendered questions will display math correctly in both the test view and the review view.

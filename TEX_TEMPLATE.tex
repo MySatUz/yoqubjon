@@ -1,0 +1,90 @@
+% MYSATuz — шаблон файла с вопросами.
+% Формат описан в TEX_FORMAT.md и TWO_MODULE_FORMAT.md.
+%
+% Файл загружается одним из двух способов:
+%   - Question bank → Upload questions: только в банк вопросов;
+%   - курс → Tests → Import test: тест в курсе, и каждый вопрос тоже в банк.
+%
+% У каждого вопроса два тега для банка:
+%   \domain{...}      algebra | advanced-math | problem-solving | geometry-trig
+%                     (можно короче: alg, am, psda, trig — см. TEX_FORMAT.md)
+%   \difficulty{...}  1 | 2 | 3   (или easy | medium | hard)
+% Если тег не указан, его выбирают на экране проверки перед загрузкой.
+%
+% Модули: \module{1}, \module{2}. Для теста одним блоком (один таймер)
+% строки \module{...} просто удалите.
+%
+% Знак % начинает комментарий. Обычный процент в тексте пишите как \%.
+
+\module{1}
+
+% Один правильный ответ
+\begin{question}
+  \domain{algebra}
+  \difficulty{1}
+  \content{If \( 3x + 5 = 20 \), what is the value of \( x \)?}
+  \options{
+    A: 3
+    B: 5
+    C: 15
+    D: 25
+  }
+  \answer{B}
+\end{question}
+
+% Несколько правильных ответов: буквы через запятую
+\begin{question}
+  \domain{advanced-math}
+  \difficulty{2}
+  \content{Which values of \( x \) satisfy \( x^2 - 5x + 6 = 0 \)? Select all that apply.}
+  \options{
+    A: 1
+    B: 2
+    C: 3
+    D: 6
+  }
+  \answer{B, C}
+\end{question}
+
+% Вопрос со своим ответом (grid-in): без \options
+\begin{question}
+  \domain{problem-solving}
+  \difficulty{easy}
+  \content{A shirt costs \$40 and is on sale for 25\% off. What is the sale price, in dollars?}
+  \answer{30}
+\end{question}
+
+\module{2}
+
+% Картинка: имя файла точь-в-точь как у загружаемого изображения
+\begin{question}
+  \domain{geometry-trig}
+  \difficulty{3}
+  \content{In a right triangle the legs are \( 6 \) and \( 8 \). What is the length of the hypotenuse?}
+  % \image{triangle-01.png}
+  \options{
+    A: 10
+    B: 12
+    C: 14
+    D: 48
+  }
+  \answer{A}
+\end{question}
+
+% Таблица — через array внутри \[ ... \], не tabular
+\begin{question}
+  \domain{psda}
+  \difficulty{hard}
+  \content{
+    The table shows values of \( x \) and \( f(x) \) for a linear function \( f \).
+    \[
+    \begin{array}{c|cccc}
+    x & 1 & 2 & 3 & 4\\
+    \hline
+    f(x) & 3 & 7 & 11 & 15
+    \end{array}
+    \]
+    What is \( f(10) \)?
+  }
+  \answer{39}
+\end{question}
