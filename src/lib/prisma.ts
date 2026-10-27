@@ -13,6 +13,14 @@ const globalForPrisma = globalThis as unknown as { prisma: PrismaClient };
  *
  * At 5, nine instances fit. A page that runs more queries at once (the
  * dashboard runs nine) waits a moment for a free connection instead.
+ *
+ * Since the same day production connects through Prisma Postgres's pooler
+ * (`pooled.db.prisma.io`, PgBouncer in transaction mode, `pgbouncer=true`),
+ * which allows 500 connections; this cap stays as a guard. The advisory locks
+ * are all `pg_advisory_xact_lock` inside interactive transactions, which hold
+ * one server connection to the end, so the pooler keeps them working; a
+ * session-level lock would not survive it. Migrations still need the direct
+ * host (`db.prisma.io`), which the local .env keeps. See PERF_PLAN.md §12.
  */
 const VERCEL_CONNECTION_LIMIT = 5;
 
