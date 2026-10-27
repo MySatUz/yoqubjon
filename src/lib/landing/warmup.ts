@@ -20,8 +20,28 @@ export const PER_QUESTION_SECONDS = 95;
 /** Shared links point at the production domain, never at a preview deploy. */
 export const SITE_URL = 'https://www.slope.uz';
 
-/** Support contact, the same one the footer lists for Mr Mardon. */
-export const TELEGRAM_URL = 'https://t.me/Abd_mardon';
+/** Support contact, the same one the footer lists for Mr Yoqubjon. */
+export const TELEGRAM_URL = 'https://t.me/Yokubjon_Isaqjonov';
+export const TELEGRAM_HANDLE = `@${TELEGRAM_URL.slice('https://t.me/'.length)}`;
+
+/**
+ * Sent on window by the landing's phone menu (SiteNav) as it opens (detail
+ * true) and closes: the warm-up clock stops while the menu covers its card.
+ */
+export const SITE_MENU_EVENT = 'mysat:site-menu';
+
+/** The free offer's one name, on every button that signs a visitor up. */
+export const FREE_OFFER_CTA = 'Start my free test';
+
+/**
+ * The free offer counted (countFreeTests in freeTests.ts reads the number):
+ * "3 free timed Math tests." The short form, "3 free tests.", is for the
+ * phone's bottom bar.
+ */
+export function freeTestsPhrase(count: number, short = false) {
+  const noun = count === 1 ? 'test' : 'tests';
+  return short ? `${count} free ${noun}.` : `${count} free timed Math ${noun}.`;
+}
 
 /* ─────────────────────────────── questions ─────────────────────────────── */
 

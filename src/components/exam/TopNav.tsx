@@ -122,7 +122,7 @@ export default function TopNav({ testId, title, modules, canDraw = false, refere
 
   return (
     <>
-      <header className="sticky top-0 z-50 flex h-14 shrink-0 items-center justify-between gap-2 border-b border-mist-200 bg-white px-2 sm:px-4 lg:px-6">
+      <header className="sticky top-0 z-50 flex h-14 shrink-0 items-center justify-between gap-2 border-b border-gray-200 bg-white px-2 sm:px-4 lg:px-6">
         {/* Where the student is, in words: "Module 1 of 2" on every screen
             size, with the test under it. Kept clear of the centred clock. */}
         <div className="flex min-w-0 flex-1 items-center gap-3 sm:max-w-[calc(50%-5.5rem)]">
@@ -131,14 +131,14 @@ export default function TopNav({ testId, title, modules, canDraw = false, refere
           </span>
           <div className="min-w-0 leading-tight">
             {moduleCount > 1 && (
-              <p className="truncate text-sm font-semibold tabular-nums text-mist-900">
+              <p className="truncate text-sm font-semibold tabular-nums text-gray-900">
                 Module {shownModuleIndex} of {moduleCount}
               </p>
             )}
             <h1
               className={cn(
                 'truncate',
-                moduleCount > 1 ? 'mt-0.5 text-xs text-mist-500' : 'text-sm font-semibold text-mist-900'
+                moduleCount > 1 ? 'mt-0.5 text-xs text-gray-500' : 'text-sm font-semibold text-gray-900'
               )}
             >
               {title}
@@ -156,10 +156,10 @@ export default function TopNav({ testId, title, modules, canDraw = false, refere
               'inline-flex h-9 items-center justify-center gap-1.5 rounded-lg text-lg font-semibold tabular-nums transition-colors',
               showsTime ? 'px-3' : 'w-9',
               isPaused
-                ? 'text-mist-500'
+                ? 'text-gray-500'
                 : isLowTime
                   ? 'bg-amber-50 text-amber-800'
-                  : 'bg-mist-100 text-mist-900'
+                  : 'bg-gray-100 text-gray-900'
             )}
           >
             {showsTime ? (

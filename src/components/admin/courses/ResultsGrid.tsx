@@ -42,7 +42,7 @@ function Cell({ row, column }: { row: ResultsGridRow; column: Column }) {
   if (!cell || !row.userId) {
     return (
       <>
-        <span aria-hidden className="text-mist-500">—</span>
+        <span aria-hidden className="text-gray-500">—</span>
         <span className="sr-only">No result</span>
       </>
     );
@@ -56,7 +56,7 @@ function Cell({ row, column }: { row: ResultsGridRow; column: Column }) {
       aria-label={`${displayName(row)}, ${column.title}, ${cell.value}${cell.attempts > 1 ? `, ${cell.attempts} attempts` : ''}, open their results`}
     >
       {cell.value}
-      {cell.attempts > 1 && <span className="ml-1 text-xs text-mist-500">×{cell.attempts}</span>}
+      {cell.attempts > 1 && <span className="ml-1 text-xs text-gray-500">×{cell.attempts}</span>}
     </Link>
   );
 }
@@ -81,13 +81,13 @@ function OthersToggle({
       onClick={onToggle}
       aria-expanded={isOpen}
       className={cn(
-        'inline-flex items-center gap-1.5 text-sm font-medium text-mist-700 hover:text-mist-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-board-600',
+        'inline-flex items-center gap-1.5 text-sm font-medium text-gray-700 hover:text-gray-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink-600',
         className,
       )}
     >
       {isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
       Others with results ({total})
-      {total > shown && isOpen && <span className="font-normal text-mist-500">, first {shown} by name</span>}
+      {total > shown && isOpen && <span className="font-normal text-gray-500">, first {shown} by name</span>}
     </button>
   );
 }
@@ -98,9 +98,9 @@ function PhoneRow({ row, test, todayKey }: { row: ResultsGridRow; test: Column |
   const content = (
     <>
       <div className="min-w-0 flex-1"><RowHeader row={row} todayKey={todayKey} /></div>
-      <span className="shrink-0 text-sm tabular-nums text-mist-900">
-        {cell ? cell.value : <span className="text-mist-500">—</span>}
-        {cell && cell.attempts > 1 && <span className="ml-1 text-xs text-mist-500">×{cell.attempts}</span>}
+      <span className="shrink-0 text-sm tabular-nums text-gray-900">
+        {cell ? cell.value : <span className="text-gray-500">—</span>}
+        {cell && cell.attempts > 1 && <span className="ml-1 text-xs text-gray-500">×{cell.attempts}</span>}
       </span>
     </>
   );
@@ -108,7 +108,7 @@ function PhoneRow({ row, test, todayKey }: { row: ResultsGridRow; test: Column |
   return (
     <li>
       {cell && row.userId ? (
-        <Link href={`/admin/users/${row.userId}`} prefetch={false} className="group flex min-h-14 items-center gap-3 px-4 py-3 transition-colors hover:bg-mist-50 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-board-600">
+        <Link href={`/admin/users/${row.userId}`} prefetch={false} className="group flex min-h-14 items-center gap-3 px-4 py-3 transition-colors hover:bg-gray-50 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ink-600">
           {content}
           <ChevronRight aria-hidden className={rowChevronClass} />
         </Link>
@@ -122,10 +122,10 @@ function PhoneRow({ row, test, todayKey }: { row: ResultsGridRow; test: Column |
 function RowHeader({ row, todayKey }: { row: ResultsGridRow; todayKey: string }) {
   return (
     <div className="min-w-0">
-      <p className={cn('truncate font-medium', row.group === 'ended' ? 'text-mist-500' : 'text-mist-900')}>{displayName(row)}</p>
+      <p className={cn('truncate font-medium', row.group === 'ended' ? 'text-gray-500' : 'text-gray-900')}>{displayName(row)}</p>
       <div className="flex flex-wrap items-center gap-1">
         {row.group === 'ended' && row.endedKey && (
-          <span className="text-xs text-mist-500">Access ended {formatDateKey(row.endedKey, todayKey)}</span>
+          <span className="text-xs text-gray-500">Access ended {formatDateKey(row.endedKey, todayKey)}</span>
         )}
         {row.group !== 'ended' && row.account !== 'confirmed' && (
           <Badge tone={row.account === 'waiting' ? 'warning' : 'neutral'}>{ACCOUNT_STATE_LABELS[row.account]}</Badge>
@@ -248,8 +248,8 @@ export default function ResultsGrid({
               ))}
             </Select>
           </div>
-          {/* On the mist-100 canvas, where mist-500 misses AA. */}
-          <p aria-live="polite" className="pb-2 text-sm tabular-nums text-mist-600">{countLine}</p>
+          {/* On the gray-100 canvas, where gray-500 misses AA. */}
+          <p aria-live="polite" className="pb-2 text-sm tabular-nums text-gray-600">{countLine}</p>
         </div>
         <div className="flex items-center gap-2">
           <a href={csvHref} className={buttonClass({ variant: 'secondary' })}>
@@ -263,18 +263,18 @@ export default function ResultsGrid({
         </div>
       </div>
 
-      <p className="flex items-center gap-2 text-xs text-mist-600">
+      <p className="flex items-center gap-2 text-xs text-gray-600">
         <Laptop aria-hidden className="h-4 w-4 shrink-0" />
         Tests in progress on a student&apos;s device are not visible until they are submitted.
       </p>
 
       <div aria-live="polite">
         {copy.status === 'copied' && (
-          <p className="text-sm text-mist-600">{copy.count === 1 ? '1 name copied' : `${copy.count} names copied`}</p>
+          <p className="text-sm text-gray-600">{copy.count === 1 ? '1 name copied' : `${copy.count} names copied`}</p>
         )}
         {copy.status === 'blocked' && (
           <div className="space-y-1.5">
-            <p className="text-sm text-mist-600">Copying is blocked in this browser. Select the names below and copy them.</p>
+            <p className="text-sm text-gray-600">Copying is blocked in this browser. Select the names below and copy them.</p>
             <textarea readOnly value={copy.text} rows={3} className={textareaClass()} aria-label="Names to copy" />
           </div>
         )}
@@ -326,7 +326,7 @@ export default function ResultsGrid({
             {shownOthers.length > 0 && (
               <tbody className="[&>tr:last-child>*]:border-b-0">
                 <tr>
-                  <td colSpan={columns.length + 1} className={cn(tdClass, 'bg-mist-50 py-2')}>
+                  <td colSpan={columns.length + 1} className={cn(tdClass, 'bg-gray-50 py-2')}>
                     <OthersToggle
                       isOpen={isOthersOpen}
                       onToggle={toggleOthers}

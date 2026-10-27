@@ -148,7 +148,7 @@ export default async function AdminCoursesPage() {
               {/* Only when something waits; a bell with nothing behind it would be one more thing to check. */}
               {attentionCount > 0 && (
                 <AttentionButton count={attentionCount}>
-                  <ul className="divide-y divide-mist-100">
+                  <ul className="divide-y divide-gray-100">
               {pendingPayments > 0 && (
                 <li>
                   <Link href="/dashboard/subscription#payments" className={cn(listRowInteractiveClass, 'group')}>
@@ -174,7 +174,7 @@ export default async function AdminCoursesPage() {
                     >
                       {row.course.label}
                     </Link>
-                    <p className="mt-0.5 text-xs text-mist-500">
+                    <p className="mt-0.5 text-xs text-gray-500">
                       Access ends for {plural(row.ending.length, 'student', 'students')}
                       {row.lastEndingKey && ` by ${formatDateKey(row.lastEndingKey, todayKey)}`}
                     </p>
@@ -205,7 +205,7 @@ export default async function AdminCoursesPage() {
                 </li>
               ))}
               {hiddenRecentCount > hiddenRecent.length && (
-                <li className={cn(listRowClass, 'text-xs text-mist-500')}>
+                <li className={cn(listRowClass, 'text-xs text-gray-500')}>
                   {plural(hiddenRecentCount - hiddenRecent.length, 'more hidden test', 'more hidden tests')} added in the last {RECENT_HIDDEN_DAYS} days
                 </li>
               )}
@@ -272,7 +272,7 @@ export default async function AdminCoursesPage() {
                       </td>
                       <td className={cn(numericTdClass, 'whitespace-nowrap')}>
                         {row.testCount}
-                        {row.hiddenCount > 0 && <span className="text-mist-500"> · {row.hiddenCount} hidden</span>}
+                        {row.hiddenCount > 0 && <span className="text-gray-500"> · {row.hiddenCount} hidden</span>}
                       </td>
                       <td className={numericTdClass}>{row.withAccess}</td>
                       <td className={tdClass}>
@@ -290,8 +290,8 @@ export default async function AdminCoursesPage() {
                 <li key={row.course.value}>
                   <Link href={courseHref(row.course.value)} className={cn(listRowInteractiveClass, 'group')}>
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium text-mist-900">{row.course.label}</p>
-                      <p className="mt-0.5 text-xs text-mist-500">
+                      <p className="truncate text-sm font-medium text-gray-900">{row.course.label}</p>
+                      <p className="mt-0.5 text-xs text-gray-500">
                         {row.course.visible ? 'Visible' : 'Hidden'} · {plural(row.testCount, 'test', 'tests')} · {row.withAccess} with access
                       </p>
                     </div>

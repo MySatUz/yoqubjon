@@ -67,7 +67,7 @@ export function TexImportPreview({
 
   if (state.status === 'checking') {
     return (
-      <p role="status" className="inline-flex items-center gap-2 text-sm text-mist-600">
+      <p role="status" className="inline-flex items-center gap-2 text-sm text-gray-600">
         <Loader2 className="h-4 w-4 animate-spin" />
         Checking the questions in {state.fileName}…
       </p>
@@ -112,8 +112,8 @@ export function TexImportPreview({
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-        <p className="text-sm text-mist-700">
-          <span className="font-medium text-mist-900">{plural(questions.length, 'question')}</span>
+        <p className="text-sm text-gray-700">
+          <span className="font-medium text-gray-900">{plural(questions.length, 'question')}</span>
           {' '}in {result.fileName} · {tagged === questions.length
             ? 'all tagged in the file'
             : `${tagged} tagged in the file`}
@@ -137,9 +137,9 @@ export function TexImportPreview({
       {(withoutDomain > 0 || withoutDifficulty > 0) && (
         // The quick way through a file without tags: everything still
         // unsorted gets one value, and the odd ones are changed in their rows.
-        <div className="flex flex-wrap items-center gap-x-6 gap-y-3 rounded-xl bg-mist-50 px-3.5 py-3">
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-3 rounded-xl bg-gray-50 px-3.5 py-3">
           {withoutDomain > 0 && (
-            <div className="flex flex-wrap items-center gap-2 text-sm text-mist-700">
+            <div className="flex flex-wrap items-center gap-2 text-sm text-gray-700">
               <span id={`${helperId}-domain`}>Set the {plural(withoutDomain, 'question')} without a domain to</span>
               <Select
                 aria-labelledby={`${helperId}-domain`}
@@ -158,7 +158,7 @@ export function TexImportPreview({
             </div>
           )}
           {withoutDifficulty > 0 && (
-            <div className="flex flex-wrap items-center gap-2 text-sm text-mist-700">
+            <div className="flex flex-wrap items-center gap-2 text-sm text-gray-700">
               <span>Set the {plural(withoutDifficulty, 'question')} without a difficulty to</span>
               {BANK_DIFFICULTIES.map((difficulty) => (
                 <Button
@@ -178,7 +178,7 @@ export function TexImportPreview({
 
       {/* Scrolls inside its own frame: a 44-question file would otherwise
           push the rest of the form a page down. */}
-      <div className="max-h-112 overflow-auto rounded-xl border border-mist-200">
+      <div className="max-h-112 overflow-auto rounded-xl border border-gray-200">
         <table className={tableClass}>
           <thead>
             <tr>
@@ -233,16 +233,16 @@ function PreviewRow({
 
   return (
     <tr className="align-top">
-      <td className={cn(tdClass, 'tabular-nums text-mist-500')}>{question.order}</td>
+      <td className={cn(tdClass, 'tabular-nums text-gray-500')}>{question.order}</td>
       {showModules && <td className={cn(tdClass, 'tabular-nums')}>{module ?? '—'}</td>}
       <td className={tdClass}>
         <div className="min-w-56 max-w-md space-y-1">
           <div
-            className="line-clamp-2 text-mist-800"
-            dangerouslySetInnerHTML={{ __html: question.previewHtml || '<span class="text-mist-500">Image only</span>' }}
+            className="line-clamp-2 text-gray-800"
+            dangerouslySetInnerHTML={{ __html: question.previewHtml || '<span class="text-gray-500">Image only</span>' }}
           />
           {(question.image || question.kind !== 'choice') && (
-            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-mist-500">
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-gray-500">
               <KindBadge kind={question.kind} />
               {question.image && (
                 imageMissing ? (

@@ -29,9 +29,9 @@ type ShellUserMenuProps = {
    its own). The focus outline is inset, so it is not clipped by the panel. */
 const itemBase =
   'flex h-10 w-full items-center gap-2.5 rounded-lg px-2.5 text-left text-sm transition-colors ' +
-  'focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-board-600';
-const itemClass = cn(itemBase, 'font-medium text-mist-700 hover:bg-mist-100 hover:text-mist-900');
-const subItemClass = cn(itemBase, 'text-mist-700 hover:bg-mist-100 hover:text-mist-900');
+  'focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ink-600';
+const itemClass = cn(itemBase, 'font-medium text-gray-700 hover:bg-gray-100 hover:text-gray-900');
+const subItemClass = cn(itemBase, 'text-gray-700 hover:bg-gray-100 hover:text-gray-900');
 const signOutClass = cn(itemBase, 'font-medium text-red-600 hover:bg-red-50 hover:text-red-700');
 
 /** The panel's items in tab order, the ones the arrow keys move between. */
@@ -149,15 +149,15 @@ export default function ShellUserMenu({ name, email, initial, isAdmin, inStudent
       aria-label="Account"
       onKeyDown={onPanelKeyDown}
       className={cn(
-        'absolute z-50 w-64 rounded-2xl border border-mist-200 bg-white p-1.5 shadow-lg',
+        'absolute z-50 w-64 rounded-2xl border border-gray-200 bg-white p-1.5 shadow-lg',
         variant === 'desktop' ? 'bottom-full left-0 mb-2' : 'right-0 top-full mt-2',
       )}
     >
       <div className="px-2.5 pb-2 pt-1.5">
-        <p className="truncate text-sm font-semibold text-mist-900">{name}</p>
-        <p className="truncate text-xs text-mist-500">{email}</p>
+        <p className="truncate text-sm font-semibold text-gray-900">{name}</p>
+        <p className="truncate text-xs text-gray-500">{email}</p>
       </div>
-      <div className="border-t border-mist-100 pt-1.5">
+      <div className="border-t border-gray-100 pt-1.5">
         <Link href="/dashboard/profile" onClick={close} className={itemClass}>
           <User className="h-4 w-4" />
           Profile
@@ -168,7 +168,7 @@ export default function ShellUserMenu({ name, email, initial, isAdmin, inStudent
         <a href={TELEGRAM_URL} target="_blank" rel="noopener noreferrer" onClick={close} className={itemClass}>
           <CircleHelp className="h-4 w-4" />
           <span className="flex-1">Help</span>
-          <span aria-hidden className="text-xs font-normal text-mist-500">
+          <span aria-hidden className="text-xs font-normal text-gray-500">
             Telegram
           </span>
           <span className="sr-only"> (opens Telegram)</span>
@@ -212,7 +212,7 @@ export default function ShellUserMenu({ name, email, initial, isAdmin, inStudent
           </form>
         )}
       </div>
-      <div className="mt-1.5 border-t border-mist-100 pt-1.5">
+      <div className="mt-1.5 border-t border-gray-100 pt-1.5">
         <form action={signOutAction} onSubmit={clearLocalExamData}>
           <button className={signOutClass}>
             <LogOut className="h-4 w-4" />
@@ -240,7 +240,7 @@ export default function ShellUserMenu({ name, email, initial, isAdmin, inStudent
         >
           <span
             aria-hidden
-            className="flex h-8 w-8 items-center justify-center rounded-full bg-mist-200 text-xs font-medium uppercase text-mist-700 transition-colors group-hover:bg-mist-300"
+            className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-200 text-xs font-medium uppercase text-gray-700 transition-colors group-hover:bg-gray-300"
           >
             {initial}
           </span>
@@ -268,7 +268,7 @@ export default function ShellUserMenu({ name, email, initial, isAdmin, inStudent
         className={cn(
           'group relative flex h-12 w-full items-center gap-3 rounded-l-full pl-1 pr-3 text-left text-sm font-medium transition-colors',
           sidebarFocusClass,
-          onProfile ? 'bg-mist-100 text-board-600' : 'text-board-100 hover:bg-board-900 hover:text-white',
+          onProfile ? 'bg-gray-100 text-ink-600' : 'text-ink-100 hover:bg-ink-900 hover:text-white',
         )}
       >
         {onProfile && <SidebarNotch />}
@@ -276,7 +276,7 @@ export default function ShellUserMenu({ name, email, initial, isAdmin, inStudent
           aria-hidden
           className={cn(
             'flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-medium uppercase',
-            onProfile ? 'bg-board-600 text-white' : 'bg-board-700 text-white',
+            onProfile ? 'bg-ink-600 text-white' : 'bg-ink-700 text-white',
           )}
         >
           {initial}
@@ -287,7 +287,7 @@ export default function ShellUserMenu({ name, email, initial, isAdmin, inStudent
         <ChevronDown
           className={cn(
             'h-4 w-4 shrink-0 transition-transform collapsed:hidden',
-            onProfile ? 'text-mist-500' : 'text-board-200',
+            onProfile ? 'text-gray-500' : 'text-ink-200',
             open ? 'rotate-0' : 'rotate-180',
           )}
         />

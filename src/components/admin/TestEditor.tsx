@@ -188,7 +188,7 @@ export function TestSettingsCard({
         />
 
         <div className="flex flex-wrap items-center gap-x-6 gap-y-2 sm:col-span-2">
-          <label className="inline-flex items-center gap-2 text-sm text-mist-700">
+          <label className="inline-flex items-center gap-2 text-sm text-gray-700">
             <input type="hidden" name="isVisible" value="false" />
             <input
               name="isVisible"
@@ -199,7 +199,7 @@ export function TestSettingsCard({
             />
             Show in Practice
           </label>
-          <label className="inline-flex items-center gap-2 text-sm text-mist-700">
+          <label className="inline-flex items-center gap-2 text-sm text-gray-700">
             <input
               name="isFree"
               type="checkbox"
@@ -215,7 +215,7 @@ export function TestSettingsCard({
       {/* The outcome sits left (mr-auto), Save on the right, as on the Sections card. */}
       <CardFooter>
         {result?.success && (
-          <p role="status" className="mr-auto inline-flex items-center gap-1.5 text-sm text-lime-800">
+          <p role="status" className="mr-auto inline-flex items-center gap-1.5 text-sm text-green-800">
             <CheckCircle2 className="h-4 w-4" />
             Settings saved.
           </p>
@@ -305,7 +305,7 @@ export function QuestionOptionsEditor({ initialOptions }: { initialOptions: stri
         <div ref={listRef} className="space-y-2">
           {options.map((option, index) => (
             <div key={option.id} className="flex items-start gap-2">
-              <span className="w-5 shrink-0 pt-2.5 text-sm font-medium text-mist-500">
+              <span className="w-5 shrink-0 pt-2.5 text-sm font-medium text-gray-500">
                 {String.fromCharCode(65 + index)}
               </span>
               <Textarea
@@ -331,7 +331,7 @@ export function QuestionOptionsEditor({ initialOptions }: { initialOptions: stri
           ))}
         </div>
       ) : (
-        <p className={cn(insetClass, 'px-3 py-2.5 text-sm text-mist-500')}>
+        <p className={cn(insetClass, 'px-3 py-2.5 text-sm text-gray-500')}>
           No options. This question will be treated as a grid-in answer.
         </p>
       )}
@@ -374,16 +374,16 @@ function QuestionEditor({ question }: { question: EditorQuestion }) {
         onClick={() => setIsOpen((current) => !current)}
         aria-expanded={isOpen}
         // The focus ring is drawn inside: the row runs edge to edge in its card.
-        className="flex w-full items-center gap-3 px-4 py-2 text-left transition-colors hover:bg-mist-50 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-board-600 sm:px-5"
+        className="flex w-full items-center gap-3 px-4 py-2 text-left transition-colors hover:bg-gray-50 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ink-600 sm:px-5"
       >
-        <span className="w-6 shrink-0 text-right text-xs tabular-nums text-mist-500">
+        <span className="w-6 shrink-0 text-right text-xs tabular-nums text-gray-500">
           <span className="sr-only">Question </span>
           {question.order}
         </span>
         {/* Typeset on the server; empty only for a question that is all image. */}
         <span
-          className="line-clamp-1 min-w-0 flex-1 text-sm text-mist-700"
-          dangerouslySetInnerHTML={{ __html: question.previewHtml || '<span class="text-mist-500">Image only</span>' }}
+          className="line-clamp-1 min-w-0 flex-1 text-sm text-gray-700"
+          dangerouslySetInnerHTML={{ __html: question.previewHtml || '<span class="text-gray-500">Image only</span>' }}
         />
         {(savedOptions.length === 0 || isMultiSelect || question.bank) && (
           <span className="hidden shrink-0 items-center gap-1 sm:flex">
@@ -417,10 +417,10 @@ function QuestionEditor({ question }: { question: EditorQuestion }) {
       </button>
 
       {isOpen && (
-        <form onSubmit={handleSubmit} className="space-y-4 border-t border-mist-100 bg-mist-50 p-4 sm:p-5">
+        <form onSubmit={handleSubmit} className="space-y-4 border-t border-gray-100 bg-gray-50 p-4 sm:p-5">
           {question.bank && (
-            <p className="flex items-start gap-2 text-sm text-mist-600">
-              <Library aria-hidden className="mt-0.5 h-4 w-4 shrink-0 text-mist-500" />
+            <p className="flex items-start gap-2 text-sm text-gray-600">
+              <Library aria-hidden className="mt-0.5 h-4 w-4 shrink-0 text-gray-500" />
               <span>
                 From the question bank ({formatBankTags(question.bank.domain, question.bank.difficulty)}).
                 {' '}Saving changes the text, options, answer and image there and in every other test that uses it.
@@ -450,7 +450,7 @@ function QuestionEditor({ question }: { question: EditorQuestion }) {
               hint={
                 <>
                   One option letter, a value for a grid-in, or several letters such as
-                  {' '}<code className="font-medium text-mist-700">B, C</code> to make the question multi-select.
+                  {' '}<code className="font-medium text-gray-700">B, C</code> to make the question multi-select.
                 </>
               }
             >
@@ -482,7 +482,7 @@ function QuestionEditor({ question }: { question: EditorQuestion }) {
 
           <div className="flex flex-wrap items-center justify-end gap-3">
             {result?.success && (
-              <p role="status" className="mr-auto inline-flex items-center gap-1.5 text-sm text-lime-800">
+              <p role="status" className="mr-auto inline-flex items-center gap-1.5 text-sm text-green-800">
                 <CheckCircle2 className="h-4 w-4" />
                 Question saved.
               </p>

@@ -246,8 +246,8 @@ export default async function AdminTestStatsPage({
             title="Questions"
             description={`Share of attempts that got each question right. Below ${formatPercent(HARD_QUESTION_RATE)} is marked in red once ${MIN_ATTEMPTS_TO_FLAG} attempts have reached it.`}
             actions={
-              // segmentedClass's mist-300 edge holds the track on the
-              // mist-100 canvas; the old mist-200/70 fill was a tint outside
+              // segmentedClass's gray-300 edge holds the track on the
+              // gray-100 canvas; the old gray-200/70 fill was a tint outside
               // the scale.
               <nav aria-label="Question order" className={segmentedClass}>
                 <Link
@@ -291,7 +291,7 @@ export default async function AdminTestStatsPage({
 
                   return (
                     <tr key={question.id}>
-                      <td className={cn(tdClass, 'tabular-nums text-mist-500')}>{question.order}</td>
+                      <td className={cn(tdClass, 'tabular-nums text-gray-500')}>{question.order}</td>
                       {modules.length > 1 && (
                         <td className={cn(tdClass, 'tabular-nums')}>{question.module}</td>
                       )}
@@ -299,13 +299,13 @@ export default async function AdminTestStatsPage({
                         <div
                           className="line-clamp-1 min-w-48 max-w-md"
                           dangerouslySetInnerHTML={{
-                            __html: renderQuestionPreview(question.content) || '<span class="text-mist-500">Image only</span>',
+                            __html: renderQuestionPreview(question.content) || '<span class="text-gray-500">Image only</span>',
                           }}
                         />
                       </td>
                       <td className={tdClass}>
                         {question.rate === null ? (
-                          <span className="text-mist-500">Not reached</span>
+                          <span className="text-gray-500">Not reached</span>
                         ) : (
                           <div className="flex items-center gap-3">
                             {/* Red text only, and only for the very hard: a
@@ -313,7 +313,7 @@ export default async function AdminTestStatsPage({
                             <span
                               className={cn(
                                 'w-10 shrink-0 text-right font-semibold tabular-nums',
-                                isHard ? 'text-red-600' : 'text-mist-900',
+                                isHard ? 'text-red-600' : 'text-gray-900',
                               )}
                             >
                               {formatPercent(question.rate)}
@@ -321,27 +321,27 @@ export default async function AdminTestStatsPage({
                             <div className="w-20 shrink-0">
                               <Progress value={Math.round(question.rate * 100)} tone="success" />
                             </div>
-                            <span className="whitespace-nowrap text-xs tabular-nums text-mist-500">
+                            <span className="whitespace-nowrap text-xs tabular-nums text-gray-500">
                               of {question.seen}
                             </span>
                           </div>
                         )}
                       </td>
-                      <td className={cn(numericTdClass, blank === 0 && 'text-mist-500')}>{blank}</td>
+                      <td className={cn(numericTdClass, blank === 0 && 'text-gray-500')}>{blank}</td>
                       <td className={tdClass}>
                         {question.topWrong ? (
                           <span className="whitespace-nowrap">
                             {/* A grid-in answer can be long; the cut-off rest is in the tooltip. */}
                             <span
                               title={formatStoredAnswer(question.topWrong.answer)}
-                              className="inline-block max-w-32 truncate align-bottom font-medium text-mist-900"
+                              className="inline-block max-w-32 truncate align-bottom font-medium text-gray-900"
                             >
                               {formatStoredAnswer(question.topWrong.answer)}
                             </span>
-                            <span className="tabular-nums text-mist-500"> · {question.topWrong.count}×</span>
+                            <span className="tabular-nums text-gray-500"> · {question.topWrong.count}×</span>
                           </span>
                         ) : (
-                          <span className="text-mist-500">None</span>
+                          <span className="text-gray-500">None</span>
                         )}
                       </td>
                     </tr>
@@ -413,7 +413,7 @@ export default async function AdminTestStatsPage({
                     // The whole row opens the student (see `linkRowClass`).
                     <tr key={student.userId} className={cn(linkRowClass, 'group')}>
                       <td className={cn(tdClass, 'tabular-nums')}>
-                        <span className="text-mist-500">{rank}</span>
+                        <span className="text-gray-500">{rank}</span>
                       </td>
                       <td className={tdClass}>
                         <div className="max-w-72">
@@ -424,16 +424,16 @@ export default async function AdminTestStatsPage({
                           >
                             {student.name || student.email}
                           </Link>
-                          {student.name && <p className="truncate text-xs text-mist-500">{student.email}</p>}
+                          {student.name && <p className="truncate text-xs text-gray-500">{student.email}</p>}
                         </div>
                       </td>
                       <td className={tdClass}>
                         <div className="flex items-center gap-3">
                           <span className="whitespace-nowrap tabular-nums">
-                            <span className="font-semibold text-mist-900">{formatCreditTotal(student.bestCorrect)}</span>
-                            <span className="text-mist-500"> / {questionCount}</span>
+                            <span className="font-semibold text-gray-900">{formatCreditTotal(student.bestCorrect)}</span>
+                            <span className="text-gray-500"> / {questionCount}</span>
                           </span>
-                          {/* The same "correct" lime the review pages use, so a
+                          {/* The same "correct" green the review pages use, so a
                               short bar reads as few solved questions. */}
                           <div className="w-20 shrink-0">
                             <Progress value={Math.round(accuracy * 100)} tone="success" />
@@ -450,7 +450,7 @@ export default async function AdminTestStatsPage({
                             them instead of pushing the table into a sideways scroll. */}
                         {student.attempts > 1
                           ? <div className="ml-auto max-w-44">{student.correctCounts.map(formatCreditTotal).join(' / ')}</div>
-                          : <span className="text-mist-500">&mdash;</span>}
+                          : <span className="text-gray-500">&mdash;</span>}
                       </td>
                       <td className={cn(numericTdClass, 'whitespace-nowrap')}>
                         {student.latestAt ? formatDate(student.latestAt) : 'No attempts'}
@@ -480,8 +480,8 @@ export default async function AdminTestStatsPage({
             ) : (
               <span />
             )}
-            {/* On the mist-100 canvas, where mist-500 misses AA. */}
-            <span className="text-xs tabular-nums text-mist-600">
+            {/* On the gray-100 canvas, where gray-500 misses AA. */}
+            <span className="text-xs tabular-nums text-gray-600">
               Page {currentPage} of {totalPages}
             </span>
             {currentPage < totalPages ? (

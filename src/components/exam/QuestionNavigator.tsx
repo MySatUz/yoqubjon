@@ -70,8 +70,8 @@ const PaletteButton = memo(function PaletteButton({
       className={cn(
         'relative flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border text-sm font-medium tabular-nums transition-colors',
         // offset-4 so the focus outline clears the current-question ring.
-        'focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-board-600',
-        isAnswered ? cn(ANSWERED_TONE, 'hover:bg-board-700') : cn(UNANSWERED_TONE, 'hover:bg-mist-50'),
+        'focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink-600',
+        isAnswered ? cn(ANSWERED_TONE, 'hover:bg-ink-700') : cn(UNANSWERED_TONE, 'hover:bg-gray-50'),
         isCurrent && CURRENT_RING,
       )}
     >
@@ -115,7 +115,7 @@ export function QuestionGrid({
 
   return (
     <div className={className}>
-      <ul className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-mist-600">
+      <ul className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-gray-600">
         {LEGEND.filter((item) => currentIndex !== null || !item.current).map((item) => (
           <li key={item.label} className="flex items-center gap-2">
             <span className={cn('relative h-4 w-4 rounded-md border', item.tone)}>
@@ -215,17 +215,17 @@ export default function QuestionNavigator({
       id={id}
       role="dialog"
       aria-label="Question navigator"
-      className="fixed inset-x-4 bottom-20 rounded-2xl border border-mist-200 bg-white p-4 shadow-lg md:absolute md:inset-x-auto md:bottom-full md:left-1/2 md:mb-6 md:w-max md:-translate-x-1/2 md:p-5"
+      className="fixed inset-x-4 bottom-20 rounded-2xl border border-gray-200 bg-white p-4 shadow-lg md:absolute md:inset-x-auto md:bottom-full md:left-1/2 md:mb-6 md:w-max md:-translate-x-1/2 md:p-5"
     >
       <div className="flex items-center justify-between gap-4">
         <div className="min-w-0">
-          <h2 className="text-sm font-semibold tabular-nums text-mist-900">
+          <h2 className="text-sm font-semibold tabular-nums text-gray-900">
             {moduleCount > 1 && <>Module {moduleIndex} of {moduleCount} · </>}
             {questionIds.length} {questionIds.length === 1 ? 'question' : 'questions'}
           </h2>
           {/* What is still open, at a glance: the reason to open this grid in
               the last minutes of a module. */}
-          <p className="mt-0.5 text-xs tabular-nums text-mist-500">
+          <p className="mt-0.5 text-xs tabular-nums text-gray-500">
             {unanswered === 0 ? 'All answered' : `${unanswered} not answered`}
             {marked > 0 && ` · ${marked} flagged`}
           </p>
@@ -254,8 +254,8 @@ export default function QuestionNavigator({
 
       {/* The way to finish early, as the old "End module" in the header
           was: finishing always goes through the review. */}
-      <div className="mt-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t border-mist-100 pt-4">
-        <p className="text-xs text-mist-500">Nothing is sent until you finish the test.</p>
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t border-gray-100 pt-4">
+        <p className="text-xs text-gray-500">Nothing is sent until you finish the test.</p>
         <Button variant="secondary" size="sm" onClick={onReview} className="max-sm:w-full">
           <ListChecks className="h-4 w-4" />
           Check your work
@@ -264,7 +264,7 @@ export default function QuestionNavigator({
 
       <span
         aria-hidden
-        className="absolute -bottom-2 left-1/2 hidden h-4 w-4 -translate-x-1/2 rotate-45 border-b border-r border-mist-200 bg-white md:block"
+        className="absolute -bottom-2 left-1/2 hidden h-4 w-4 -translate-x-1/2 rotate-45 border-b border-r border-gray-200 bg-white md:block"
       />
     </div>
   );

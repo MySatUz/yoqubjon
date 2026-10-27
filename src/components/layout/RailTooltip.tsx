@@ -7,7 +7,7 @@ import { cn } from '@/components/ui/cn';
  * reaches a server component as a client reference, not as the string.
  */
 
-/** Keyboard focus on the deep board-green sidebar: the accent outline would vanish on `board-950`. */
+/** Keyboard focus on the navy sidebar: the accent outline would vanish on `ink-950`. */
 export const sidebarFocusClass = 'focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-white';
 
 /**
@@ -17,7 +17,7 @@ export const sidebarFocusClass = 'focus-visible:outline-2 focus-visible:-outline
  * only to a resting mouse, a second later, and never to the keyboard.
  *
  * The row needs `group` and `relative`; the tip opens past the sidebar's right
- * edge, over the canvas, in the popover style (white, mist border, shadow-lg).
+ * edge, over the canvas, in the popover style (white, gray border, shadow-lg).
  * `className` is for the horizontal offset only.
  *
  * `w-max max-w-64`: as wide as the label up to 16rem, then it wraps (a long
@@ -32,7 +32,7 @@ export function RailTooltip({ children, className }: { children: React.ReactNode
     <span
       aria-hidden
       className={cn(
-        'pointer-events-none absolute left-full top-1/2 z-10 hidden min-h-8 w-max max-w-64 -translate-y-1/2 items-center wrap-anywhere rounded-lg border border-mist-200 bg-white px-3 py-1 text-sm font-medium leading-5 text-mist-900 shadow-lg',
+        'pointer-events-none absolute left-full top-1/2 z-10 hidden min-h-8 w-max max-w-64 -translate-y-1/2 items-center wrap-anywhere rounded-lg border border-gray-200 bg-white px-3 py-1 text-sm font-medium leading-5 text-gray-900 shadow-lg',
         'collapsed:group-hover:flex collapsed:group-focus-visible:flex',
         className ?? 'ml-3',
       )}

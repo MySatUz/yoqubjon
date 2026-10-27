@@ -39,7 +39,7 @@ export default function HeroBackdrop() {
 
   return (
     <div ref={ref} aria-hidden="true" className={cn('pointer-events-none absolute inset-0 hidden lg:block', !onScreen && styles.paused)}>
-      <svg className="absolute right-0 top-0 h-full w-[44%] text-mist-300">
+      <svg className="absolute right-0 top-0 h-full w-[44%] text-gray-300">
         <defs>
           <pattern id="hero-dots" width="14" height="14" patternUnits="userSpaceOnUse">
             <circle cx="2" cy="2" r="1.2" fill="currentColor" />
@@ -51,15 +51,15 @@ export default function HeroBackdrop() {
       {size && line && (
         <>
           <svg viewBox={`0 0 ${size.width} ${size.height}`} className="absolute inset-0 h-full w-full overflow-visible">
-            <line {...line} className="stroke-board-100" strokeWidth="2" />
-            <line {...line} pathLength={1} className={cn('stroke-board-600', styles.heroDraw)} strokeWidth="2" strokeLinecap="round" />
+            <line {...line} className="stroke-ink-100" strokeWidth="2" />
+            <line {...line} pathLength={1} className={cn('stroke-ink-600', styles.heroDraw)} strokeWidth="2" strokeLinecap="round" />
           </svg>
           <span
-            className={cn('absolute flex items-center gap-1.5 text-sm font-semibold tabular-nums text-board-600', styles.heroGoal)}
+            className={cn('absolute flex items-center gap-1.5 text-sm font-semibold tabular-nums text-ink-600', styles.heroGoal)}
             style={{ left: line.x2 + 5, top: line.y2 }}
           >
             800
-            <i className={cn('h-2.5 w-2.5 rounded-full bg-board-600', styles.heroGoalDot)} />
+            <i className={cn('h-2.5 w-2.5 rounded-full bg-ink-600', styles.heroGoalDot)} />
           </span>
         </>
       )}

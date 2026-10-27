@@ -30,7 +30,7 @@ function toggleSidebar() {
  * glyph of the sidebar. The aside is `relative`, so it hangs from its corner.
  */
 const handleClass =
-  'absolute -right-3 top-5 z-10 h-6 w-6 items-center justify-center rounded-full border border-mist-400 border-b-mist-500 bg-white text-mist-700 shadow-xs transition-colors hover:bg-mist-50 hover:text-mist-900 ' +
+  'absolute -right-3 top-5 z-10 h-6 w-6 items-center justify-center rounded-full border border-gray-400 border-b-gray-500 bg-white text-gray-700 shadow-xs transition-colors hover:bg-gray-50 hover:text-gray-900 ' +
   focusRingClass;
 
 /**

@@ -194,14 +194,14 @@
   70%, 100% { transform: scale(1); }
 }
 
-/* "800" turns board green the moment the first run arrives, and stays so.
+/* "800" turns ink blue the moment the first run arrives, and stays so.
    The palette's own variables: Tailwind emits both, as the app uses them. */
 .goal {
-  fill: var(--color-mist-500);
+  fill: var(--color-gray-500);
   transition: fill 1ms 1.7s;
 }
 .inView .goal {
-  fill: var(--color-board-600);
+  fill: var(--color-ink-600);
   font-weight: 600;
 }
 
@@ -211,9 +211,69 @@
   animation-play-state: paused !important;
 }
 
+/* ── The header's phone menu (SiteNav) ──────────────────────────────── */
+/* The two bars of the toggle turn into a cross; the panel fades in and its
+   items rise one after another, 60 ms apart. */
+
+.navBar {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 16px;
+  height: 2px;
+  margin: -1px 0 0 -8px;
+  border-radius: 1px;
+  background: currentColor;
+  transition: transform 260ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.navBarTop {
+  transform: translateY(-3px);
+}
+.navBarBottom {
+  transform: translateY(3px);
+}
+.navBarTop.navBarOpen {
+  transform: rotate(45deg);
+}
+.navBarBottom.navBarOpen {
+  transform: rotate(-45deg);
+}
+
+.menu {
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 200ms cubic-bezier(0.22, 1, 0.36, 1), visibility 0s 200ms;
+}
+.menuOpen {
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 200ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.menuItem {
+  opacity: 0;
+  transform: translateY(16px);
+  transition: opacity 300ms cubic-bezier(0.22, 1, 0.36, 1), transform 300ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.menuOpen .menuItem {
+  opacity: 1;
+  transform: none;
+  transition-delay: calc(var(--i, 0) * 60ms);
+}
+
 /* ── Reduced motion: everything in its final place, nothing looping ──── */
 
 @media (prefers-reduced-motion: reduce) {
+  .navBar,
+  .menu,
+  .menuOpen,
+  .menuItem {
+    transition: none;
+  }
+
+  .menuItem {
+    transform: none;
+  }
+
   .cardIn,
   .fadeUp,
   .fadeUpSlow,
@@ -271,7 +331,7 @@
   }
 
   .goal {
-    fill: var(--color-board-600);
+    fill: var(--color-ink-600);
     font-weight: 600;
     transition: none;
   }

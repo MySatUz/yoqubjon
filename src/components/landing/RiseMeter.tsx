@@ -35,9 +35,9 @@ function meterPath(answers: WarmupAnswer[]) {
 }
 
 const dotTone = {
-  correct: 'fill-lime-700',
+  correct: 'fill-green-700',
   incorrect: 'fill-red-600',
-  skipped: 'fill-mist-400',
+  skipped: 'fill-gray-400',
 } as const;
 
 /** The segments and the end dot, for either the header meter or the result plane. */
@@ -102,7 +102,7 @@ function Segment({ x, y, climbs, strokeWidth, animate }: SegmentShape & { stroke
         y1={0}
         x2={climbs ? CLIMB_LENGTH : 30}
         y2={0}
-        className={cn(climbs ? 'stroke-board-600' : 'stroke-mist-400', styles.segment, on && styles.segmentOn)}
+        className={cn(climbs ? 'stroke-ink-600' : 'stroke-gray-400', styles.segment, on && styles.segmentOn)}
         strokeWidth={strokeWidth}
         strokeLinecap="round"
         vectorEffect="non-scaling-stroke"
@@ -133,7 +133,7 @@ export default function RiseMeter({
         y1={40}
         x2={90}
         y2={0}
-        className="stroke-mist-200"
+        className="stroke-gray-200"
         strokeWidth={1}
         strokeDasharray="2 3"
         vectorEffect="non-scaling-stroke"

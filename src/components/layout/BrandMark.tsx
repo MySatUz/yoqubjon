@@ -1,29 +1,30 @@
-/**
- * The one logo square, shared by the sidebar, the mobile header, the
- * collapsed-rail toggle and the public pages. The mark is the product's own
- * motif - a line rising to a point, "800 isn't a jump, it's a slope" - drawn on
- * `currentColor`. A board-600 square with a white line on light pages;
- * `onBrand` is the inverted mark for the deep board-950 sidebar: a white
- * square with a board-600 line. src/app/icon.svg, apple-icon.png and the link
- * preview (opengraph-image.tsx) draw the same mark in the same green.
- */
-export function SlopeMark({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden className={className}>
-      <path d="M5 18.5 16.4 8.6" fill="none" stroke="currentColor" strokeWidth="3.2" strokeLinecap="round" />
-      <circle cx="17.4" cy="7.6" r="3.3" fill="currentColor" />
-    </svg>
-  );
-}
+import Image from 'next/image';
 
-export default function BrandMark({ size = 'md', onBrand = false }: { size?: 'sm' | 'md'; onBrand?: boolean }) {
+/**
+ * The one logo, shared by the sidebar, the mobile header, the exam bar and the
+ * public pages: the owner's crowned snake climbing a rising line, in a white
+ * disc with an ink-blue ring (the site kit of 2026-10-27). The disc is white
+ * on every ground, so the same file sits on light pages and on the navy
+ * sidebar.
+ *
+ * It is a picture, not a drawing on `currentColor`, so it is served as a small
+ * file already sized for 2x screens (`public/brand/mark-96.webp`, cut from the
+ * kit's `mark.png`) and bypasses the image optimizer, whose monthly
+ * transformations are kept for question images. The browser tab icon
+ * (favicon.ico, icon.png), apple-icon.png, the manifest icons and the link
+ * preview (public/brand/social-card.png) come from the same kit.
+ */
+export default function BrandMark({ size = 'md' }: { size?: 'sm' | 'md' }) {
+  const px = size === 'sm' ? 32 : 40;
   return (
-    <span
-      className={`flex shrink-0 items-center justify-center ${
-        onBrand ? 'bg-white text-board-600' : 'bg-board-600 text-white'
-      } ${size === 'sm' ? 'h-8 w-8 rounded-lg' : 'h-10 w-10 rounded-xl'}`}
-    >
-      <SlopeMark className={size === 'sm' ? 'h-5 w-5' : 'h-6 w-6'} />
-    </span>
+    <Image
+      src="/brand/mark-96.webp"
+      width={px}
+      height={px}
+      alt=""
+      unoptimized
+      loading="eager"
+      className="shrink-0 rounded-full"
+    />
   );
 }

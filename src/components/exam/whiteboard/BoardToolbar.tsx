@@ -105,28 +105,28 @@ const STEPS: Record<string, [number, number]> = {
  * `opacity-40` the red bin and the inks turned into pastels in no family.
  */
 const cellClass = cn(
-  'inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-colors disabled:cursor-not-allowed disabled:text-mist-400',
+  'inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-colors disabled:cursor-not-allowed disabled:text-gray-400',
   focusRingClass
 );
-const plainClass = 'text-mist-600 enabled:hover:bg-mist-100 enabled:hover:text-mist-900';
+const plainClass = 'text-gray-600 enabled:hover:bg-gray-100 enabled:hover:text-gray-900';
 /**
  * The one "selected" treatment - the same as the exam header's pressed tools.
  * A picked ink or thickness under a tool that has none keeps its place in grey.
  */
 const pickedClass =
-  'bg-board-50 text-board-700 ring-1 ring-inset ring-board-600 disabled:bg-mist-100 disabled:ring-mist-300';
+  'bg-ink-50 text-ink-700 ring-1 ring-inset ring-ink-600 disabled:bg-gray-100 disabled:ring-gray-300';
 /** An ink swatch or a thickness bar under a tool that uses neither. */
-const mutedInkClass = 'bg-mist-300';
-const surfaceClass = 'z-40 rounded-2xl border border-mist-200 bg-white p-1 shadow-lg';
+const mutedInkClass = 'bg-gray-300';
+const surfaceClass = 'z-40 rounded-2xl border border-gray-200 bg-white p-1 shadow-lg';
 
 /** Between groups in a row. */
 function Divider() {
-  return <span aria-hidden className="mx-0.5 h-5 w-px shrink-0 bg-mist-200" />;
+  return <span aria-hidden className="mx-0.5 h-5 w-px shrink-0 bg-gray-200" />;
 }
 
 /** Between groups in a column. */
 function Hairline() {
-  return <span aria-hidden className="my-0.5 h-px w-5 shrink-0 bg-mist-200" />;
+  return <span aria-hidden className="my-0.5 h-px w-5 shrink-0 bg-gray-200" />;
 }
 
 /**
@@ -539,7 +539,7 @@ export default function BoardToolbar({ pageKey, onClose }: BoardToolbarProps) {
 
   const inkDot = (value: string) => (
     <span
-      className={cn('h-4 w-4 rounded-full ring-1 ring-inset ring-mist-900/15', inkless && mutedInkClass)}
+      className={cn('h-4 w-4 rounded-full ring-1 ring-inset ring-gray-900/15', inkless && mutedInkClass)}
       style={inkless ? undefined : { backgroundColor: value }}
     />
   );
@@ -565,7 +565,7 @@ export default function BoardToolbar({ pageKey, onClose }: BoardToolbarProps) {
           setColorIndex(index);
           if (inFlyout) closeFlyout();
         }}
-        className={`${cellClass} ${colorIndex === index ? pickedClass : 'enabled:hover:bg-mist-100'}`}
+        className={`${cellClass} ${colorIndex === index ? pickedClass : 'enabled:hover:bg-gray-100'}`}
       >
         {inkDot(item.value)}
       </button>
@@ -585,7 +585,7 @@ export default function BoardToolbar({ pageKey, onClose }: BoardToolbarProps) {
           setWidth(item);
           if (inFlyout) closeFlyout();
         }}
-        className={`${cellClass} ${width === item ? pickedClass : 'enabled:hover:bg-mist-100'}`}
+        className={`${cellClass} ${width === item ? pickedClass : 'enabled:hover:bg-gray-100'}`}
       >
         {widthBar(item)}
       </button>
@@ -613,7 +613,7 @@ export default function BoardToolbar({ pageKey, onClose }: BoardToolbarProps) {
               setFlyout(null);
             }
           }}
-          className={`${cellClass} ${open ? 'bg-mist-100' : 'enabled:hover:bg-mist-100'}`}
+          className={`${cellClass} ${open ? 'bg-gray-100' : 'enabled:hover:bg-gray-100'}`}
         >
           {kind === 'ink' ? inkDot(ink.value) : widthBar(width)}
         </button>
@@ -651,7 +651,7 @@ export default function BoardToolbar({ pageKey, onClose }: BoardToolbarProps) {
       onKeyDown={onGripKey}
       onDoubleClick={resetPanel}
       className={cn(
-        'inline-flex shrink-0 cursor-grab touch-none items-center justify-center rounded-lg text-mist-500 transition-colors hover:bg-mist-100 hover:text-mist-900 active:cursor-grabbing',
+        'inline-flex shrink-0 cursor-grab touch-none items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 active:cursor-grabbing',
         focusRingClass,
         dock ? 'h-6 w-full' : 'h-8 w-6'
       )}
@@ -756,7 +756,7 @@ export default function BoardToolbar({ pageKey, onClose }: BoardToolbarProps) {
     body = (
       <div className="flex items-start gap-0.5">
         <div className="flex flex-col gap-0.5">{toolButtons}</div>
-        <span aria-hidden className="mx-0.5 w-px shrink-0 self-stretch bg-mist-200" />
+        <span aria-hidden className="mx-0.5 w-px shrink-0 self-stretch bg-gray-200" />
         <div className="flex flex-col items-center gap-0.5">{dockedRest}</div>
       </div>
     );
@@ -777,7 +777,7 @@ export default function BoardToolbar({ pageKey, onClose }: BoardToolbarProps) {
         <span
           key={side}
           aria-hidden
-          className={`pointer-events-none fixed bottom-18 top-16 z-40 w-1 rounded-full bg-board-600 transition-opacity duration-150 motion-reduce:transition-none ${
+          className={`pointer-events-none fixed bottom-18 top-16 z-40 w-1 rounded-full bg-ink-600 transition-opacity duration-150 motion-reduce:transition-none ${
             side === 'left' ? 'left-0.5' : 'right-0.5'
           } ${preview === side ? 'opacity-100' : 'opacity-0'}`}
         />

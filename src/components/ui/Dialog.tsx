@@ -141,11 +141,11 @@ export function ConfirmDialog({
   const spinner = <Loader2 className="h-4 w-4 animate-spin" />;
 
   return createPortal(
-    // The scrim is the one tint in the app: mist, never blurred - the same
+    // The scrim is the one tint in the app: gray, never blurred - the same
     // light source as every other surface (see AGENTS.md, "Elevation"). It
     // scrolls, so a dialog taller than a phone held sideways is still whole.
     <div
-      className="fixed inset-0 z-50 overflow-y-auto bg-mist-900/40"
+      className="fixed inset-0 z-50 overflow-y-auto bg-gray-900/40"
       onMouseDown={(event) => {
         // Keeps focus on the dialog: a press outside it is not an answer.
         if (!panelRef.current?.contains(event.target as Node)) event.preventDefault();
@@ -161,11 +161,11 @@ export function ConfirmDialog({
           aria-busy={busy || undefined}
           className="w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl"
         >
-          <h2 id={titleId} className="text-base font-semibold break-words text-mist-900">
+          <h2 id={titleId} className="text-base font-semibold break-words text-gray-900">
             {title}
           </h2>
           {description && (
-            <div id={descriptionId} className="mt-2 space-y-2 text-sm break-words text-mist-600">
+            <div id={descriptionId} className="mt-2 space-y-2 text-sm break-words text-gray-600">
               {description}
             </div>
           )}
@@ -310,7 +310,7 @@ export function Dialog({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-50 overflow-y-auto bg-mist-900/40"
+      className="fixed inset-0 z-50 overflow-y-auto bg-gray-900/40"
       onMouseDown={(event) => {
         if (!panelRef.current?.contains(event.target as Node)) event.preventDefault();
       }}
@@ -326,13 +326,13 @@ export function Dialog({
           tabIndex={-1}
           className={`w-full ${dialogWidths[size]} rounded-2xl bg-white shadow-2xl focus:outline-hidden`}
         >
-          <div className="flex items-start justify-between gap-4 border-b border-mist-200 px-5 py-4">
+          <div className="flex items-start justify-between gap-4 border-b border-gray-200 px-5 py-4">
             <div className="min-w-0">
-              <h2 id={titleId} className="text-base font-semibold break-words text-mist-900">
+              <h2 id={titleId} className="text-base font-semibold break-words text-gray-900">
                 {title}
               </h2>
               {description && (
-                <p id={descriptionId} className="mt-0.5 text-sm break-words text-mist-600">
+                <p id={descriptionId} className="mt-0.5 text-sm break-words text-gray-600">
                   {description}
                 </p>
               )}
@@ -350,7 +350,7 @@ export function Dialog({
           </div>
           <div className="px-5 py-4">{children}</div>
           {footer && (
-            <div className="flex flex-col-reverse gap-2 border-t border-mist-200 px-5 py-4 sm:flex-row sm:items-center sm:justify-end">
+            <div className="flex flex-col-reverse gap-2 border-t border-gray-200 px-5 py-4 sm:flex-row sm:items-center sm:justify-end">
               {footer}
             </div>
           )}

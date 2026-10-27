@@ -36,10 +36,10 @@ export default function NameForm({ name }: { name: string }) {
           {pending && <Loader2 className="h-4 w-4 motion-safe:animate-spin" aria-hidden />}
           {pending ? 'Saving…' : 'Save name'}
         </Button>
-        <p className="flex items-center gap-1.5 text-sm text-lime-800" aria-live="polite">
+        <p className="flex items-center gap-1.5 text-sm text-green-800" aria-live="polite">
           {state?.saved && !pending && (
             <>
-              <CheckCircle2 className="h-4 w-4 text-lime-700" aria-hidden />
+              <CheckCircle2 className="h-4 w-4 text-green-700" aria-hidden />
               Saved
             </>
           )}

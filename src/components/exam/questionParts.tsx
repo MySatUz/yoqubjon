@@ -54,10 +54,10 @@ export const questionSurfaceClass =
 export const questionColumnClass = 'mx-auto flex w-full max-w-[680px] flex-1 flex-col [&_.katex]:text-[1.1em]!';
 
 /** The row over the question: its number and whatever acts on it. */
-export const questionHeadClass = 'mb-5 flex items-center gap-3 border-b border-mist-200 pb-3 focus:outline-hidden';
+export const questionHeadClass = 'mb-5 flex items-center gap-3 border-b border-gray-200 pb-3 focus:outline-hidden';
 
 /** The stem's reading size. The answers never go larger or heavier. */
-export const questionStemClass = 'text-lg leading-[1.6] text-mist-900';
+export const questionStemClass = 'text-lg leading-[1.6] text-gray-900';
 
 /**
  * Bluebook's question-number tile, one of the two places the exam copies the
@@ -65,7 +65,7 @@ export const questionStemClass = 'text-lg leading-[1.6] text-mist-900';
  */
 export function QuestionNumberTile({ number }: { number: number }) {
   return (
-    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-mist-900 text-sm font-semibold tabular-nums text-white">
+    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gray-900 text-sm font-semibold tabular-nums text-white">
       <span className="sr-only">Question </span>
       {number}
     </span>
@@ -80,7 +80,7 @@ export function QuestionNumberTile({ number }: { number: number }) {
  */
 export function QuestionDiagram({ src, unoptimized = false }: { src: string; unoptimized?: boolean }) {
   return (
-    <div className="mb-5 overflow-hidden rounded-xl border border-mist-200 bg-white p-3">
+    <div className="mb-5 overflow-hidden rounded-xl border border-gray-200 bg-white p-3">
       <Image
         src={src}
         alt="Question diagram"
@@ -98,7 +98,7 @@ export function QuestionDiagram({ src, unoptimized = false }: { src: string; uno
 
 /** Over the choices of a question with several right answers. */
 export function MultiSelectHint() {
-  return <p className="mb-3 text-sm font-medium text-mist-700">Select all that apply</p>;
+  return <p className="mb-3 text-sm font-medium text-gray-700">Select all that apply</p>;
 }
 
 interface AnswerChoiceProps {
@@ -120,11 +120,11 @@ interface AnswerChoiceProps {
  * Memoized so picking an answer only re-renders the two choices whose
  * selection state actually changed.
  *
- * Selected is board - the app's one "selected" colour; lime is kept for a
+ * Selected is ink - the app's one "selected" colour; green is kept for a
  * correct answer, and a correct row also says so in words and with an icon,
- * so the two greens are never told apart by hue alone. The 1px ring doubles
+ * so selected and correct are never told apart by hue alone. The 1px ring doubles
  * the border without moving the row. Idle rows are drawn in the controls'
- * mist-300: mist-200 all but vanished on white (1.23:1).
+ * gray-300: gray-200 all but vanished on white (1.23:1).
  *
  * A multi-select choice keeps every other treatment and only squares off its
  * letter box - `rounded-lg` against `rounded-xl` - which is the same
@@ -157,10 +157,10 @@ export const AnswerChoice = memo(function AnswerChoice({
           'group flex min-h-13 w-full items-center rounded-xl border py-2.5 pl-4 pr-14 text-left transition-colors pointer-coarse:min-h-14',
           focusRingClass,
           isCorrect
-            ? 'border-lime-700 bg-lime-50 ring-1 ring-lime-700'
+            ? 'border-green-700 bg-green-50 ring-1 ring-green-700'
             : isSelected
-              ? 'border-board-600 bg-board-50 ring-1 ring-board-600'
-              : 'border-mist-300 bg-white hover:border-mist-400 hover:bg-mist-50'
+              ? 'border-ink-600 bg-ink-50 ring-1 ring-ink-600'
+              : 'border-gray-300 bg-white hover:border-gray-400 hover:bg-gray-50'
         )}
       >
         {/* Letter and text together, so the strike runs through what is
@@ -171,12 +171,12 @@ export const AnswerChoice = memo(function AnswerChoice({
               'flex h-8 w-8 shrink-0 items-center justify-center border text-sm font-semibold transition-colors',
               isMultiSelect ? 'rounded-lg' : 'rounded-xl',
               isCorrect
-                ? 'border-lime-700 bg-lime-700 text-white'
+                ? 'border-green-700 bg-green-700 text-white'
                 : isSelected
-                  ? 'border-board-600 bg-board-600 text-white'
+                  ? 'border-ink-600 bg-ink-600 text-white'
                   : isCrossedOut
-                    ? 'border-mist-300 text-mist-500'
-                    : 'border-mist-300 text-mist-600 group-hover:border-mist-400 group-hover:text-mist-900'
+                    ? 'border-gray-300 text-gray-500'
+                    : 'border-gray-300 text-gray-600 group-hover:border-gray-400 group-hover:text-gray-900'
             )}
           >
             {letter}
@@ -184,7 +184,7 @@ export const AnswerChoice = memo(function AnswerChoice({
           {/* The stem's size and weight - never larger or heavier than the
               question it answers. KaTeX takes its colour from here. */}
           <span
-            className={cn('min-w-0 text-lg', isCrossedOut ? 'text-mist-500' : 'text-mist-900')}
+            className={cn('min-w-0 text-lg', isCrossedOut ? 'text-gray-500' : 'text-gray-900')}
             dangerouslySetInnerHTML={{ __html: optionHtml }}
           />
           {isCrossedOut && (
@@ -194,13 +194,13 @@ export const AnswerChoice = memo(function AnswerChoice({
                   into KaTeX's inline blocks. */}
               <span
                 aria-hidden
-                className="pointer-events-none absolute -inset-x-1.5 top-1/2 h-0.5 -translate-y-1/2 rounded-full bg-mist-600"
+                className="pointer-events-none absolute -inset-x-1.5 top-1/2 h-0.5 -translate-y-1/2 rounded-full bg-gray-600"
               />
             </>
           )}
         </span>
         {isCorrect && (
-          <span className="ml-auto inline-flex shrink-0 items-center gap-1.5 pl-3 text-sm font-medium text-lime-800">
+          <span className="ml-auto inline-flex shrink-0 items-center gap-1.5 pl-3 text-sm font-medium text-green-800">
             <CircleCheck aria-hidden className="h-4 w-4" />
             Correct answer
           </span>
@@ -220,8 +220,8 @@ export const AnswerChoice = memo(function AnswerChoice({
           'absolute right-2 top-1/2 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg border transition-colors pointer-coarse:h-10 pointer-coarse:w-10',
           focusRingClass,
           isCrossedOut
-            ? 'border-mist-400 bg-mist-200 text-mist-900 hover:bg-mist-300'
-            : 'border-mist-400 border-b-mist-500 bg-white text-mist-800 shadow-xs hover:border-mist-500 hover:bg-mist-50 hover:text-mist-900 active:bg-mist-100 active:shadow-none'
+            ? 'border-gray-400 bg-gray-200 text-gray-900 hover:bg-gray-300'
+            : 'border-gray-400 border-b-gray-500 bg-white text-gray-800 shadow-xs hover:border-gray-500 hover:bg-gray-50 hover:text-gray-900 active:bg-gray-100 active:shadow-none'
         )}
       >
         <Strikethrough className="h-4 w-4" />
@@ -331,11 +331,11 @@ function AnswerPreview({ value }: { value: string }) {
 
   return (
     <div aria-hidden className="mt-3 flex min-h-14 items-center gap-3">
-      <span className="text-xs text-mist-500">Answer preview</span>
+      <span className="text-xs text-gray-500">Answer preview</span>
       {html ? (
-        <span className="text-xl text-mist-900" dangerouslySetInnerHTML={{ __html: html }} />
+        <span className="text-xl text-gray-900" dangerouslySetInnerHTML={{ __html: html }} />
       ) : (
-        <span className="text-xl tabular-nums text-mist-900">{value}</span>
+        <span className="text-xl tabular-nums text-gray-900">{value}</span>
       )}
     </div>
   );
@@ -364,7 +364,7 @@ export function GridInField({
 }) {
   return (
     <div className="max-w-xs">
-      <h4 className="text-sm font-medium text-mist-700">
+      <h4 className="text-sm font-medium text-gray-700">
         Student-produced response
       </h4>
       <div className="mt-2 w-full max-w-56">
@@ -390,7 +390,7 @@ export function GridInField({
           // `focus:outline-hidden`, as in Field.tsx: high-contrast mode still
           // shows the focus.
           className={cn(
-            'h-12 w-full rounded-lg border border-mist-400 bg-white px-3 text-center text-xl font-medium tabular-nums text-mist-900 transition-colors hover:border-mist-500 focus:outline-hidden',
+            'h-12 w-full rounded-lg border border-gray-400 bg-white px-3 text-center text-xl font-medium tabular-nums text-gray-900 transition-colors hover:border-gray-500 focus:outline-hidden',
             fieldFocusClass
           )}
         />
@@ -400,7 +400,7 @@ export function GridInField({
       <p
         id="grid-in-rules"
         role="status"
-        className={cn('mt-2 text-xs leading-5', problem ? 'text-red-600' : 'text-mist-500')}
+        className={cn('mt-2 text-xs leading-5', problem ? 'text-red-600' : 'text-gray-500')}
       >
         {problem ?? GRID_IN_RULES}
       </p>

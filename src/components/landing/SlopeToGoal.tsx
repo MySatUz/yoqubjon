@@ -21,20 +21,20 @@ export default function SlopeToGoal({ animate = false, className }: { animate?: 
   return (
     <div ref={ref} aria-hidden="true" className={cn('relative mb-3 h-10', animate && inView && styles.inView, className)}>
       <svg className="absolute inset-0 block h-full w-full overflow-visible">
-        <line x1="0" y1="38" x2="100%" y2="38" className="stroke-mist-200" />
+        <line x1="0" y1="38" x2="100%" y2="38" className="stroke-gray-200" />
         <line
           x1="1"
           y1="38"
           x2="114"
           y2="5"
           pathLength={1}
-          className={cn('stroke-board-600', animate && styles.drawOnView)}
+          className={cn('stroke-ink-600', animate && styles.drawOnView)}
           strokeWidth="2.5"
           strokeLinecap="round"
         />
-        <circle cx="114" cy="5" r="3" className={cn('fill-board-600', animate && styles.dotOnView)} />
+        <circle cx="114" cy="5" r="3" className={cn('fill-ink-600', animate && styles.dotOnView)} />
       </svg>
-      <span className="absolute left-31 top-0 text-xs font-medium tabular-nums text-mist-600">800</span>
+      <span className="absolute left-31 top-0 text-xs font-medium tabular-nums text-gray-600">800</span>
     </div>
   );
 }

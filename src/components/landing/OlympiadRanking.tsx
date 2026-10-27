@@ -95,8 +95,8 @@ export default function OlympiadRanking() {
 
   return (
     <div ref={viewRef} className={cn(cardClass, 'overflow-hidden')}>
-      <div className="flex items-center justify-between gap-2 border-b border-mist-100 px-4 py-3">
-        <h3 className="text-base font-semibold text-mist-900">How the ranking works</h3>
+      <div className="flex items-center justify-between gap-2 border-b border-gray-100 px-4 py-3">
+        <h3 className="text-base font-semibold text-gray-900">How the ranking works</h3>
         <Badge>Example</Badge>
       </div>
 
@@ -109,25 +109,25 @@ export default function OlympiadRanking() {
               role="row"
               data-name={entrant.name}
               // "29 min 45 s" needs 84px; the rank and arrow columns gave it up.
-              className="grid grid-cols-[28px_minmax(0,1fr)_72px_84px_32px] items-center gap-2 border-t border-mist-100 bg-white px-4 py-2.5 text-sm first:border-t-0"
+              className="grid grid-cols-[28px_minmax(0,1fr)_72px_84px_32px] items-center gap-2 border-t border-gray-100 bg-white px-4 py-2.5 text-sm first:border-t-0"
             >
-              <span role="cell" className="font-semibold tabular-nums text-mist-900">
+              <span role="cell" className="font-semibold tabular-nums text-gray-900">
                 {showRanked ? entrant.rank : '—'}
               </span>
-              <span role="cell" className="truncate text-mist-900">
+              <span role="cell" className="truncate text-gray-900">
                 {entrant.name}
               </span>
-              <span role="cell" className="whitespace-nowrap tabular-nums text-mist-600">
+              <span role="cell" className="whitespace-nowrap tabular-nums text-gray-600">
                 {entrant.solved} solved
               </span>
-              <span role="cell" className="whitespace-nowrap tabular-nums text-mist-600">
+              <span role="cell" className="whitespace-nowrap tabular-nums text-gray-600">
                 {formatDuration(entrant.seconds)}
               </span>
               <span
                 role="cell"
                 className={cn(
                   'text-right text-xs font-semibold tabular-nums transition-opacity duration-200',
-                  moved > 0 ? 'text-board-700' : 'text-mist-500',
+                  moved > 0 ? 'text-ink-700' : 'text-gray-500',
                   showRanked ? 'opacity-100' : 'opacity-0',
                 )}
               >
@@ -138,7 +138,7 @@ export default function OlympiadRanking() {
         })}
       </div>
 
-      <div className="flex items-center justify-between gap-3 border-t border-mist-100 px-4 py-2.5 text-sm text-mist-500">
+      <div className="flex items-center justify-between gap-3 border-t border-gray-100 px-4 py-2.5 text-sm text-gray-500">
         <span key={showRanked ? 'ranked' : 'finished'} className={styles.fade}>
           {showRanked ? 'Order in the ranking · Solved first. Time only breaks ties.' : 'Order they finished'}
         </span>

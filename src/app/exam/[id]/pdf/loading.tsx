@@ -20,7 +20,7 @@ function QuestionSkeleton() {
       </div>
       <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
         {[0, 1, 2, 3].map((option) => (
-          <div key={option} className="flex items-center gap-3 rounded-xl border border-mist-200 px-3 py-2.5">
+          <div key={option} className="flex items-center gap-3 rounded-xl border border-gray-200 px-3 py-2.5">
             <Skeleton className="h-6 w-6 shrink-0" />
             <Skeleton className="h-4 w-full" />
           </div>
@@ -32,7 +32,7 @@ function QuestionSkeleton() {
 
 export default function Loading() {
   return (
-    <main className="min-h-screen bg-mist-100 px-4 py-6 text-mist-900 sm:px-6 lg:py-8">
+    <main className="min-h-screen bg-gray-100 px-4 py-6 text-gray-900 sm:px-6 lg:py-8">
       <p className="sr-only">Loading the printable test</p>
       <div className="mx-auto max-w-4xl space-y-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -41,12 +41,12 @@ export default function Loading() {
         </div>
 
         <div className={cn(cardClass, 'overflow-hidden')}>
-          <div className="border-b border-mist-200 p-5">
+          <div className="border-b border-gray-200 p-5">
             <Skeleton className="h-7 w-3/5 sm:h-8" />
             <Skeleton className="mt-2 h-4 w-80 max-w-full" />
           </div>
 
-          <div className="divide-y divide-mist-100">
+          <div className="divide-y divide-gray-100">
             {[0, 1, 2].map((question) => (
               <QuestionSkeleton key={question} />
             ))}

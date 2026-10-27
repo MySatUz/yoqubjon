@@ -100,8 +100,8 @@ function PlanFeatures({ plan }: { plan: PlanSummary }) {
   return (
     <ul className="mt-4 flex-1 space-y-2 text-sm">
       {plan.features.map((feature) => (
-        <li key={feature} className="flex gap-2 text-mist-700">
-          <Check className="mt-0.5 h-4 w-4 shrink-0 text-board-600" aria-hidden />
+        <li key={feature} className="flex gap-2 text-gray-700">
+          <Check className="mt-0.5 h-4 w-4 shrink-0 text-ink-600" aria-hidden />
           {feature}
         </li>
       ))}
@@ -236,11 +236,11 @@ export function SubscriptionCheckout(props: SubscriptionCheckoutProps) {
         )}
 
         {latestRequest && !props.isPremium && (
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-mist-100 px-5 py-3">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-gray-100 px-5 py-3">
             {/* The date, not the amount: a price is shown only in the
                 payment details while sales are open (the owner's rule). */}
-            <p className="min-w-0 flex-1 text-sm text-mist-600">
-              Latest payment request <span className="text-mist-500">· {formatDate(latestRequest.createdAt)}</span>
+            <p className="min-w-0 flex-1 text-sm text-gray-600">
+              Latest payment request <span className="text-gray-500">· {formatDate(latestRequest.createdAt)}</span>
             </p>
             <PaymentStatusBadge status={latestRequest.status} pendingLabel="Pending review" />
             {/* The details page sends a new request, which a pause refuses. */}
@@ -252,7 +252,7 @@ export function SubscriptionCheckout(props: SubscriptionCheckoutProps) {
             {/* Without the details page, the admin's reason for a declined
                 receipt would have nowhere to show while sales are paused. */}
             {!props.salesOpen && latestRequest.adminNote && (
-              <p className="w-full text-xs text-mist-600">Admin note: {latestRequest.adminNote}</p>
+              <p className="w-full text-xs text-gray-600">Admin note: {latestRequest.adminNote}</p>
             )}
           </div>
         )}
@@ -265,8 +265,8 @@ export function SubscriptionCheckout(props: SubscriptionCheckoutProps) {
         <SectionHeading title="Plans" />
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <Card padded className="flex flex-col">
-            <h3 className="text-base font-semibold text-mist-900">{FREE_PLAN.name}</h3>
-            <p className="mt-0.5 text-sm text-mist-500">{FREE_PLAN.summary}</p>
+            <h3 className="text-base font-semibold text-gray-900">{FREE_PLAN.name}</h3>
+            <p className="mt-0.5 text-sm text-gray-500">{FREE_PLAN.summary}</p>
             <PlanFeatures plan={FREE_PLAN} />
             <Button variant="secondary" block disabled className="mt-5">
               {props.isPremium ? 'Included in Premium' : 'Current plan'}
@@ -278,14 +278,14 @@ export function SubscriptionCheckout(props: SubscriptionCheckoutProps) {
           <div
             className={cn(
               'flex flex-col rounded-2xl border bg-white p-5',
-              props.salesOpen && !props.isPremium ? 'border-board-600 ring-1 ring-board-600' : 'border-mist-200',
+              props.salesOpen && !props.isPremium ? 'border-ink-600 ring-1 ring-ink-600' : 'border-gray-200',
             )}
           >
             <div className="flex items-center justify-between gap-2">
-              <h3 className="text-base font-semibold text-mist-900">{PREMIUM_PLAN.name}</h3>
+              <h3 className="text-base font-semibold text-gray-900">{PREMIUM_PLAN.name}</h3>
               {!props.isPremium && props.salesOpen && <Badge tone="accent">Recommended</Badge>}
             </div>
-            <p className="mt-0.5 text-sm text-mist-500">{PREMIUM_PLAN.summary}</p>
+            <p className="mt-0.5 text-sm text-gray-500">{PREMIUM_PLAN.summary}</p>
             <PlanFeatures plan={PREMIUM_PLAN} />
 
             {props.isPremium ? (
@@ -299,7 +299,7 @@ export function SubscriptionCheckout(props: SubscriptionCheckoutProps) {
             ) : (
               // Paused by an admin (SubscriptionAvailabilityControl): a calm
               // note where the button was, never a button into a dead end.
-              <p className={cn(insetClass, 'mt-5 px-4 py-3 text-sm text-mist-600')}>
+              <p className={cn(insetClass, 'mt-5 px-4 py-3 text-sm text-gray-600')}>
                 New subscriptions are paused for now. Your free tests stay open.{' '}
                 <a href={TELEGRAM_URL} target="_blank" rel="noopener noreferrer" className={linkClass}>
                   Ask in Telegram

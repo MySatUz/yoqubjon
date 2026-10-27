@@ -299,7 +299,7 @@ export default function FloatingWindow({
       // Under the bars (z-50) and under the whiteboard's toolbar (z-40, and
       // later in the page); the window used last sits over the other one.
       className={cn(
-        isOpen ? 'fixed flex flex-col overflow-hidden border-mist-200 bg-white shadow-lg' : 'hidden',
+        isOpen ? 'fixed flex flex-col overflow-hidden border-gray-200 bg-white shadow-lg' : 'hidden',
         isFront ? 'z-40' : 'z-30',
         isPhone ? 'inset-x-0 rounded-t-2xl border-t' : 'rounded-2xl border'
       )}
@@ -311,7 +311,7 @@ export default function FloatingWindow({
           {...pointerHandlers}
           className="flex h-5 shrink-0 cursor-ns-resize touch-none items-center justify-center"
         >
-          <span className="h-1 w-10 rounded-full bg-mist-300" />
+          <span className="h-1 w-10 rounded-full bg-gray-300" />
         </div>
       )}
 
@@ -323,15 +323,15 @@ export default function FloatingWindow({
         }}
         {...pointerHandlers}
         className={cn(
-          'relative flex h-11 shrink-0 touch-none select-none items-center justify-between gap-2 border-b border-mist-200 pl-4 pr-1.5',
-          isPhone ? 'cursor-ns-resize bg-white' : 'cursor-move bg-mist-50'
+          'relative flex h-11 shrink-0 touch-none select-none items-center justify-between gap-2 border-b border-gray-200 pl-4 pr-1.5',
+          isPhone ? 'cursor-ns-resize bg-white' : 'cursor-move bg-gray-50'
         )}
       >
-        <h2 className="truncate text-sm font-semibold text-mist-900">{title}</h2>
+        <h2 className="truncate text-sm font-semibold text-gray-900">{title}</h2>
         {!isPhone && (
           <GripHorizontal
             aria-hidden
-            className="pointer-events-none absolute left-1/2 top-1/2 h-4 w-4 -translate-x-1/2 -translate-y-1/2 text-mist-400"
+            className="pointer-events-none absolute left-1/2 top-1/2 h-4 w-4 -translate-x-1/2 -translate-y-1/2 text-gray-400"
           />
         )}
         <div className="flex shrink-0 items-center gap-0.5">
@@ -369,7 +369,7 @@ export default function FloatingWindow({
           aria-hidden
           onPointerDown={handleResizePointerDown}
           {...pointerHandlers}
-          className="absolute bottom-0 right-0 z-10 flex h-5 w-5 cursor-nwse-resize touch-none items-end justify-end p-1 text-mist-400"
+          className="absolute bottom-0 right-0 z-10 flex h-5 w-5 cursor-nwse-resize touch-none items-end justify-end p-1 text-gray-400"
         >
           <svg viewBox="0 0 10 10" className="h-2.5 w-2.5" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
             <path d="M9 3 3 9M9 7 7 9" />

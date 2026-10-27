@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Fira_Sans } from "next/font/google";
 import { SIDEBAR_INIT_SCRIPT } from "@/components/layout/sidebarState";
 import { SITE_URL } from "@/lib/landing/warmup";
+import { BASE_OPEN_GRAPH, SITE_OG_IMAGE, SITE_TITLE } from "@/lib/siteMetadata";
 import "./globals.css";
 
 // Fira Sans: Russian and Uzbek Cyrillic (Ққ Ғғ Ҳҳ Ўў), the Uzbek ʻ (oʻ, gʻ —
@@ -17,7 +18,6 @@ const firaSans = Fira_Sans({
   display: "swap",
 });
 
-const SITE_TITLE = "MYSATuz · Digital SAT Math practice";
 const SITE_DESCRIPTION =
   "Digital SAT Math practice for students in Uzbekistan: timed modules in the format of the real test, with an estimated score.";
 
@@ -30,15 +30,16 @@ export const metadata: Metadata = {
   // change to screen readers only when the title changes.
   title: { default: SITE_TITLE, template: "%s · MYSATuz" },
   description: SITE_DESCRIPTION,
-  // What a link shared in Telegram unfurls to. The picture is
-  // src/app/opengraph-image.tsx, which Next adds to every page under it.
+  // What a link shared in Telegram unfurls to: the site kit's card. The tab
+  // and home-screen icons are the files beside this one (favicon.ico,
+  // icon.png, apple-icon.png) and manifest.ts.
   openGraph: {
-    type: "website",
-    siteName: "MYSATuz",
+    ...BASE_OPEN_GRAPH,
     title: SITE_TITLE,
     description: SITE_DESCRIPTION,
+    images: [SITE_OG_IMAGE],
   },
-  twitter: { card: "summary_large_image" },
+  twitter: { card: "summary_large_image", images: [SITE_OG_IMAGE] },
 };
 
 export default function RootLayout({
@@ -56,7 +57,7 @@ export default function RootLayout({
       <head>
         <script dangerouslySetInnerHTML={{ __html: SIDEBAR_INIT_SCRIPT }} />
       </head>
-      <body className="min-h-full flex flex-col font-sans bg-mist-50 text-mist-900">{children}</body>
+      <body className="min-h-full flex flex-col font-sans bg-gray-50 text-gray-900">{children}</body>
     </html>
   );
 }

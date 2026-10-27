@@ -4,7 +4,7 @@ import { formatSignedDelta } from '@/lib/scoreDisplay';
 
 /**
  * How an attempt moved against the one before it on the same test: up in
- * lime, down and unchanged in mist - with an arrow, so colour is never the
+ * green, down and unchanged in gray - with an arrow, so colour is never the
  * only cue. A lower score is not an error, and red stays for wrong answers,
  * errors and destructive actions (the owner's call). `unit` names what moved
  * when it is not the score ("correct"); `context` ends the phrase ("since

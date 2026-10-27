@@ -28,7 +28,7 @@ export function WarmupEchoLine({ className }: { className?: string }) {
   const run = useFinishedRun();
   if (!run) return null;
   return (
-    <p className={cn('font-medium text-mist-900', className)}>
+    <p className={cn('font-medium text-gray-900', className)}>
       Your warm-up: {countCorrect(run.answers)} of 3 in {formatDuration(run.totalMs / 1000)}. The real thing is next.
     </p>
   );
@@ -40,9 +40,9 @@ export function WarmupChip({ className }: { className?: string }) {
   if (!run) return null;
 
   return (
-    <span className={cn('inline-flex h-6 items-center gap-1.5 rounded-full bg-mist-100 px-2 text-xs font-medium text-mist-600', className)}>
+    <span className={cn('inline-flex h-6 items-center gap-1.5 rounded-full bg-gray-100 px-2 text-xs font-medium text-gray-600', className)}>
       <svg viewBox="-2 -2 94 44" className="h-3 w-7 overflow-visible" aria-hidden="true">
-        <polyline points={risePoints(run.answers)} fill="none" className="stroke-board-600" strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinejoin="round" />
+        <polyline points={risePoints(run.answers)} fill="none" className="stroke-ink-600" strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinejoin="round" />
       </svg>
       Warm-up: {countCorrect(run.answers)} of 3 · {formatDuration(run.totalMs / 1000)}
     </span>

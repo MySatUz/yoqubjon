@@ -68,7 +68,7 @@ function matchesFilter(row: StudentRow, filter: StudentFilter, todayKey: string)
 function AccessUntil({ row, todayKey }: { row: StudentRow; todayKey: string }) {
   if (row.endKey === null) return <span>No end date</span>;
   const date = formatDateKey(row.endKey, todayKey);
-  if (!row.active) return <span className="text-mist-500">Ended {date}</span>;
+  if (!row.active) return <span className="text-gray-500">Ended {date}</span>;
 
   const daysLeft = daysBetweenKeys(todayKey, row.endKey);
   const left = daysLeft <= 0 ? 'ends today' : daysLeft === 1 ? '1 day left' : `${daysLeft} days left`;
@@ -76,14 +76,14 @@ function AccessUntil({ row, todayKey }: { row: StudentRow; todayKey: string }) {
 
   return (
     <span className="whitespace-nowrap">
-      {date} <span className="text-xs text-mist-500">· {left}</span>
+      {date} <span className="text-xs text-gray-500">· {left}</span>
     </span>
   );
 }
 
 /** Plain text for the norm (a confirmed account); a badge for what still waits. */
 function AccountState({ account }: { account: AccessAccountState }) {
-  if (account === 'confirmed') return <span className="text-mist-600">{ACCOUNT_STATE_LABELS.confirmed}</span>;
+  if (account === 'confirmed') return <span className="text-gray-600">{ACCOUNT_STATE_LABELS.confirmed}</span>;
   return <Badge tone={account === 'waiting' ? 'warning' : 'neutral'}>{ACCOUNT_STATE_LABELS[account]}</Badge>;
 }
 
@@ -96,9 +96,9 @@ function StudentName({ row }: { row: StudentRow }) {
           {title}
         </Link>
       ) : (
-        <p className="truncate font-medium text-mist-900">{title}</p>
+        <p className="truncate font-medium text-gray-900">{title}</p>
       )}
-      {row.name && <p className="truncate text-xs text-mist-500">{row.email}</p>}
+      {row.name && <p className="truncate text-xs text-gray-500">{row.email}</p>}
     </div>
   );
 }
@@ -310,7 +310,7 @@ export default function StudentsTable({
         </div>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           <div className="relative sm:w-64">
-            <Search aria-hidden className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-mist-400" />
+            <Search aria-hidden className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
             <input
               type="search"
               value={query}
@@ -325,12 +325,12 @@ export default function StudentsTable({
         </div>
       </div>
 
-      {/* On the mist-100 canvas, where mist-500 misses AA. */}
-      <p aria-live="polite" className="text-sm text-mist-600 empty:hidden">{notice}</p>
+      {/* On the gray-100 canvas, where gray-500 misses AA. */}
+      <p aria-live="polite" className="text-sm text-gray-600 empty:hidden">{notice}</p>
 
       {selectedRows.length > 0 && (
-        <div className="sticky top-0 z-20 flex flex-wrap items-center gap-3 rounded-xl bg-board-50 px-4 py-2.5">
-          <span className="text-sm font-medium text-board-800 tabular-nums">{selectedRows.length} selected</span>
+        <div className="sticky top-0 z-20 flex flex-wrap items-center gap-3 rounded-xl bg-ink-50 px-4 py-2.5">
+          <span className="text-sm font-medium text-ink-800 tabular-nums">{selectedRows.length} selected</span>
           <GiveAccessButton
             courses={courses}
             preset={{ courseId, emails: selectedRows.map((row) => row.email), months: 1 }}
@@ -397,16 +397,16 @@ export default function StudentsTable({
                     <td className={tdClass}>
                       <div className="max-w-60">
                         <StudentName row={row} />
-                        {row.note && <p className="truncate text-xs text-mist-500 2xl:hidden" title={row.note}>{row.note}</p>}
+                        {row.note && <p className="truncate text-xs text-gray-500 2xl:hidden" title={row.note}>{row.note}</p>}
                       </div>
                     </td>
                     <td className={tdClass}><AccountState account={row.account} /></td>
                     <td className={cn(tdClass, 'tabular-nums')}><AccessUntil row={row} todayKey={todayKey} /></td>
                     <td className={cn(tdClass, 'hidden 2xl:table-cell')}>
-                      {row.note ? <p className="max-w-48 truncate" title={row.note}>{row.note}</p> : <span className="text-mist-500">—</span>}
+                      {row.note ? <p className="max-w-48 truncate" title={row.note}>{row.note}</p> : <span className="text-gray-500">—</span>}
                     </td>
                     <td className={cn(tdClass, 'whitespace-nowrap tabular-nums')}>
-                      {row.lastResultKey ? formatDateKey(row.lastResultKey, todayKey) : <span className="text-mist-500">—</span>}
+                      {row.lastResultKey ? formatDateKey(row.lastResultKey, todayKey) : <span className="text-gray-500">—</span>}
                     </td>
                     <td className={tdClass}>
                       {actions(row)}
@@ -436,10 +436,10 @@ export default function StudentsTable({
                     <StudentName row={row} />
                     <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
                       <AccountState account={row.account} />
-                      <span className="text-mist-400" aria-hidden>·</span>
+                      <span className="text-gray-400" aria-hidden>·</span>
                       <AccessUntil row={row} todayKey={todayKey} />
                     </div>
-                    {row.note && <p className="text-xs text-mist-500">{row.note}</p>}
+                    {row.note && <p className="text-xs text-gray-500">{row.note}</p>}
                   </div>
                 </div>
                 {actions(row, true)}
@@ -450,7 +450,7 @@ export default function StudentsTable({
         </>
       )}
 
-      <p className="text-xs text-mist-600">Students must sign up with exactly the email shown here.</p>
+      <p className="text-xs text-gray-600">Students must sign up with exactly the email shown here.</p>
       {dialog}
     </div>
   );

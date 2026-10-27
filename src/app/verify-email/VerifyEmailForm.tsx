@@ -42,14 +42,14 @@ export default function VerifyEmailForm({ email }: { email: string | null }) {
   return (
     <>
       <Card padded>
-        <h1 className="text-xl font-semibold tracking-tight text-mist-900 sm:text-2xl">Check your email</h1>
+        <h1 className="text-xl font-semibold tracking-tight text-gray-900 sm:text-2xl">Check your email</h1>
         {/* &#8209; (\u2011 in a string) is a non-breaking hyphen, so "6-" never
             ends a line with "digit" starting the next. break-words: a long
             address has no space to wrap at and would run out of the card. */}
-        <p className="mt-1.5 break-words text-sm text-mist-600">
+        <p className="mt-1.5 break-words text-sm text-gray-600">
           {email ? (
             <>
-              We sent a 6&#8209;digit code to <span className="font-medium text-mist-900">{email}</span>. Enter it to open
+              We sent a 6&#8209;digit code to <span className="font-medium text-gray-900">{email}</span>. Enter it to open
               your account.
             </>
           ) : (
@@ -103,8 +103,8 @@ export default function VerifyEmailForm({ email }: { email: string | null }) {
             {verifying ? 'Checking…' : 'Confirm email'}
           </Button>
 
-          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-mist-100 pt-4">
-            <p className="text-sm text-mist-600">No email? Check spam, or</p>
+          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-gray-100 pt-4">
+            <p className="text-sm text-gray-600">No email? Check spam, or</p>
             {/* formNoValidate: asking for a code must not require one. */}
             <Button type="submit" formAction={resendAction} formNoValidate variant="secondary" size="sm">
               {resending && <Loader2 className="h-4 w-4 motion-safe:animate-spin" aria-hidden />}
@@ -112,13 +112,13 @@ export default function VerifyEmailForm({ email }: { email: string | null }) {
             </Button>
           </div>
           <div aria-live="polite" className="text-sm empty:hidden">
-            {resendState?.notice && <p className="text-mist-600">{resendState.notice}</p>}
+            {resendState?.notice && <p className="text-gray-600">{resendState.notice}</p>}
             {resendState?.error && <p className="text-red-600">{resendState.error}</p>}
           </div>
         </form>
       </Card>
 
-      <p className="mt-6 text-center text-sm text-mist-600">
+      <p className="mt-6 text-center text-sm text-gray-600">
         Signed up with the wrong email?{' '}
         <Link href="/register" className={authLinkClass}>
           Sign up again

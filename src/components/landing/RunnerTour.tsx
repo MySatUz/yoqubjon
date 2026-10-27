@@ -72,10 +72,10 @@ const OPTIONS: { letter: string; value: MathParts }[] = [
 ];
 
 // The tools look like TopNav's ghost icon buttons, at mock scale.
-const toolClass = 'grid h-7 w-7 place-items-center rounded-lg text-mist-600';
+const toolClass = 'grid h-7 w-7 place-items-center rounded-lg text-gray-600';
 
 // The exam navigator's own chip states (navigatorTones), so the demo cannot
-// drift from the real room: answered is solid board green, unanswered a dashed
+// drift from the real room: answered is solid ink blue, unanswered a dashed
 // outline, "you are here" a ring over either one, and a flagged question
 // carries the flag mark in its corner. Only the ring's offset changes, 1 not 2
 // at this mock scale; it is swapped in the string because cn() does not
@@ -164,7 +164,7 @@ export default function RunnerTour({ children }: { children: ReactNode }) {
             </button>
           ))}
         </div>
-        <p aria-live="polite" className="mt-3 min-h-14 text-base leading-7 text-mist-600">
+        <p aria-live="polite" className="mt-3 min-h-14 text-base leading-7 text-gray-600">
           <span key={active} className={cn('block', styles.fadeUp)}>
             {caption}
           </span>
@@ -172,11 +172,11 @@ export default function RunnerTour({ children }: { children: ReactNode }) {
       </div>
 
       <div>
-        <p className="mb-2 text-center text-xs font-medium text-mist-600">Example</p>
+        <p className="mb-2 text-center text-xs font-medium text-gray-600">Example</p>
         <div ref={mockRef} aria-hidden="true" className={cn(cardClass, 'relative mx-auto w-full max-w-[380px] overflow-hidden')}>
-          <div className="grid h-11 grid-cols-[1fr_auto_1fr] items-center border-b border-mist-100 px-3 text-sm">
-            <span className="text-mist-700">{moduleTwo ? 'Module 2' : 'Module 1'}</span>
-            <span data-tour="clocks" className="inline-flex rounded-full bg-mist-100 px-3 py-0.5 font-semibold tabular-nums text-mist-900">
+          <div className="grid h-11 grid-cols-[1fr_auto_1fr] items-center border-b border-gray-100 px-3 text-sm">
+            <span className="text-gray-700">{moduleTwo ? 'Module 2' : 'Module 1'}</span>
+            <span data-tour="clocks" className="inline-flex rounded-full bg-gray-100 px-3 py-0.5 font-semibold tabular-nums text-gray-900">
               <Odometer value={moduleTwo ? '35:00' : '31:24'} animate={!reduce} />
             </span>
             <span className="flex justify-end gap-1.5">
@@ -191,27 +191,27 @@ export default function RunnerTour({ children }: { children: ReactNode }) {
 
           <div className="p-3">
             <div className="flex items-center justify-between gap-2">
-              <span className="grid h-6 w-6 place-items-center rounded-lg bg-mist-900 text-xs font-semibold tabular-nums text-white">
+              <span className="grid h-6 w-6 place-items-center rounded-lg bg-gray-900 text-xs font-semibold tabular-nums text-white">
                 {CURRENT}
               </span>
               <span
                 data-tour="flag"
                 className={cn(
                   'inline-flex h-7 items-center gap-1.5 rounded-lg px-2 text-xs font-medium',
-                  active === 'flag' ? 'text-mist-900' : 'text-mist-600',
+                  active === 'flag' ? 'text-gray-900' : 'text-gray-600',
                 )}
               >
                 <Bookmark className={cn('h-3.5 w-3.5', active === 'flag' && cn(MARKED_ICON_CLASS, styles.pop))} />
                 Flag
               </span>
             </div>
-            <p className="mt-2 text-sm leading-6 text-mist-900">
+            <p className="mt-2 text-sm leading-6 text-gray-900">
               <MathText parts={STEM} />
             </p>
             <div className="mt-2 grid gap-1.5">
               {OPTIONS.map((option) => (
-                <div key={option.letter} className="flex h-9 items-center gap-2 rounded-xl border border-mist-300 px-2 text-sm text-mist-900">
-                  <span className="grid h-5 w-5 shrink-0 place-items-center rounded-md border border-mist-300 text-xs font-medium text-mist-600">
+                <div key={option.letter} className="flex h-9 items-center gap-2 rounded-xl border border-gray-300 px-2 text-sm text-gray-900">
+                  <span className="grid h-5 w-5 shrink-0 place-items-center rounded-md border border-gray-300 text-xs font-medium text-gray-600">
                     {option.letter}
                   </span>
                   <MathText parts={option.value} math />
@@ -220,8 +220,8 @@ export default function RunnerTour({ children }: { children: ReactNode }) {
             </div>
           </div>
 
-          <div data-tour="nav" className="border-t border-mist-100 px-3 pb-3 pt-2">
-            <p className="mb-2 text-xs tabular-nums text-mist-500">
+          <div data-tour="nav" className="border-t border-gray-100 px-3 pb-3 pt-2">
+            <p className="mb-2 text-xs tabular-nums text-gray-500">
               Question {CURRENT} of 22 · {active === 'flag' ? 2 : 1} flagged
             </p>
             <div className="flex flex-wrap gap-1.5">
@@ -248,39 +248,39 @@ export default function RunnerTour({ children }: { children: ReactNode }) {
 
           <div
             className={cn(
-              'absolute bottom-0 right-0 top-11 w-[62%] rounded-l-xl border border-mist-200 bg-white p-3 shadow-lg transition-transform duration-260',
+              'absolute bottom-0 right-0 top-11 w-[62%] rounded-l-xl border border-gray-200 bg-white p-3 shadow-lg transition-transform duration-260',
               'ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none',
               active === 'calc' ? 'translate-x-0' : 'translate-x-[105%]',
             )}
           >
-            <p className="mb-2 text-xs font-semibold text-mist-900">Graphing calculator</p>
+            <p className="mb-2 text-xs font-semibold text-gray-900">Graphing calculator</p>
             <svg viewBox="0 0 100 80" className="h-auto w-full">
               <defs>
                 <pattern id="tour-grid" width="10" height="10" patternUnits="userSpaceOnUse">
-                  <path d="M10 0H0V10" fill="none" className="stroke-mist-200" strokeWidth="0.6" />
+                  <path d="M10 0H0V10" fill="none" className="stroke-gray-200" strokeWidth="0.6" />
                 </pattern>
               </defs>
               <rect width="100" height="80" fill="url(#tour-grid)" />
-              <line x1="50" y1="0" x2="50" y2="80" className="stroke-mist-400" strokeWidth="0.7" />
-              <line x1="0" y1="40" x2="100" y2="40" className="stroke-mist-400" strokeWidth="0.7" />
-              <line x1="10" y1="72" x2="92" y2="10" className="stroke-board-600" strokeWidth="1.6" />
+              <line x1="50" y1="0" x2="50" y2="80" className="stroke-gray-400" strokeWidth="0.7" />
+              <line x1="0" y1="40" x2="100" y2="40" className="stroke-gray-400" strokeWidth="0.7" />
+              <line x1="10" y1="72" x2="92" y2="10" className="stroke-ink-600" strokeWidth="1.6" />
             </svg>
-            <p className="mt-2 text-xs text-mist-600">
+            <p className="mt-2 text-xs text-gray-600">
               <MathText parts={[{ v: 'y' }, ' = 0.75', { v: 'x' }, ' + 2']} math />
             </p>
           </div>
 
           <div
             className={cn(
-              'absolute inset-x-0 bottom-0 h-[58%] rounded-t-2xl border border-mist-200 bg-white p-3 shadow-lg transition-transform duration-260',
+              'absolute inset-x-0 bottom-0 h-[58%] rounded-t-2xl border border-gray-200 bg-white p-3 shadow-lg transition-transform duration-260',
               'ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none',
               active === 'sheet' ? 'translate-y-0' : 'translate-y-[105%]',
             )}
           >
-            <p className="mb-2 text-xs font-semibold text-mist-900">Reference</p>
-            <div className="grid grid-cols-3 gap-1.5 text-xs text-mist-900">
+            <p className="mb-2 text-xs font-semibold text-gray-900">Reference</p>
+            <div className="grid grid-cols-3 gap-1.5 text-xs text-gray-900">
               {FORMULAS.map((formula, index) => (
-                <span key={index} className="flex min-h-9 items-center rounded-lg border border-mist-200 px-2 py-1">
+                <span key={index} className="flex min-h-9 items-center rounded-lg border border-gray-200 px-2 py-1">
                   <MathText parts={formula} math />
                 </span>
               ))}
@@ -290,7 +290,7 @@ export default function RunnerTour({ children }: { children: ReactNode }) {
           {/* The ring moves with translate; its size follows the target. */}
           <div
             ref={spotRef}
-            className="pointer-events-none absolute left-0 top-0 rounded-xl outline-2 outline-offset-2 outline-board-600 transition-[transform,width,height] duration-280 ease-[cubic-bezier(0.22,1,0.36,1)]"
+            className="pointer-events-none absolute left-0 top-0 rounded-xl outline-2 outline-offset-2 outline-ink-600 transition-[transform,width,height] duration-280 ease-[cubic-bezier(0.22,1,0.36,1)]"
           />
         </div>
       </div>

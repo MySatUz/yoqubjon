@@ -46,7 +46,7 @@ export default function PracticeHomeSkeleton() {
 
       <div>
         <Skeleton className="mb-3 h-5 w-28" />
-        <ul className={cn(cardClass, 'divide-y divide-mist-100')}>
+        <ul className={cn(cardClass, 'divide-y divide-gray-100')}>
           {[0, 1, 2].map((i) => (
             // A collection row: a 16px name line, a 12px description line,
             // the progress block on the right.

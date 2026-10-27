@@ -45,16 +45,16 @@ type ChipStatus = AnswerStatus | 'partial';
 // the solid one, and each status carries a glyph besides its colour.
 const CHIP_TONE: Record<ChipStatus, string> = {
   incorrect: 'border-red-600 bg-red-600 text-white',
-  correct: 'border-lime-700 bg-white text-lime-800',
-  partial: 'border-dashed border-lime-700 bg-white text-lime-800',
-  skipped: 'border-mist-400 bg-mist-100 text-mist-600',
+  correct: 'border-green-700 bg-white text-green-800',
+  partial: 'border-dashed border-green-700 bg-white text-green-800',
+  skipped: 'border-gray-400 bg-gray-100 text-gray-600',
 };
 
 const CHIP_GLYPH: Record<ChipStatus, { icon: LucideIcon; tone: string }> = {
   incorrect: { icon: X, tone: 'text-red-600 ring-red-600' },
-  correct: { icon: Check, tone: 'text-lime-700 ring-lime-700' },
-  partial: { icon: CircleDot, tone: 'text-lime-700 ring-lime-700' },
-  skipped: { icon: Minus, tone: 'text-mist-500 ring-mist-400' },
+  correct: { icon: Check, tone: 'text-green-700 ring-green-700' },
+  partial: { icon: CircleDot, tone: 'text-green-700 ring-green-700' },
+  skipped: { icon: Minus, tone: 'text-gray-500 ring-gray-400' },
 };
 
 const STATUS_WORD: Record<AnswerStatus, string> = {
@@ -84,7 +84,7 @@ function Chip({ status, children }: { status: ChipStatus; children: ReactNode })
 }
 
 // Static rows: the chip, the topic with the answers, the time.
-const rowGrid = 'grid w-full grid-cols-[32px_minmax(0,1fr)_auto] items-center gap-3 border-t border-mist-100 px-4 py-3 text-left';
+const rowGrid = 'grid w-full grid-cols-[32px_minmax(0,1fr)_auto] items-center gap-3 border-t border-gray-100 px-4 py-3 text-left';
 
 const seconds = (ms: number) => formatDuration(ms / 1000);
 
@@ -99,7 +99,7 @@ export default function ReviewEcho() {
   return (
     <div className={cn(cardClass, 'mt-8 max-w-3xl overflow-hidden')}>
       <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3">
-        <h3 className="text-base font-semibold text-mist-900">
+        <h3 className="text-base font-semibold text-gray-900">
           {mine ? 'Your warm-up review' : 'Example review'}
         </h3>
         {mine ? (
@@ -114,16 +114,16 @@ export default function ReviewEcho() {
         )}
       </div>
 
-      <dl className="grid grid-cols-2 border-t border-mist-100">
+      <dl className="grid grid-cols-2 border-t border-gray-100">
         <div className="min-w-0 px-4 py-3">
-          <dt className="text-xs text-mist-500">Accuracy</dt>
-          <dd className="text-xl font-semibold tracking-tight tabular-nums text-mist-900 sm:text-2xl">
+          <dt className="text-xs text-gray-500">Accuracy</dt>
+          <dd className="text-xl font-semibold tracking-tight tabular-nums text-gray-900 sm:text-2xl">
             {correct}/{answers.length}
           </dd>
         </div>
-        <div className="min-w-0 border-l border-mist-100 px-4 py-3">
-          <dt className="text-xs text-mist-500">Time</dt>
-          <dd className="text-xl font-semibold tracking-tight tabular-nums text-mist-900 sm:text-2xl">
+        <div className="min-w-0 border-l border-gray-100 px-4 py-3">
+          <dt className="text-xs text-gray-500">Time</dt>
+          <dd className="text-xl font-semibold tracking-tight tabular-nums text-gray-900 sm:text-2xl">
             {seconds(totalTime(answers))}
           </dd>
         </div>
@@ -145,10 +145,10 @@ export default function ReviewEcho() {
             <li key={`${answer.q}-${index}`} className={rowGrid}>
               <Chip status={answer.status}>Q{answer.q + 1}</Chip>
               <span className="min-w-0">
-                <span className="block text-sm font-medium text-mist-900">{question.topic}</span>
-                <span className="block text-sm text-mist-500">{meta}</span>
+                <span className="block text-sm font-medium text-gray-900">{question.topic}</span>
+                <span className="block text-sm text-gray-500">{meta}</span>
               </span>
-              <span className="whitespace-nowrap text-sm tabular-nums text-mist-500">{seconds(answer.ms)}</span>
+              <span className="whitespace-nowrap text-sm tabular-nums text-gray-500">{seconds(answer.ms)}</span>
             </li>
           );
         })}
@@ -157,14 +157,14 @@ export default function ReviewEcho() {
         <li className={rowGrid}>
           <Chip status="partial">Q4</Chip>
           <span className="min-w-0">
-            <span className="block text-sm font-medium text-mist-900">Example · multi-select</span>
-            <span className="block text-sm text-mist-500">Partial credit · You: A, C · Correct: A, C, D</span>
+            <span className="block text-sm font-medium text-gray-900">Example · multi-select</span>
+            <span className="block text-sm text-gray-500">Partial credit · You: A, C · Correct: A, C, D</span>
           </span>
-          <span className="whitespace-nowrap text-sm tabular-nums text-mist-500">{seconds(65000)}</span>
+          <span className="whitespace-nowrap text-sm tabular-nums text-gray-500">{seconds(65000)}</span>
         </li>
       </ul>
 
-      <p className="border-t border-mist-100 px-4 py-3 text-sm text-mist-500">
+      <p className="border-t border-gray-100 px-4 py-3 text-sm text-gray-500">
         Every finished test gets a review like this, and a full test a score estimate on the 200–800 scale. On any
         plan.
       </p>

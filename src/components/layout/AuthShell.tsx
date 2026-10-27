@@ -12,11 +12,11 @@ import { buttonClass, focusRingClass, linkClass } from '@/components/ui/Button';
  */
 export default function AuthShell({ children, altLink }: { children: React.ReactNode; altLink?: React.ReactNode }) {
   return (
-    <div className="min-h-screen bg-mist-100">
+    <div className="min-h-screen bg-gray-100">
       <header className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4 sm:px-6 lg:px-8">
         <Link href="/" className={`flex items-center gap-2.5 rounded-lg ${focusRingClass}`} aria-label="MYSATuz home">
           <BrandMark size="sm" />
-          <span className="text-base font-semibold tracking-tight text-mist-900">MYSATuz</span>
+          <span className="text-base font-semibold tracking-tight text-gray-900">MYSATuz</span>
         </Link>
         {altLink}
       </header>

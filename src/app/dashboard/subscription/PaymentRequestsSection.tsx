@@ -120,7 +120,7 @@ function PaymentRequestsFallback() {
           <Skeleton className="mt-2 h-3 w-20 shrink-0" />
         </div>
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-[0.86fr_1.14fr]">
-          <div className={cn(cardClass, 'self-start divide-y divide-mist-100')}>
+          <div className={cn(cardClass, 'self-start divide-y divide-gray-100')}>
             {[0, 1, 2, 3].map((i) => (
               // Same geometry as a request row: two text lines, a badge over a date.
               <div key={i} className="flex items-center gap-4 px-4 py-3 sm:px-5">
@@ -136,7 +136,7 @@ function PaymentRequestsFallback() {
             ))}
           </div>
           <div className={cn(cardClass, 'self-start')}>
-            <div className="flex items-start justify-between gap-3 border-b border-mist-100 px-5 py-4">
+            <div className="flex items-start justify-between gap-3 border-b border-gray-100 px-5 py-4">
               <div className="space-y-1.5">
                 <Skeleton className="h-5 w-40" />
                 <Skeleton className="h-4 w-52 max-w-full" />

@@ -260,7 +260,7 @@ export default async function ResultPage({ params, searchParams }: Props) {
             wrong one. */}
         <dl
           className={cn(
-            'grid gap-4 border-t border-mist-100 px-5 py-4',
+            'grid gap-4 border-t border-gray-100 px-5 py-4',
             hasScore ? 'grid-cols-2 @lg:grid-cols-4' : 'grid-cols-3'
           )}
         >
@@ -277,7 +277,7 @@ export default async function ResultPage({ params, searchParams }: Props) {
             decides the second, so the split is worth seeing. A one-block test
             has one count, and the row above already gives it. */}
         {reviewModules.length > 1 && (
-          <dl className="grid grid-cols-2 gap-4 border-t border-mist-100 px-5 py-4 @lg:grid-cols-4">
+          <dl className="grid grid-cols-2 gap-4 border-t border-gray-100 px-5 py-4 @lg:grid-cols-4">
             {reviewModules.map((module) => (
               <KeyValue
                 key={module.index}
@@ -292,8 +292,8 @@ export default async function ResultPage({ params, searchParams }: Props) {
           </dl>
         )}
 
-        <div className="flex flex-wrap items-center gap-3 border-t border-mist-100 px-5 py-4">
-          <p className="min-w-0 flex-1 basis-64 text-sm text-mist-600">
+        <div className="flex flex-wrap items-center gap-3 border-t border-gray-100 px-5 py-4">
+          <p className="min-w-0 flex-1 basis-64 text-sm text-gray-600">
             {reviewOpens
               ? reviewOpens
               : mistakeCount === 0
@@ -342,7 +342,7 @@ export default async function ResultPage({ params, searchParams }: Props) {
           The review itself is never in the print output because it is never
           fully in the page to begin with. */}
       {!reviewOpens && (
-        <p className="hidden text-sm text-mist-500 print:block">
+        <p className="hidden text-sm text-gray-500 print:block">
           The question-by-question review is only available on screen.
         </p>
       )}
@@ -379,14 +379,14 @@ function ScoreHero({
     <div className="grid grid-cols-1 gap-x-10 gap-y-5 p-5 @2xl:grid-cols-[minmax(0,16rem)_minmax(0,1fr)] @2xl:items-center">
       <div className="min-w-0">
         <div className="flex items-center gap-2">
-          <h2 id="score-heading" className="text-xs font-medium text-mist-500">
+          <h2 id="score-heading" className="text-xs font-medium text-gray-500">
             SAT Math score
           </h2>
           <Badge>Estimate</Badge>
         </div>
-        <p className="mt-1 text-4xl font-semibold tabular-nums tracking-tight text-mist-900 sm:text-5xl">
+        <p className="mt-1 text-4xl font-semibold tabular-nums tracking-tight text-gray-900 sm:text-5xl">
           {score}
-          <span className="text-lg font-medium tracking-normal text-mist-500"> / {SAT_SCORE_MAX}</span>
+          <span className="text-lg font-medium tracking-normal text-gray-500"> / {SAT_SCORE_MAX}</span>
         </p>
         {previous && (
           <div className="mt-2">
@@ -400,45 +400,45 @@ function ScoreHero({
       </div>
 
       <div className="min-w-0">
-        <div role="img" aria-label={scaleLabel} className="relative h-2 rounded-full bg-mist-100">
+        <div role="img" aria-label={scaleLabel} className="relative h-2 rounded-full bg-gray-100">
           <span
-            className="absolute inset-y-0 rounded-full bg-mist-300"
+            className="absolute inset-y-0 rounded-full bg-gray-300"
             style={{ left: `${low}%`, width: `${scorePercent(range.high) - low}%` }}
           />
           {previous && (
             <span
-              className="absolute top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-mist-500 bg-white"
+              className="absolute top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-gray-500 bg-white"
               style={{ left: `${scorePercent(previous.value)}%` }}
             />
           )}
           <span
-            className="absolute top-1/2 h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-board-600"
+            className="absolute top-1/2 h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-ink-600"
             style={{ left: `${scorePercent(score)}%` }}
           />
         </div>
-        <div aria-hidden className="mt-1.5 flex justify-between text-xs tabular-nums text-mist-500">
+        <div aria-hidden className="mt-1.5 flex justify-between text-xs tabular-nums text-gray-500">
           <span>{SAT_SCORE_MIN}</span>
           <span>{SAT_SCORE_MAX}</span>
         </div>
-        <ul aria-hidden className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-mist-600">
+        <ul aria-hidden className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-600">
           <li className="flex items-center gap-1.5">
-            <span className="h-2.5 w-2.5 rounded-full bg-board-600" />
+            <span className="h-2.5 w-2.5 rounded-full bg-ink-600" />
             <span className="tabular-nums">This attempt {score}</span>
           </li>
           <li className="flex items-center gap-1.5">
-            <span className="h-1.5 w-4 rounded-full bg-mist-300" />
+            <span className="h-1.5 w-4 rounded-full bg-gray-300" />
             <span className="tabular-nums">Likely {formatScoreRange(range)}</span>
           </li>
           {previous && (
             <li className="flex items-center gap-1.5">
-              <span className="h-2.5 w-2.5 rounded-full border-2 border-mist-500 bg-white" />
+              <span className="h-2.5 w-2.5 rounded-full border-2 border-gray-500 bg-white" />
               <span className="tabular-nums">
                 Attempt {previous.number} {previous.value}
               </span>
             </li>
           )}
         </ul>
-        <p className="mt-3 text-xs text-mist-500">
+        <p className="mt-3 text-xs text-gray-500">
           An estimate from {questionCount} questions, not an official College Board score.
         </p>
       </div>
@@ -461,12 +461,12 @@ function CountHero({
 }) {
   return (
     <div className="p-5">
-      <h2 id="score-heading" className="text-xs font-medium text-mist-500">
+      <h2 id="score-heading" className="text-xs font-medium text-gray-500">
         Your result
       </h2>
-      <p className="mt-1 text-4xl font-semibold tabular-nums tracking-tight text-mist-900 sm:text-5xl">
+      <p className="mt-1 text-4xl font-semibold tabular-nums tracking-tight text-gray-900 sm:text-5xl">
         {formatCorrectOf(correct, questionCount)}
-        <span className="text-lg font-medium tracking-normal text-mist-500"> correct</span>
+        <span className="text-lg font-medium tracking-normal text-gray-500"> correct</span>
       </p>
       <div className={cn('flex flex-wrap items-center gap-x-3 gap-y-2', previous ? 'mt-2' : 'mt-1')}>
         {previous && (
@@ -477,7 +477,7 @@ function CountHero({
             same={`Same as attempt ${previous.number}`}
           />
         )}
-        <p className="text-xs text-mist-500">
+        <p className="text-xs text-gray-500">
           No score estimate: it takes at least {MIN_QUESTIONS_FOR_SCORE} questions to be worth one.
         </p>
       </div>

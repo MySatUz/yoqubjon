@@ -71,7 +71,7 @@ const FlagQuestion = memo(function FlagQuestion({ questionId }: { questionId: st
         variant: 'secondary',
         size: 'sm',
         className:
-          'cursor-pointer has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-board-600',
+          'cursor-pointer has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ink-600',
       })}
     >
       <input

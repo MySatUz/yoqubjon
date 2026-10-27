@@ -93,7 +93,7 @@ function DeleteCourseDialog({
         </>
       }
     >
-      <div className="space-y-4 text-sm text-mist-700">
+      <div className="space-y-4 text-sm text-gray-700">
         {error && <Alert tone="danger">{error}</Alert>}
         <p>
           {needsTyping
@@ -291,8 +291,8 @@ export default function CourseSettingsForm({
 
             <div className="space-y-1.5">
               <p className={labelClass}>Link</p>
-              <p className="text-sm text-mist-700">
-                <span className="font-medium tabular-nums text-mist-900">?set={getCategoryQueryValue(course.value)}</span>
+              <p className="text-sm text-gray-700">
+                <span className="font-medium tabular-nums text-gray-900">?set={getCategoryQueryValue(course.value)}</span>
                 {' '}· course id {course.value} · cannot be changed
               </p>
             </div>
@@ -314,8 +314,8 @@ export default function CourseSettingsForm({
         <Card as="section" aria-labelledby={`${fieldId}-delete`}>
           <CardBody className="flex flex-wrap items-start justify-between gap-3">
             <div className="min-w-0 max-w-md">
-              <h2 id={`${fieldId}-delete`} className="text-base font-semibold text-mist-900">Delete this course</h2>
-              <p className="mt-0.5 text-sm text-mist-500">
+              <h2 id={`${fieldId}-delete`} className="text-base font-semibold text-gray-900">Delete this course</h2>
+              <p className="mt-0.5 text-sm text-gray-500">
                 {deleteBlocked ?? 'Its access entries are deleted with it. Results stay.'}
               </p>
             </div>

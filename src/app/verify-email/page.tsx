@@ -7,7 +7,8 @@ import VerifyEmailForm from '@/app/verify-email/VerifyEmailForm';
 import { isEmailEnabled } from '@/lib/email';
 import { readPendingEmail } from '@/lib/pendingEmail';
 
-export const metadata: Metadata = { title: 'Confirm your email' };
+// noindex: a step inside a flow, not a page anyone should land on from search.
+export const metadata: Metadata = { title: 'Confirm your email', robots: { index: false } };
 
 /**
  * Where sign-up (and a sign-in to an unconfirmed account) lands: enter the

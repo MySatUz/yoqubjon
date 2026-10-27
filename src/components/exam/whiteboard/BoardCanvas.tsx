@@ -169,7 +169,7 @@ export default function BoardCanvas({ pageKey, interactive }: BoardCanvasProps) 
           // The fields' focus (Field.tsx): a solid board edge, and
           // `outline-hidden` rather than `outline-none`, so high-contrast mode
           // still shows which field has the keyboard.
-          className={`absolute z-20 min-w-[8ch] max-w-[24ch] -translate-y-1/2 rounded-lg border border-dashed border-mist-300 bg-white px-1 font-semibold leading-snug focus:outline-hidden ${fieldFocusClass}`}
+          className={`absolute z-20 min-w-[8ch] max-w-[24ch] -translate-y-1/2 rounded-lg border border-dashed border-gray-300 bg-white px-1 font-semibold leading-snug focus:outline-hidden ${fieldFocusClass}`}
           style={{
             // Less the field's border and padding, so the committed label is
             // painted where the typed one stood instead of jumping left.

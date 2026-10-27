@@ -31,30 +31,33 @@ export interface Stroke {
 
 /**
  * Ink, from the five colour families the design system allows (AGENTS.md):
- * red-600, board-600, lime-700, amber-600 and mist-900. Hex rather than
+ * red-600, ink-600, green-700, amber-600 and gray-900. Hex rather than
  * Tailwind's oklch values because these go to a canvas, and a stored stroke is
  * only ever given a colour from this list.
  */
 export const INKS = [
   { name: 'Red', value: '#dc2626' },
-  { name: 'Green', value: '#0d6657' },
-  { name: 'Lime', value: '#497d00' },
+  { name: 'Blue', value: '#1f4fbf' },
+  { name: 'Green', value: '#1a6b37' },
   { name: 'Amber', value: '#d97706' },
-  { name: 'Black', value: '#161b1d' },
+  { name: 'Black', value: '#141b24' },
 ] as const;
 
 /**
  * Inks this list used to hold, and the one each is drawn in now. Each left
  * with the palette it came from - blue-600 and then indigo-600 with the old
- * accents, emerald and slate with indigo - and a stroke drawn in one before
- * the change, read back from the tab's storage, takes its successor rather
- * than turning red.
+ * accents, emerald and slate with indigo, Board's green, lime and near-black
+ * with Board - and a stroke drawn in one before the change, read back from the
+ * tab's storage, takes its successor rather than turning red.
  */
 const RETIRED_INKS: Record<string, string> = {
-  '#2563eb': '#0d6657',
-  '#4f46e5': '#0d6657',
-  '#059669': '#497d00',
-  '#0f172a': '#161b1d',
+  '#2563eb': '#1f4fbf',
+  '#4f46e5': '#1f4fbf',
+  '#059669': '#1a6b37',
+  '#0f172a': '#141b24',
+  '#0d6657': '#1f4fbf',
+  '#497d00': '#1a6b37',
+  '#161b1d': '#141b24',
 };
 
 /** Three, not five: a fourth choice on a switch nobody explains is noise. */

@@ -144,7 +144,7 @@ function NewCourseDialog({ takenIds, onClose }: { takenIds: string[]; onClose: (
             <span aria-live="polite">
               {predictedId
                 ? <>
-                    Students&apos; link ends in <span className="font-medium tabular-nums text-mist-700">?set={predictedId.toLowerCase()}</span>
+                    Students&apos; link ends in <span className="font-medium tabular-nums text-gray-700">?set={predictedId.toLowerCase()}</span>
                     {predictedId !== baseId && ` (${baseId?.toLowerCase()} is taken)`} · cannot be changed later
                   </>
                 : 'Latin letters, digits and dashes. It cannot be changed later.'}
@@ -200,7 +200,7 @@ function NewCourseDialog({ takenIds, onClose }: { takenIds: string[]; onClose: (
           />
         </Field>
 
-        <p className="text-sm text-mist-600">
+        <p className="text-sm text-gray-600">
           The course is created visible. Add students with Give access once it exists.
         </p>
       </form>

@@ -20,7 +20,7 @@ export default function VideoClient({ url }: { url: string }) {
       </button>
 
       {isOpen && (
-        <div className="mt-3 aspect-video w-full overflow-hidden rounded-xl border border-mist-200 bg-mist-900">
+        <div className="mt-3 aspect-video w-full overflow-hidden rounded-xl border border-gray-200 bg-gray-900">
           <iframe
             src={url}
             title="Explanation video"

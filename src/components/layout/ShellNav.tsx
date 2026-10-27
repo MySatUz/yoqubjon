@@ -68,16 +68,16 @@ function isActivePath(pathname: string, href: string) {
  * The two concave corners that make the active row look cut out of the
  * sidebar: each is a 20px square of the canvas colour minus a quarter circle,
  * sitting just above and below the row at the sidebar's right edge. Plain
- * SVG paths — no gradient or shadow tricks. `fill-mist-100` must match the
+ * SVG paths — no gradient or shadow tricks. `fill-gray-100` must match the
  * canvas behind the sidebar (AppShellFrame) and the row's own background.
  */
 export function SidebarNotch() {
   return (
     <>
-      <svg aria-hidden viewBox="0 0 20 20" className="pointer-events-none absolute -top-5 right-0 h-5 w-5 fill-mist-100">
+      <svg aria-hidden viewBox="0 0 20 20" className="pointer-events-none absolute -top-5 right-0 h-5 w-5 fill-gray-100">
         <path d="M20 0V20H0A20 20 0 0 0 20 0Z" />
       </svg>
-      <svg aria-hidden viewBox="0 0 20 20" className="pointer-events-none absolute -bottom-5 right-0 h-5 w-5 fill-mist-100">
+      <svg aria-hidden viewBox="0 0 20 20" className="pointer-events-none absolute -bottom-5 right-0 h-5 w-5 fill-gray-100">
         <path d="M0 0H20V20A20 20 0 0 0 0 0Z" />
       </svg>
     </>
@@ -90,10 +90,10 @@ export function SidebarNotch() {
  * beside it. `socket` is the 40px circle on the left — an icon, or the avatar
  * on the profile row — which fills with the accent when the row is active.
  *
- * Colours are for the deep board-green sidebar (`board-950`): labels `board-100`,
- * icons `board-200`, hover `board-900`. The active socket stays `board-600`, the
+ * Colours are for the navy sidebar (`ink-950`): labels `ink-100`,
+ * icons `ink-200`, hover `ink-900`. The active socket stays `ink-600`, the
  * accent, so it is the brightest thing in the panel. Keyboard focus is a
- * white outline: the accent outline would vanish on `board-950`.
+ * white outline: the accent outline would vanish on `ink-950`.
  *
  * Collapsed, the label goes sr-only rather than away, so the link keeps its
  * name, and `tooltip` shows it beside the rail on hover and on focus.
@@ -116,7 +116,7 @@ function SidebarRow({
       href={href}
       aria-current={active ? 'page' : undefined}
       className={`group relative flex h-12 items-center gap-3 rounded-l-full pl-1 pr-3 text-sm font-medium transition-colors ${sidebarFocusClass} ${
-        active ? 'bg-mist-100 text-board-600' : 'text-board-100 hover:bg-board-900 hover:text-white'
+        active ? 'bg-gray-100 text-ink-600' : 'text-ink-100 hover:bg-ink-900 hover:text-white'
       }`}
     >
       {/* Hover lights the whole row in the active tab's own shape (rounded
@@ -124,7 +124,7 @@ function SidebarRow({
       {active && <SidebarNotch />}
       <span
         className={`relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-colors ${
-          active ? 'bg-board-600 text-white' : 'text-board-200 group-hover:text-white'
+          active ? 'bg-ink-600 text-white' : 'text-ink-200 group-hover:text-white'
         }`}
       >
         {socket}
@@ -157,12 +157,12 @@ function NavLink({ item, variant, active }: { item: NavItem; variant: ShellNavVa
         href={item.href}
         aria-current={active ? 'page' : undefined}
         className={`flex min-w-0 flex-1 flex-col items-center gap-1 rounded-lg py-1 text-[11px] font-medium transition-colors ${focusRingClass} ${
-          active ? 'text-board-600' : 'text-mist-500 hover:text-mist-900'
+          active ? 'text-ink-600' : 'text-gray-500 hover:text-gray-900'
         }`}
       >
         <span
           className={`flex h-8 w-14 items-center justify-center rounded-full transition-colors ${
-            active ? 'bg-board-600 text-white' : ''
+            active ? 'bg-ink-600 text-white' : ''
           }`}
         >
           <Icon className="h-5 w-5" />
@@ -214,12 +214,12 @@ export function ShellAdminNavLink({ variant }: { variant: ShellNavVariant }) {
 
   return (
     <div role="group" aria-labelledby="admin-nav-label" className="mt-3 flex flex-col gap-1">
-      <p id="admin-nav-label" className="px-4 pb-1 text-xs font-medium text-board-200 collapsed:sr-only">
+      <p id="admin-nav-label" className="px-4 pb-1 text-xs font-medium text-ink-200 collapsed:sr-only">
         Admin
       </p>
       {/* Collapsed, the "Admin" caption is gone from sight: a short rule under
           the icon column still marks where the student's places end. */}
-      <span aria-hidden className="mb-2 ml-1 hidden h-px w-10 bg-board-900 collapsed:block" />
+      <span aria-hidden className="mb-2 ml-1 hidden h-px w-10 bg-ink-900 collapsed:block" />
       {adminItems.map((item) => (
         <NavLink key={item.href} item={item} variant="desktop" active={isAdminActive(pathname, item.href)} />
       ))}
@@ -257,7 +257,7 @@ export function ShellSubscriptionLink({ pendingPayments = 0 }: { pendingPayments
       <span className="flex items-center gap-2">
         <span className="min-w-0 flex-1 truncate">{item.label}</span>
         {showCount && (
-          <span className="shrink-0 rounded-full bg-white px-1.5 text-xs font-medium tabular-nums text-board-950">
+          <span className="shrink-0 rounded-full bg-white px-1.5 text-xs font-medium tabular-nums text-ink-950">
             {pendingPayments}
             <span className="sr-only"> {pendingPayments === 1 ? 'payment' : 'payments'} waiting</span>
           </span>

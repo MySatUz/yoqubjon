@@ -6,8 +6,8 @@ import { iconCircleClass } from '@/components/ui/Misc';
 type AlertTone = 'info' | 'success' | 'warning' | 'danger';
 
 const alertTones: Record<AlertTone, { box: string; icon: React.ReactNode }> = {
-  info: { box: 'border-mist-200 bg-mist-50 text-mist-700', icon: <Info className="text-mist-500" /> },
-  success: { box: 'border-lime-200 bg-lime-50 text-lime-900', icon: <CheckCircle2 className="text-lime-700" /> },
+  info: { box: 'border-gray-200 bg-gray-50 text-gray-700', icon: <Info className="text-gray-500" /> },
+  success: { box: 'border-green-200 bg-green-50 text-green-900', icon: <CheckCircle2 className="text-green-700" /> },
   warning: { box: 'border-amber-200 bg-amber-50 text-amber-800', icon: <TriangleAlert className="text-amber-600" /> },
   danger: { box: 'border-red-200 bg-red-50 text-red-800', icon: <AlertCircle className="text-red-600" /> },
 };
@@ -57,12 +57,12 @@ export function EmptyState({
   className?: string;
 }) {
   return (
-    <div className={cn('flex flex-col items-center rounded-2xl border border-dashed border-mist-300 bg-white px-6 py-10 text-center', className)}>
+    <div className={cn('flex flex-col items-center rounded-2xl border border-dashed border-gray-300 bg-white px-6 py-10 text-center', className)}>
       {icon && (
         <span className={cn(iconCircleClass, 'mb-3')}>{icon}</span>
       )}
-      <p className="text-sm font-medium text-mist-900">{title}</p>
-      {description && <p className="mt-1 max-w-sm text-sm text-mist-500">{description}</p>}
+      <p className="text-sm font-medium text-gray-900">{title}</p>
+      {description && <p className="mt-1 max-w-sm text-sm text-gray-500">{description}</p>}
       {action && <div className="mt-4">{action}</div>}
     </div>
   );
@@ -70,5 +70,5 @@ export function EmptyState({
 
 /** Grey placeholder block for loading.tsx skeletons. Size it with className. */
 export function Skeleton({ className }: { className?: string }) {
-  return <div className={cn('animate-pulse rounded-lg bg-mist-200/70', className)} />;
+  return <div className={cn('animate-pulse rounded-lg bg-gray-200/70', className)} />;
 }

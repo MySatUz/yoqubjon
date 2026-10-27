@@ -20,8 +20,8 @@ async function CourseMeta({ courseId, visible }: { courseId: string; visible: bo
   return (
     <>
       {visible ? <Badge onCanvas>Visible</Badge> : <Badge onCanvas><EyeOff />Hidden</Badge>}
-      {/* On the mist-100 canvas, where mist-500 misses AA. */}
-      <span className="text-sm tabular-nums text-mist-600">
+      {/* On the gray-100 canvas, where gray-500 misses AA. */}
+      <span className="text-sm tabular-nums text-gray-600">
         {plural(summary.tests, 'test', 'tests')}
         {summary.hiddenTests > 0 && ` (${summary.hiddenTests} hidden)`}
         {' · '}{summary.withAccess} with access

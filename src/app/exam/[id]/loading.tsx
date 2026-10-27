@@ -9,10 +9,10 @@ import { ModuleTransitionSkeleton } from '@/components/exam/ModuleTransition';
  */
 export default function Loading() {
   return (
-    <main className="flex h-dvh flex-col overflow-hidden bg-mist-100">
+    <main className="flex h-dvh flex-col overflow-hidden bg-gray-100">
       <p className="sr-only">Loading the test</p>
 
-      <div className="flex h-14 shrink-0 items-center justify-between gap-2 border-b border-mist-200 bg-white px-2 sm:px-4 lg:px-6">
+      <div className="flex h-14 shrink-0 items-center justify-between gap-2 border-b border-gray-200 bg-white px-2 sm:px-4 lg:px-6">
         <div className="space-y-1.5">
           <Skeleton className="h-4 w-24" />
           <Skeleton className="h-3 w-32 sm:w-44" />

@@ -74,21 +74,21 @@ export default function ExpiredAttemptNotice({
       <div className={cn(cardClass, 'mx-auto w-full max-w-md p-5')}>
         <Badge>Unfinished attempt</Badge>
 
-        <h2 className="mt-3 text-xl font-semibold tracking-tight text-mist-900">
+        <h2 className="mt-3 text-xl font-semibold tracking-tight text-gray-900">
           Time ran out while you were away
         </h2>
-        <p className="mt-1 text-sm text-mist-500">
+        <p className="mt-1 text-sm text-gray-500">
           You started this test earlier and left before finishing it. The clock
           kept running{ranOutAt ? ` and ran out on ${ranOutAt}` : ' and has run out'}.
         </p>
 
-        <p className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-mist-700">
+        <p className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-700">
           <span className="inline-flex items-center gap-1.5 tabular-nums">
-            <ListChecks className="h-4 w-4 text-mist-500" />
+            <ListChecks className="h-4 w-4 text-gray-500" />
             {answeredCount} {answeredCount === 1 ? 'answer' : 'answers'} saved
           </span>
           <span className="inline-flex items-center gap-1.5">
-            <Clock3 className="h-4 w-4 text-mist-500" />
+            <Clock3 className="h-4 w-4 text-gray-500" />
             {moduleCount > 1 ? `Stopped in Module ${moduleIndex} of ${moduleCount}` : 'No time left'}
           </span>
         </p>
@@ -123,7 +123,7 @@ export default function ExpiredAttemptNotice({
           </button>
         </div>
 
-        <p className="mt-3 text-xs text-mist-500">
+        <p className="mt-3 text-xs text-gray-500">
           A new attempt starts with a full clock and discards the saved answers.
           {isLastModule ? ' Submitting them counts as one of your attempts.' : ''}
         </p>

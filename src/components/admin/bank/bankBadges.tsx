@@ -65,7 +65,7 @@ export function DifficultyBars({ level, className }: { level: number | null; cla
       {[1, 2, 3].map((step) => (
         <span
           key={step}
-          className={cn('h-1.5 w-4 rounded-full', level !== null && step <= level ? 'bg-board-600' : 'bg-mist-200')}
+          className={cn('h-1.5 w-4 rounded-full', level !== null && step <= level ? 'bg-ink-600' : 'bg-gray-200')}
         />
       ))}
     </span>
@@ -76,11 +76,11 @@ export function DifficultyBars({ level, className }: { level: number | null; cla
  * A choice tile: a native checkbox and its label in one bordered box, so the
  * whole tile is the target - the bank's domain and difficulty filters, on the
  * bank page and in every bank picker. Chosen, it takes the selected treatment
- * of every other picker (board-50, a board-600 edge); `has-checked:` reads the
+ * of every other picker (ink-50, a ink-600 edge); `has-checked:` reads the
  * box itself, so a server-rendered form is right before any script runs.
  * Use it on a <label> that wraps `<input type="checkbox" className={checkboxClass}>`,
  * the words (flex-1) and, where known, a count.
  */
 export const choiceTileClass =
-  'flex h-11 cursor-pointer items-center gap-3 rounded-xl border border-mist-300 bg-white px-3.5 transition-colors ' +
-  'hover:border-mist-400 hover:bg-mist-50 has-checked:border-board-600 has-checked:bg-board-50 pointer-coarse:h-12';
+  'flex h-11 cursor-pointer items-center gap-3 rounded-xl border border-gray-300 bg-white px-3.5 transition-colors ' +
+  'hover:border-gray-400 hover:bg-gray-50 has-checked:border-ink-600 has-checked:bg-ink-50 pointer-coarse:h-12';

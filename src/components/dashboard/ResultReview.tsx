@@ -92,31 +92,31 @@ const QUESTION_IMAGE_HEIGHT = 480;
 /*
  * Chip colours, shared by the chips and the legend. Mistakes are the solid
  * ones - they are what the student came here to work through. The old pale
- * tints were 1.04:1 apart (lime-50 against red-50) and one colour to a
+ * tints were 1.04:1 apart (green-50 against red-50) and one colour to a
  * red-green colour-blind eye, so each status also carries a glyph.
  */
 const STATUS_TONE: Record<ReviewStatus, string> = {
   incorrect: 'border-red-600 bg-red-600 text-white',
-  correct: 'border-lime-700 bg-white text-lime-800',
-  // A partly right multi-select stays inside the lime family, told apart by
+  correct: 'border-green-700 bg-white text-green-800',
+  // A partly right multi-select stays inside the green family, told apart by
   // a dashed outline, rather than borrowing amber - which this design system
   // keeps for pending and expiring things alone.
-  partial: 'border-dashed border-lime-700 bg-white text-lime-800',
-  skipped: 'border-mist-400 bg-mist-100 text-mist-600',
+  partial: 'border-dashed border-green-700 bg-white text-green-800',
+  skipped: 'border-gray-400 bg-gray-100 text-gray-600',
 };
 
 const STATUS_HOVER: Record<ReviewStatus, string> = {
   incorrect: 'hover:bg-red-700',
-  correct: 'hover:bg-lime-50',
-  partial: 'hover:bg-lime-50',
-  skipped: 'hover:bg-mist-200',
+  correct: 'hover:bg-green-50',
+  partial: 'hover:bg-green-50',
+  skipped: 'hover:bg-gray-200',
 };
 
 const STATUS_GLYPH: Record<ReviewStatus, { icon: LucideIcon; tone: string }> = {
   incorrect: { icon: X, tone: 'text-red-600 ring-red-600' },
-  correct: { icon: Check, tone: 'text-lime-700 ring-lime-700' },
-  partial: { icon: CircleDot, tone: 'text-lime-700 ring-lime-700' },
-  skipped: { icon: Minus, tone: 'text-mist-500 ring-mist-400' },
+  correct: { icon: Check, tone: 'text-green-700 ring-green-700' },
+  partial: { icon: CircleDot, tone: 'text-green-700 ring-green-700' },
+  skipped: { icon: Minus, tone: 'text-gray-500 ring-gray-400' },
 };
 
 const STATUS_LABEL: Record<ReviewStatus, string> = {
@@ -393,7 +393,7 @@ export default function ResultReview({
                   className={segmentClass(filter === value)}
                 >
                   {value === 'all' ? 'All' : 'Mistakes'}
-                  <span className="tabular-nums text-mist-500">{value === 'all' ? totalCount : mistakes.length}</span>
+                  <span className="tabular-nums text-gray-500">{value === 'all' ? totalCount : mistakes.length}</span>
                 </button>
               ))}
             </div>
@@ -402,8 +402,8 @@ export default function ResultReview({
       />
 
       <div className="@4xl:grid @4xl:grid-cols-[17rem_minmax(0,1fr)]">
-        <div className="space-y-4 p-5 @4xl:border-r @4xl:border-mist-100">
-          <ul className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-mist-600">
+        <div className="space-y-4 p-5 @4xl:border-r @4xl:border-gray-100">
+          <ul className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-gray-600">
             {legend.map(({ status, count }) => (
               <li key={status} className="flex items-center gap-2">
                 <span className={cn('relative h-4 w-4 rounded-md border', STATUS_TONE[status])}>
@@ -423,7 +423,7 @@ export default function ResultReview({
             return (
               <div key={module.index} className="space-y-2">
                 {isModular && (
-                  <h3 className="text-xs font-medium text-mist-500">Module {module.index}</h3>
+                  <h3 className="text-xs font-medium text-gray-500">Module {module.index}</h3>
                 )}
 
                 <div className="flex flex-wrap gap-2">
@@ -438,12 +438,12 @@ export default function ResultReview({
                         // A finger, not a narrow window, needs the bigger target:
                         // pointer-coarse, as the buttons step up (Button.tsx).
                         'relative h-9 w-9 rounded-lg border text-sm font-medium tabular-nums transition-colors pointer-coarse:h-10 pointer-coarse:w-10',
-                        'focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-board-600',
+                        'focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink-600',
                         STATUS_TONE[question.status],
                         STATUS_HOVER[question.status],
                         // The open question wears the same dark ring as "you are
                         // here" in the exam's navigator.
-                        question.id === openQuestionId && 'ring-2 ring-mist-900 ring-offset-2'
+                        question.id === openQuestionId && 'ring-2 ring-gray-900 ring-offset-2'
                       )}
                     >
                       {question.number}
@@ -460,18 +460,18 @@ export default function ResultReview({
           /* print:hidden is a second lock, not the first one: the question is
              only ever in the DOM while it is open, so a print of this page is
              empty here either way. */
-          <section className="min-w-0 border-t border-mist-100 @4xl:border-t-0 print:hidden">
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-mist-100 px-5 py-3">
+          <section className="min-w-0 border-t border-gray-100 @4xl:border-t-0 print:hidden">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 px-5 py-3">
               {/* Live: Previous and Next change the question under a
                   screen reader's cursor, and it should hear which one it is. */}
               <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1" aria-live="polite" aria-atomic="true">
-                <h3 className="text-sm font-semibold text-mist-900">
+                <h3 className="text-sm font-semibold text-gray-900">
                   {isModular && `Module ${current.moduleIndex} · `}
                   Question {current.number}
                 </h3>
                 <StatusBadge status={current.status} credit={current.credit} />
                 {showOnlyMistakes && (
-                  <span className="text-xs tabular-nums text-mist-500">
+                  <span className="text-xs tabular-nums text-gray-500">
                     Mistake {openIndex + 1} of {mistakes.length}
                   </span>
                 )}
@@ -509,7 +509,7 @@ export default function ResultReview({
             <div className="p-5">
               {/* Open, and neither here nor failed: on its way. */}
               {!detail && !error && (
-                <div className="flex items-center justify-center gap-2 py-12 text-sm text-mist-500">
+                <div className="flex items-center justify-center gap-2 py-12 text-sm text-gray-500">
                   <Loader2 className="h-4 w-4 animate-spin" />
                   Opening question {current.number}
                 </div>
@@ -557,7 +557,7 @@ export default function ResultReview({
                     {/* `contentHtml` comes from `renderMathHtml`, which escapes
                         every plain-text segment and leaves KaTeX's `trust` off. */}
                     <div
-                      className="text-sm leading-relaxed text-mist-700"
+                      className="text-sm leading-relaxed text-gray-700"
                       dangerouslySetInnerHTML={{ __html: detail.contentHtml }}
                     />
                   </div>
@@ -569,7 +569,7 @@ export default function ResultReview({
                       userAnswerHtml={detail.userAnswerHtml}
                       correctAnswerHtml={detail.correctAnswerHtml}
                       credit={detail.credit}
-                      className="border-t border-mist-100 pt-5"
+                      className="border-t border-gray-100 pt-5"
                     />
                   )}
 
@@ -584,7 +584,7 @@ export default function ResultReview({
             {/* A wrong key or a broken diagram is reported from the question
                 itself, and the message already names it. Next is repeated
                 here: it is where the student is once they have read it all. */}
-            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-mist-100 px-5 py-3">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-gray-100 px-5 py-3">
               <a
                 href={reportProblemHref(testTitle, current, isModular)}
                 target="_blank"
@@ -606,7 +606,7 @@ export default function ResultReview({
         ) : (
           // Where the question will open, at its place: a dashed panel, not
           // a line of centred grey text.
-          <div className="border-t border-mist-100 p-5 @4xl:border-t-0">
+          <div className="border-t border-gray-100 p-5 @4xl:border-t-0">
             <EmptyState
               icon={<MousePointerClick />}
               title="No question open"
@@ -664,22 +664,22 @@ function AnswerPair({
     <dl className={cn('grid grid-cols-1 gap-4 sm:grid-cols-2', className)}>
       {userAnswerHtml !== null && (
         <div>
-          <dt className="text-xs font-medium text-mist-500">Your answer</dt>
+          <dt className="text-xs font-medium text-gray-500">Your answer</dt>
           {userAnswerHtml ? (
             <dd
-              className={cn('mt-1 text-base font-semibold', credit > 0 ? 'text-lime-800' : 'text-red-700')}
+              className={cn('mt-1 text-base font-semibold', credit > 0 ? 'text-green-800' : 'text-red-700')}
               dangerouslySetInnerHTML={{ __html: userAnswerHtml }}
             />
           ) : (
-            <dd className="mt-1 text-base font-semibold text-mist-500">Not answered</dd>
+            <dd className="mt-1 text-base font-semibold text-gray-500">Not answered</dd>
           )}
         </div>
       )}
       {correctAnswerHtml && (
         <div>
-          <dt className="text-xs font-medium text-mist-500">Correct answer</dt>
+          <dt className="text-xs font-medium text-gray-500">Correct answer</dt>
           <dd
-            className="mt-1 text-base font-semibold text-mist-900"
+            className="mt-1 text-base font-semibold text-gray-900"
             dangerouslySetInnerHTML={{ __html: correctAnswerHtml }}
           />
         </div>
@@ -709,8 +709,8 @@ function ReviewOptions({ detail }: { detail: RevealedQuestion }) {
   const unmatchedKey = right.size === 0 ? detail.correctAnswerHtml : null;
 
   return (
-    <div className="space-y-2 border-t border-mist-100 pt-5">
-      {!detail.userAnswerHtml && <p className="text-sm font-medium text-mist-600">Not answered</p>}
+    <div className="space-y-2 border-t border-gray-100 pt-5">
+      {!detail.userAnswerHtml && <p className="text-sm font-medium text-gray-600">Not answered</p>}
       <ol className="select-none space-y-2">
         {detail.optionsHtml.map((html, index) => {
           const letter = OPTION_LETTERS[index];
@@ -727,26 +727,26 @@ function ReviewOptions({ detail }: { detail: RevealedQuestion }) {
                 // card is the container (@container on the review).
                 'grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-3 gap-y-1.5 rounded-xl border px-4 py-3 text-sm @md:grid-cols-[auto_minmax(0,1fr)_auto]',
                 isRight
-                  ? 'border-lime-700 bg-lime-50'
+                  ? 'border-green-700 bg-green-50'
                   : isWrongPick
                     ? 'border-red-600 bg-red-50'
-                    : 'border-mist-200',
+                    : 'border-gray-200',
               )}
             >
               <span
                 className={cn(
                   'flex h-7 w-7 shrink-0 items-center justify-center rounded-full border text-xs font-semibold',
                   isRight
-                    ? 'border-lime-700 bg-lime-700 text-white'
+                    ? 'border-green-700 bg-green-700 text-white'
                     : isWrongPick
                       ? 'border-red-600 bg-red-600 text-white'
-                      : 'border-mist-300 text-mist-600',
+                      : 'border-gray-300 text-gray-600',
                 )}
               >
                 {letter}
               </span>
               {/* From `renderMathHtml`, like the stem. */}
-              <span className="min-w-0 break-words text-mist-900" dangerouslySetInnerHTML={{ __html: html }} />
+              <span className="min-w-0 break-words text-gray-900" dangerouslySetInnerHTML={{ __html: html }} />
               {isPicked && (
                 <Badge tone={isRight ? 'success' : 'danger'} className={optionBadgeClass}>
                   {isRight ? <CheckCircle2 /> : <XCircle />}

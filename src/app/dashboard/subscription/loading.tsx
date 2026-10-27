@@ -18,7 +18,7 @@ export default function Loading() {
       </div>
 
       <div className={cardClass}>
-        <div className="border-b border-mist-100 px-5 py-4">
+        <div className="border-b border-gray-100 px-5 py-4">
           <Skeleton className="h-5 w-28" />
           <Skeleton className="mt-1.5 h-4 w-56 max-w-full" />
         </div>
@@ -52,7 +52,7 @@ export default function Loading() {
 
       <div className="space-y-3">
         <Skeleton className="h-5 w-32" />
-        <div className={cn(cardClass, 'divide-y divide-mist-100')}>
+        <div className={cn(cardClass, 'divide-y divide-gray-100')}>
           {[0, 1, 2].map((i) => (
             <div key={i} className="flex items-center gap-4 px-4 py-3 sm:px-5">
               <div className="flex-1 space-y-1.5 py-0.5">

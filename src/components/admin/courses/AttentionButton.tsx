@@ -58,7 +58,7 @@ export function AttentionButton({ count, children }: { count: number; children: 
         aria-label={`Needs attention: ${count}`}
         title="Needs attention"
         onClick={() => setOpen((value) => !value)}
-        className={buttonClass({ variant: 'secondary', className: open ? 'bg-mist-100' : undefined })}
+        className={buttonClass({ variant: 'secondary', className: open ? 'bg-gray-100' : undefined })}
       >
         <Bell className="h-4 w-4" />
         {/* Amber: things waiting for a decision or about to expire. */}
@@ -72,9 +72,9 @@ export function AttentionButton({ count, children }: { count: number; children: 
           id={panelId}
           role="region"
           aria-label="Needs attention"
-          className="z-40 overflow-hidden rounded-2xl border border-mist-200 bg-white shadow-lg max-sm:fixed max-sm:inset-x-4 max-sm:top-16 sm:absolute sm:right-0 sm:top-full sm:mt-2 sm:w-md"
+          className="z-40 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-lg max-sm:fixed max-sm:inset-x-4 max-sm:top-16 sm:absolute sm:right-0 sm:top-full sm:mt-2 sm:w-md"
         >
-          <p className="border-b border-mist-200 px-4 py-3 text-sm font-semibold text-mist-900 sm:px-5">Needs attention</p>
+          <p className="border-b border-gray-200 px-4 py-3 text-sm font-semibold text-gray-900 sm:px-5">Needs attention</p>
           <div className="max-h-[min(28rem,70vh)] overflow-y-auto">{children}</div>
         </div>
       )}

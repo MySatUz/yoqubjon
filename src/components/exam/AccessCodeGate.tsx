@@ -53,14 +53,14 @@ export default function AccessCodeGate({ testId, title }: { testId: string; titl
   // Held to the top like the auth forms and the start screen, not centred: a
   // wrong code's message must not move the field it is about.
   return (
-    <div className="flex min-h-dvh justify-center bg-mist-100 px-4 py-8 sm:py-16">
+    <div className="flex min-h-dvh justify-center bg-gray-100 px-4 py-8 sm:py-16">
       <div className="w-full max-w-md space-y-4">
         <BackLink href="/dashboard">Back to tests</BackLink>
 
         <form onSubmit={handleSubmit} className={cn(cardClass, 'p-5')}>
-          <h1 className="text-xl font-semibold tracking-tight text-mist-900">Enter the test code</h1>
-          <p className="mt-1 text-sm break-words text-mist-500">
-            <span className="font-medium text-mist-700">{title}</span> opens with a{' '}
+          <h1 className="text-xl font-semibold tracking-tight text-gray-900">Enter the test code</h1>
+          <p className="mt-1 text-sm break-words text-gray-500">
+            <span className="font-medium text-gray-700">{title}</span> opens with a{' '}
             {ACCESS_CODE_LENGTH}-digit code from your teacher.
           </p>
 
@@ -70,7 +70,7 @@ export default function AccessCodeGate({ testId, title }: { testId: string; titl
                 included, so high-contrast mode still shows the focus; the wide
                 tracking spaces the digits out so a mistyped one is easy to
                 spot. No "000000" placeholder: at the system's readable
-                mist-500 it looked like a code already typed in. */}
+                gray-500 it looked like a code already typed in. */}
             <input
               value={code}
               onChange={(event) =>
@@ -82,7 +82,7 @@ export default function AccessCodeGate({ testId, title }: { testId: string; titl
               aria-invalid={error ? true : undefined}
               aria-describedby={error ? 'access-code-error' : undefined}
               className={cn(
-                'h-12 w-full rounded-lg border border-mist-400 bg-white px-3 text-center text-2xl font-semibold tabular-nums tracking-[0.4em] text-mist-900 transition-colors hover:border-mist-500 focus:outline-hidden aria-invalid:border-red-600 aria-invalid:focus:ring-red-600',
+                'h-12 w-full rounded-lg border border-gray-400 bg-white px-3 text-center text-2xl font-semibold tabular-nums tracking-[0.4em] text-gray-900 transition-colors hover:border-gray-500 focus:outline-hidden aria-invalid:border-red-600 aria-invalid:focus:ring-red-600',
                 fieldFocusClass
               )}
             />

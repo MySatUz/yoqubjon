@@ -154,9 +154,9 @@ function plural(count: number, one: string, many: string) {
 function AccountCell({ name, account }: { name: string | null; account: AccessAccountState }) {
   return (
     <div className="min-w-0">
-      {name && <p className="truncate text-sm text-mist-900">{name}</p>}
+      {name && <p className="truncate text-sm text-gray-900">{name}</p>}
       {account === 'confirmed' ? (
-        <p className="text-xs text-mist-500">{ACCOUNT_STATE_LABELS.confirmed}</p>
+        <p className="text-xs text-gray-500">{ACCOUNT_STATE_LABELS.confirmed}</p>
       ) : (
         <Badge tone={account === 'waiting' ? 'warning' : 'neutral'}>{ACCOUNT_STATE_LABELS[account]}</Badge>
       )}
@@ -240,7 +240,7 @@ function StudentSearch({
     <div className="space-y-2">
       <label htmlFor={fieldId} className={labelClass}>Find students by name or email</label>
       <div className="relative">
-        <Search aria-hidden className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-mist-400" />
+        <Search aria-hidden className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
         {/* Room for the glass, as on the Users search. */}
         <input
           id={fieldId}
@@ -255,24 +255,24 @@ function StudentSearch({
       </div>
 
       {isSearching && (
-        <div className="rounded-xl border border-mist-200" aria-live="polite">
+        <div className="rounded-xl border border-gray-200" aria-live="polite">
           {!current || current.status === 'loading' ? (
-            <p className="flex items-center gap-2 px-3 py-2.5 text-sm text-mist-500">
+            <p className="flex items-center gap-2 px-3 py-2.5 text-sm text-gray-500">
               <Loader2 className="h-4 w-4 animate-spin" />
               Searching…
             </p>
           ) : current.status === 'error' ? (
             <p className="px-3 py-2.5 text-sm text-red-600">Could not search accounts. Try again.</p>
           ) : current.users.length === 0 ? (
-            <p className="px-3 py-2.5 text-sm text-mist-500">No account matches &ldquo;{term}&rdquo;.</p>
+            <p className="px-3 py-2.5 text-sm text-gray-500">No account matches &ldquo;{term}&rdquo;.</p>
           ) : (
             <>
-              <ul className="max-h-48 divide-y divide-mist-100 overflow-y-auto">
+              <ul className="max-h-48 divide-y divide-gray-100 overflow-y-auto">
                 {current.users.map((user) => {
                   const isListed = listed.has(user.email);
                   return (
                     <li key={user.id}>
-                      <label className={cn('flex items-center gap-3 px-3 py-2', isListed ? 'text-mist-500' : 'cursor-pointer hover:bg-mist-50')}>
+                      <label className={cn('flex items-center gap-3 px-3 py-2', isListed ? 'text-gray-500' : 'cursor-pointer hover:bg-gray-50')}>
                         <input
                           type="checkbox"
                           className={checkboxClass}
@@ -281,19 +281,19 @@ function StudentSearch({
                           onChange={() => toggle(user.email)}
                         />
                         <span className="min-w-0 flex-1">
-                          <span className="block truncate text-sm text-mist-900">{user.name || user.email}</span>
-                          {user.name && <span className="block truncate text-xs text-mist-500">{user.email}</span>}
+                          <span className="block truncate text-sm text-gray-900">{user.name || user.email}</span>
+                          {user.name && <span className="block truncate text-xs text-gray-500">{user.email}</span>}
                         </span>
                         {isListed
-                          ? <span className="shrink-0 text-xs text-mist-500">In the list</span>
+                          ? <span className="shrink-0 text-xs text-gray-500">In the list</span>
                           : user.account === 'waiting' && <Badge tone="warning">Waiting for email confirmation</Badge>}
                       </label>
                     </li>
                   );
                 })}
               </ul>
-              <div className="flex items-center justify-between gap-3 border-t border-mist-100 px-3 py-2">
-                <span className="text-xs text-mist-500">
+              <div className="flex items-center justify-between gap-3 border-t border-gray-100 px-3 py-2">
+                <span className="text-xs text-gray-500">
                   {current.users.length === 20 ? 'First 20 matches' : plural(current.users.length, 'match', 'matches')}
                 </span>
                 <Button variant="quiet" size="sm" onClick={add} disabled={tickedHere.length === 0 || disabled}>
@@ -589,7 +589,7 @@ function GiveAccessDialog({
               />
             </Field>
 
-            <div className="space-y-1 text-sm text-mist-600">
+            <div className="space-y-1 text-sm text-gray-600">
               <p>Access is extended from each student&apos;s current end date. Nobody&apos;s access gets shorter.</p>
               <p>Students must sign up with exactly this email.</p>
               {course && !course.visible && <p>Students with access still see a hidden course.</p>}
@@ -598,7 +598,7 @@ function GiveAccessDialog({
         </div>
 
         <section aria-labelledby={`${fieldId}-preview`} className="space-y-3">
-          <h3 id={`${fieldId}-preview`} className="text-sm font-semibold text-mist-900">
+          <h3 id={`${fieldId}-preview`} className="text-sm font-semibold text-gray-900">
             {run.status !== 'idle' ? 'Result' : run.uncertain ? 'Preview' : 'Preview · nothing is saved yet'}
           </h3>
 
@@ -645,7 +645,7 @@ function GiveAccessDialog({
                 : `Could not check these emails. ${describeAccessError(shownPreview.error).replace(/^Not saved: /, '')}`}
             </Alert>
           ) : (
-            <div className="max-h-80 overflow-auto rounded-xl border border-mist-200">
+            <div className="max-h-80 overflow-auto rounded-xl border border-gray-200">
               <table className={tableClass}>
                 <caption className="sr-only">Preview of access for {plural(validEmails.length, 'email', 'emails')}</caption>
                 <thead className="sticky top-0 z-10">
@@ -670,10 +670,10 @@ function GiveAccessDialog({
                     return (
                       <tr key={`${entry.email}-${index}`}>
                         <td className={tdClass}>
-                          <p className="max-w-64 truncate text-sm text-mist-900">{entry.email}</p>
+                          <p className="max-w-64 truncate text-sm text-gray-900">{entry.email}</p>
                           {/* Phones drop the middle columns; the dates move under the email. */}
                           {row && (
-                            <p className="text-xs text-mist-500 sm:hidden">
+                            <p className="text-xs text-gray-500 sm:hidden">
                               {now} → {after}
                             </p>
                           )}
@@ -691,7 +691,7 @@ function GiveAccessDialog({
                           {entry.status === 'invalid' ? (
                             <Badge tone="danger">Invalid email</Badge>
                           ) : entry.status === 'duplicate' ? (
-                            <span className="text-xs text-mist-500">Duplicate · sent once</span>
+                            <span className="text-xs text-gray-500">Duplicate · sent once</span>
                           ) : result?.outcome === 'given' ? (
                             <Badge tone="success">Given · until {formatDateKey(result.endKey, todayKey)}</Badge>
                           ) : result?.outcome === 'failed' ? (
@@ -700,8 +700,8 @@ function GiveAccessDialog({
                             <Badge tone="danger">Changed since the preview</Badge>
                           ) : plan ? (
                             plan.change === 'unchanged'
-                              ? <span className="text-xs text-mist-500">Unchanged · not sent</span>
-                              : run.status === 'idle' ? <Badge>{ACCESS_CHANGE_LABELS[plan.change]}</Badge> : <span className="text-xs text-mist-500">Not sent</span>
+                              ? <span className="text-xs text-gray-500">Unchanged · not sent</span>
+                              : run.status === 'idle' ? <Badge>{ACCESS_CHANGE_LABELS[plan.change]}</Badge> : <span className="text-xs text-gray-500">Not sent</span>
                           ) : (
                             <Skeleton className="h-4 w-16" />
                           )}

@@ -20,7 +20,7 @@ export default function Loading() {
 
       <div className={cn(cardClass, 'flex flex-col gap-4 px-5 py-4 sm:flex-row sm:items-center')}>
         <div className="flex min-w-0 flex-1 items-center gap-3">
-          <div className="h-12 w-12 shrink-0 animate-pulse rounded-full bg-mist-200/70" />
+          <div className="h-12 w-12 shrink-0 animate-pulse rounded-full bg-gray-200/70" />
           <div className="min-w-0 flex-1 space-y-2">
             <Skeleton className="h-5 w-40 max-w-full" />
             <Skeleton className="h-4 w-56 max-w-full" />
@@ -44,11 +44,11 @@ export default function Loading() {
       <div className="@container">
         <div className="grid grid-cols-1 items-start gap-6 @4xl:grid-cols-[minmax(0,1fr)_22rem]">
           <div className={cardClass}>
-            <div className="space-y-1.5 border-b border-mist-100 px-5 py-4">
+            <div className="space-y-1.5 border-b border-gray-100 px-5 py-4">
               <Skeleton className="h-5 w-48" />
               <Skeleton className="h-4 w-72 max-w-full" />
             </div>
-            <div className="divide-y divide-mist-100">
+            <div className="divide-y divide-gray-100">
               {[0, 1].map((i) => (
                 <div key={i} className="flex items-center gap-4 px-4 py-3 sm:px-5">
                   <div className="min-w-0 flex-1 space-y-2.5">
@@ -61,7 +61,7 @@ export default function Loading() {
             </div>
           </div>
           <div className={cardClass}>
-            <div className="space-y-1.5 border-b border-mist-100 px-5 py-4">
+            <div className="space-y-1.5 border-b border-gray-100 px-5 py-4">
               <Skeleton className="h-5 w-28" />
               <Skeleton className="h-4 w-64 max-w-full" />
             </div>

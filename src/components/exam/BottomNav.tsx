@@ -140,7 +140,7 @@ export default function BottomNav({ testId, modules }: BottomNavProps) {
   return (
     // The upward shadow is the same one the app shell's bottom bar casts.
     // `z-50`, the header's, so the navigator opens over a tool window.
-    <footer className="sticky bottom-0 z-50 flex h-16 shrink-0 items-center gap-2 border-t border-mist-200 bg-white px-3 shadow-[0_-12px_30px_rgba(15,23,42,0.08)] sm:px-4 lg:px-6">
+    <footer className="sticky bottom-0 z-50 flex h-16 shrink-0 items-center gap-2 border-t border-gray-200 bg-white px-3 shadow-[0_-12px_30px_rgba(15,23,42,0.08)] sm:px-4 lg:px-6">
       <div className="hidden flex-1 md:block" />
 
       {/* On the review the grid is on screen, so the navigator steps aside
@@ -157,7 +157,7 @@ export default function BottomNav({ testId, modules }: BottomNavProps) {
             aria-controls={isNavigatorOpen ? navigatorId : undefined}
             // `pointer-coarse:h-11`, level with Back and Next, which grow to
             // a finger's 44px there (see Button.tsx).
-            className="inline-flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-lg bg-mist-900 px-4 pointer-coarse:h-11 text-sm font-medium tabular-nums text-white transition-colors hover:bg-mist-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-board-600 disabled:pointer-events-none disabled:bg-mist-200 disabled:text-mist-500 max-md:w-full"
+            className="inline-flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-lg bg-gray-900 px-4 pointer-coarse:h-11 text-sm font-medium tabular-nums text-white transition-colors hover:bg-gray-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink-600 disabled:pointer-events-none disabled:bg-gray-200 disabled:text-gray-500 max-md:w-full"
           >
             Question {shownQuestionNumber} of {totalQuestions}
             {isNavigatorOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}

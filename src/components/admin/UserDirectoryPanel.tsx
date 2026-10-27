@@ -53,7 +53,7 @@ function AccessCell({ user }: { user: UserDirectoryEntry }) {
 
   return pills.length > 0
     ? <div className="flex flex-wrap gap-1">{pills}</div>
-    : <span className="text-mist-500">Free</span>;
+    : <span className="text-gray-500">Free</span>;
 }
 
 /** The whole row opens the user (see `linkRowClass`), and ends in a chevron that says so. */
@@ -70,7 +70,7 @@ const UserRow = memo(function UserRow({ user }: { user: UserDirectoryEntry }) {
             {user.name || user.email}
           </Link>
           {/* Phones drop the email column, so the address moves under the name. */}
-          {user.name && <p className="truncate text-xs text-mist-500 md:hidden">{user.email}</p>}
+          {user.name && <p className="truncate text-xs text-gray-500 md:hidden">{user.email}</p>}
         </div>
       </td>
       <td className={cn(tdClass, 'hidden md:table-cell')}>
@@ -82,12 +82,12 @@ const UserRow = memo(function UserRow({ user }: { user: UserDirectoryEntry }) {
       <td className={cn(tdClass, 'whitespace-nowrap tabular-nums')}>
         {user.lastActiveAt ? formatDate(user.lastActiveAt) : (
           <>
-            <span aria-hidden className="text-mist-500">&mdash;</span>
+            <span aria-hidden className="text-gray-500">&mdash;</span>
             <span className="sr-only">No attempts</span>
           </>
         )}
       </td>
-      <td className={cn(numericTdClass, user.attempts === 0 && 'text-mist-500')}>{user.attempts}</td>
+      <td className={cn(numericTdClass, user.attempts === 0 && 'text-gray-500')}>{user.attempts}</td>
       <td className={tdClass}>
         <AccessCell user={user} />
       </td>
@@ -141,7 +141,7 @@ export default function UserDirectoryPanel({ users, totalCount }: UserDirectoryP
     <section className="space-y-3" aria-label="User directory">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="relative w-full sm:w-80">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-mist-400" />
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
           <input
             ref={inputRef}
             value={query}
@@ -169,8 +169,8 @@ export default function UserDirectoryPanel({ users, totalCount }: UserDirectoryP
             </button>
           )}
         </div>
-        {/* On the mist-100 canvas, where mist-500 misses AA. */}
-        <p className="text-xs tabular-nums text-mist-600">
+        {/* On the gray-100 canvas, where gray-500 misses AA. */}
+        <p className="text-xs tabular-nums text-gray-600">
           {normalizedQuery
             ? `${filteredUsers.length} of ${users.length} match`
             : `${totalCount} signed up${totalCount > users.length ? `, newest ${users.length} listed` : ''}`}

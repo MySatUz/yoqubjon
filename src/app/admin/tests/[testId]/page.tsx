@@ -198,9 +198,9 @@ export default async function AdminTestEditorPage({
           // stats page use; each module is its own card.
           modules.map((module) => (
             <div key={module.index} className="space-y-2">
-              <h3 className="text-sm font-medium text-mist-700">
+              <h3 className="text-sm font-medium text-gray-700">
                 Module {module.index}
-                <span className="font-normal text-mist-600"> · {formatQuestionCount(module.questions.length)}</span>
+                <span className="font-normal text-gray-600"> · {formatQuestionCount(module.questions.length)}</span>
               </h3>
               <QuestionList questions={module.questions} />
             </div>

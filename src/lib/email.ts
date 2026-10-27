@@ -15,6 +15,8 @@
  * before BREVO_API_KEY is set for the deployment that uses it.
  */
 
+import { SITE_URL } from '@/lib/landing/warmup';
+
 export type EmailMode = 'brevo' | 'log' | 'off';
 
 export function getEmailMode(): EmailMode {
@@ -88,17 +90,19 @@ const escapeHtml = (value: string) =>
 /**
  * The one email layout: the brand line, a sentence, the code set large, and a
  * line saying what to do if the email was not expected. Plain inline styles,
- * since mail clients ignore stylesheets.
+ * since mail clients ignore stylesheets; the colours are the Ink palette's hex
+ * (gray-100, gray-900, gray-200, gray-700, gray-500), and the logo is the
+ * site's own PNG, since many mail clients cannot show WebP.
  */
 export function codeEmail({ intro, code, minutes }: { intro: string; code: string; minutes: number }) {
   const text = `${intro}\n\n${code}\n\nThe code works for ${minutes} minutes. If you did not ask for it, you can ignore this email.\n\nMYSATuz · Digital SAT Math practice`;
-  const html = `<!doctype html><html><body style="margin:0;background:#f1f3f3;font-family:Fira Sans,Segoe UI,Arial,sans-serif;color:#161b1d">
+  const html = `<!doctype html><html><body style="margin:0;background:#f1f3f6;font-family:Fira Sans,Segoe UI,Arial,sans-serif;color:#141b24">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="padding:32px 16px"><tr><td align="center">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:440px;background:#ffffff;border:1px solid #e3e7e8;border-radius:16px;padding:28px">
-<tr><td style="font-size:16px;font-weight:600;padding-bottom:20px"><span style="display:inline-block;width:24px;height:24px;border-radius:6px;background:#0d6657;vertical-align:middle;margin-right:8px"></span>MYSATuz</td></tr>
-<tr><td style="font-size:14px;line-height:22px;color:#394447">${escapeHtml(intro)}</td></tr>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:440px;background:#ffffff;border:1px solid #e2e6ec;border-radius:16px;padding:28px">
+<tr><td style="font-size:16px;font-weight:600;padding-bottom:20px"><img src="${SITE_URL}/brand/mark-96.png" width="24" height="24" alt="" style="display:inline-block;vertical-align:middle;margin-right:8px;border:0">MYSATuz</td></tr>
+<tr><td style="font-size:14px;line-height:22px;color:#384351">${escapeHtml(intro)}</td></tr>
 <tr><td style="padding:20px 0;font-size:32px;font-weight:600;letter-spacing:8px;font-variant-numeric:tabular-nums">${escapeHtml(code)}</td></tr>
-<tr><td style="font-size:12px;line-height:18px;color:#67787c">The code works for ${minutes} minutes. If you did not ask for it, you can ignore this email.</td></tr>
+<tr><td style="font-size:12px;line-height:18px;color:#697586">The code works for ${minutes} minutes. If you did not ask for it, you can ignore this email.</td></tr>
 </table></td></tr></table></body></html>`;
   return { text, html };
 }

@@ -87,12 +87,12 @@ const numericTdClass = cn(tdClass, 'text-right tabular-nums');
  * chevron, so it reads as something that opens before it is hovered (a touch
  * screen never hovers); `group` tints it with the row.
  */
-const rowClass = 'group relative transition-colors hover:bg-mist-50';
+const rowClass = 'group relative transition-colors hover:bg-gray-50';
 const chevronThClass = cn(thClass, 'w-px');
 const chevronTdClass = cn(tdClass, 'w-px');
 const rowLinkClass = cn(
-  'font-medium text-mist-900 after:absolute after:inset-0 hover:text-board-600 focus-visible:outline-none',
-  'focus-visible:after:outline-2 focus-visible:after:-outline-offset-2 focus-visible:after:outline-board-600'
+  'font-medium text-gray-900 after:absolute after:inset-0 hover:text-ink-600 focus-visible:outline-none',
+  'focus-visible:after:outline-2 focus-visible:after:-outline-offset-2 focus-visible:after:outline-ink-600'
 );
 
 type Attempt = { id: string; score: number; correctCount: number | null; createdAt: Date };
@@ -268,7 +268,7 @@ async function ByTestView({ userId }: { userId: string }) {
                 <div className="flex shrink-0 flex-col items-end gap-1">
                   <span
                     className={cn(
-                      'tabular-nums text-mist-900',
+                      'tabular-nums text-gray-900',
                       isScored ? 'text-base font-semibold' : 'text-sm font-medium'
                     )}
                   >
@@ -329,14 +329,14 @@ async function ByTestView({ userId }: { userId: string }) {
                     )}
                   </td>
                   <td className={numericTdClass}>{attemptValue(row.best, row.questionCount)}</td>
-                  <td className={cn(numericTdClass, 'font-semibold text-mist-900')}>
+                  <td className={cn(numericTdClass, 'font-semibold text-gray-900')}>
                     {attemptValue(row.latest, row.questionCount)}
                   </td>
                   <td className={tdClass}>
                     {delta ? (
                       <ScoreDelta delta={delta.value} unit={delta.unit} />
                     ) : (
-                      <span className="text-xs text-mist-500">First attempt</span>
+                      <span className="text-xs text-gray-500">First attempt</span>
                     )}
                   </td>
                   <td className={chevronTdClass}>
@@ -443,7 +443,7 @@ async function AttemptsView({ userId, testId, page }: { userId: string; testId: 
                     />
                     <span
                       className={cn(
-                        'shrink-0 tabular-nums text-mist-900',
+                        'shrink-0 tabular-nums text-gray-900',
                         isScored ? 'text-base font-semibold' : 'text-sm font-medium'
                       )}
                     >
@@ -483,14 +483,14 @@ async function AttemptsView({ userId, testId, page }: { userId: string; testId: 
                     <td className={cn(numericTdClass, 'whitespace-nowrap')}>
                       {row.correctCount !== null ? formatCorrectOf(row.correctCount, row.questionCount) : '—'}
                     </td>
-                    <td className={cn(numericTdClass, 'font-semibold text-mist-900')}>
+                    <td className={cn(numericTdClass, 'font-semibold text-gray-900')}>
                       {/* A short check has no score worth printing: its count
                           is the column beside. */}
                       {hasScoreEstimate(row.questionCount) ? (
                         row.score
                       ) : (
                         <>
-                          <span aria-hidden className="font-normal text-mist-500">—</span>
+                          <span aria-hidden className="font-normal text-gray-500">—</span>
                           <span className="sr-only">No score estimate</span>
                         </>
                       )}
@@ -514,7 +514,7 @@ async function AttemptsView({ userId, testId, page }: { userId: string; testId: 
               Newer
             </Link>
           ) : <span />}
-          <span className="text-xs text-mist-600 tabular-nums">
+          <span className="text-xs text-gray-600 tabular-nums">
             Page {page} of {pageCount}
           </span>
           {page < pageCount ? (

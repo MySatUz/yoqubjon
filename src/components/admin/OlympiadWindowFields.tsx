@@ -64,7 +64,7 @@ export default function OlympiadWindowFields({
       <legend className={cn(labelClass, 'mb-1.5')}>Olympiad window</legend>
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
         <div>
-          <label htmlFor={`${fieldId}-opens`} className="mb-1 block text-xs text-mist-500">
+          <label htmlFor={`${fieldId}-opens`} className="mb-1 block text-xs text-gray-500">
             Opens
           </label>
           <Input
@@ -79,7 +79,7 @@ export default function OlympiadWindowFields({
           />
         </div>
         <div>
-          <label htmlFor={`${fieldId}-closes`} className="mb-1 block text-xs text-mist-500">
+          <label htmlFor={`${fieldId}-closes`} className="mb-1 block text-xs text-gray-500">
             Closes
           </label>
           <Input
@@ -100,7 +100,7 @@ export default function OlympiadWindowFields({
             <p
               id={readbackId}
               aria-live="polite"
-              className={isBackwards ? errorTextClass : 'text-xs font-medium tabular-nums text-mist-700'}
+              className={isBackwards ? errorTextClass : 'text-xs font-medium tabular-nums text-gray-700'}
             >
               {readback}
             </p>

@@ -8,10 +8,10 @@ function TableSkeleton({ rows, twoLine }: { rows: number; twoLine: boolean }) {
   return (
     <div className={tableWrapClass}>
       {/* thClass row: py-2.5 around a 16px caption line. */}
-      <div className="border-b border-mist-200 bg-mist-50 px-4 py-2.5">
+      <div className="border-b border-gray-200 bg-gray-50 px-4 py-2.5">
         <Skeleton className="h-4 w-64 max-w-full" />
       </div>
-      <div className="divide-y divide-mist-100">
+      <div className="divide-y divide-gray-100">
         {Array.from({ length: rows }, (_, i) => (
           // tdClass rows: py-3 around one line, or a name line and an email line.
           <div key={i} className="flex items-center gap-4 px-4 py-3">

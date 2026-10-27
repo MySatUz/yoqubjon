@@ -11,11 +11,11 @@ export type ChosenImage = { name: string; url: string };
 
 /**
  * The test importer's file box (`FilePickBox`), so the two read as the same
- * control: a field's mist-400 edge, mist-500 on hover.
+ * control: a field's gray-400 edge, gray-500 on hover.
  */
 const dropzoneClass =
-  'flex h-14 min-w-0 items-center justify-center gap-2 rounded-xl border border-dashed border-mist-400 px-4 text-sm transition-colors ' +
-  'group-hover:border-mist-500 group-hover:bg-mist-50 group-focus-within:border-board-600 group-focus-within:ring-1 group-focus-within:ring-board-600';
+  'flex h-14 min-w-0 items-center justify-center gap-2 rounded-xl border border-dashed border-gray-400 px-4 text-sm transition-colors ' +
+  'group-hover:border-gray-500 group-hover:bg-gray-50 group-focus-within:border-ink-600 group-focus-within:ring-1 group-focus-within:ring-ink-600';
 
 /**
  * Way in (a): one question pasted as .tex, in the test files' own format.
@@ -101,7 +101,7 @@ export default function TexInput({
                 }}
                 className="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0"
               />
-              <div className={cn(dropzoneClass, images.length > 0 ? 'text-mist-900' : 'text-mist-500')}>
+              <div className={cn(dropzoneClass, images.length > 0 ? 'text-gray-900' : 'text-gray-500')}>
                 <ImageIcon className="h-4 w-4 shrink-0" />
                 <span className="truncate">
                   {images.length > 0 ? images.map((image) => image.name).join(', ') : 'Choose the pictures \\image{…} names'}

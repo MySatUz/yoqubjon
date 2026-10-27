@@ -177,8 +177,8 @@ export default async function AdminUserResultsPage({
             <Badge tone={user.role === "ADMIN" ? "accent" : "neutral"} onCanvas>
               {user.role === "ADMIN" ? "Admin" : "User"}
             </Badge>
-            {/* On the mist-100 canvas, where mist-500 misses AA. */}
-            <span className="text-xs text-mist-600">Joined {formatDate(user.createdAt)}</span>
+            {/* On the gray-100 canvas, where gray-500 misses AA. */}
+            <span className="text-xs text-gray-600">Joined {formatDate(user.createdAt)}</span>
           </>
         }
       />
@@ -195,17 +195,17 @@ export default async function AdminUserResultsPage({
       {courseAccess.length > 0 && (
         <Card as="section" className="overflow-hidden">
           <CardHeader title="Course access" />
-          <ul className="divide-y divide-mist-100">
+          <ul className="divide-y divide-gray-100">
             {courseAccess.map((grant) => (
               <li key={grant.id} className={listRowClass}>
                 <div className="min-w-0 flex-1">
                   <Link href={courseHref(grant.category)} prefetch={false} className={cn(linkClass, "block truncate")}>
                     {grant.label}
                   </Link>
-                  {grant.note && <p className="mt-0.5 truncate text-xs text-mist-500">{grant.note}</p>}
+                  {grant.note && <p className="mt-0.5 truncate text-xs text-gray-500">{grant.note}</p>}
                 </div>
                 {/* The end is the UTC date the admin chose (see accessPlan.ts). */}
-                <span className={cn("shrink-0 text-sm tabular-nums", grant.active ? "text-mist-700" : "text-mist-500")}>
+                <span className={cn("shrink-0 text-sm tabular-nums", grant.active ? "text-gray-700" : "text-gray-500")}>
                   {grant.endKey === null
                     ? "No end date"
                     : grant.active
@@ -272,11 +272,11 @@ export default async function AdminUserResultsPage({
                           </Link>
                         </td>
                         <td className={numericTdClass}>{test.attempts}</td>
-                        <td className={cn(numericTdClass, "font-semibold text-mist-900")}>
+                        <td className={cn(numericTdClass, "font-semibold text-gray-900")}>
                           {formatOutcome(test.bestScore, test.bestCorrect, test.questionCount)}
                         </td>
                         {/* Only a single attempt makes latest and best the same sitting. */}
-                        <td className={cn(numericTdClass, test.attempts === 1 && "text-mist-500")}>
+                        <td className={cn(numericTdClass, test.attempts === 1 && "text-gray-500")}>
                           {formatOutcome(test.latestScore, test.latestCorrect, test.questionCount)}
                         </td>
                         <td className={cn(numericTdClass, "hidden whitespace-nowrap sm:table-cell")}>

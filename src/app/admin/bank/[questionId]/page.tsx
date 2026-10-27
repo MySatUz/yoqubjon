@@ -163,7 +163,7 @@ export default async function BankQuestionPage({
             />
             <CardBody className="space-y-4">
               {question.imageUrl && (
-                <div className="overflow-hidden rounded-xl border border-mist-200 p-3">
+                <div className="overflow-hidden rounded-xl border border-gray-200 p-3">
                   <img
                     src={question.imageUrl}
                     alt="Question diagram"
@@ -173,7 +173,7 @@ export default async function BankQuestionPage({
               )}
 
               <div
-                className="text-base leading-relaxed text-mist-900"
+                className="text-base leading-relaxed text-gray-900"
                 dangerouslySetInnerHTML={{ __html: renderMathHtml(question.content) }}
               />
 
@@ -188,24 +188,24 @@ export default async function BankQuestionPage({
                         key={`${letter}-${option}`}
                         className={cn(
                           'flex items-start gap-3 rounded-xl border px-3 py-2.5',
-                          correct ? 'border-lime-700 bg-lime-50' : 'border-mist-200',
+                          correct ? 'border-green-700 bg-green-50' : 'border-gray-200',
                         )}
                       >
                         <span
                           className={cn(
                             'flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border text-xs font-semibold',
-                            correct ? 'border-lime-700 bg-lime-700 text-white' : 'border-mist-300 text-mist-700',
+                            correct ? 'border-green-700 bg-green-700 text-white' : 'border-gray-300 text-gray-700',
                           )}
                         >
                           {letter}
                         </span>
                         <div
-                          className="min-w-0 flex-1 text-sm leading-relaxed text-mist-800"
+                          className="min-w-0 flex-1 text-sm leading-relaxed text-gray-800"
                           dangerouslySetInnerHTML={{ __html: renderMathHtml(optionAsMath(option)) }}
                         />
                         {/* Said in a word too, not by the green alone. */}
                         {correct && (
-                          <span className="inline-flex shrink-0 items-center gap-1 text-xs font-medium text-lime-800">
+                          <span className="inline-flex shrink-0 items-center gap-1 text-xs font-medium text-green-800">
                             <CheckCircle2 className="h-3.5 w-3.5" />
                             Correct
                           </span>
@@ -215,8 +215,8 @@ export default async function BankQuestionPage({
                   })}
                 </ul>
               ) : (
-                <p className="flex flex-wrap items-center gap-2 rounded-xl border border-lime-700 bg-lime-50 px-3 py-2.5 text-sm text-lime-900">
-                  <CheckCircle2 className="h-4 w-4 text-lime-700" />
+                <p className="flex flex-wrap items-center gap-2 rounded-xl border border-green-700 bg-green-50 px-3 py-2.5 text-sm text-green-900">
+                  <CheckCircle2 className="h-4 w-4 text-green-700" />
                   Correct answer
                   <span
                     className="font-medium"

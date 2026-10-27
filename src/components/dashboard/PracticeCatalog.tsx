@@ -266,14 +266,14 @@ export default function PracticeCatalog({
                     className={cn(listRowInteractiveClass, 'group w-full text-left disabled:cursor-wait')}
                   >
                     <span className="min-w-0 flex-1">
-                      <span className="block text-sm font-medium text-mist-900">{collection.label}</span>
+                      <span className="block text-sm font-medium text-gray-900">{collection.label}</span>
                       {collection.description && (
-                        <span className="mt-0.5 line-clamp-2 text-xs text-mist-500 sm:line-clamp-1">
+                        <span className="mt-0.5 line-clamp-2 text-xs text-gray-500 sm:line-clamp-1">
                           {collection.description}
                         </span>
                       )}
                     </span>
-                    <span className="w-24 shrink-0 text-right text-xs tabular-nums text-mist-500 sm:w-32">
+                    <span className="w-24 shrink-0 text-right text-xs tabular-nums text-gray-500 sm:w-32">
                       {taken > 0 ? (
                         <>
                           <Progress value={(taken / count) * 100} />
@@ -331,16 +331,16 @@ export default function PracticeCatalog({
               <Card as="li" key={test.id} className="flex min-w-0 flex-col gap-2.5 p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <h2 className="line-clamp-2 text-base font-semibold text-mist-900">{test.title}</h2>
-                    {description && <p className="mt-0.5 line-clamp-2 text-xs text-mist-500">{description}</p>}
+                    <h2 className="line-clamp-2 text-base font-semibold text-gray-900">{test.title}</h2>
+                    {description && <p className="mt-0.5 line-clamp-2 text-xs text-gray-500">{description}</p>}
                   </div>
-                  {!canAccess && <Lock className="mt-0.5 h-4 w-4 shrink-0 text-mist-500" role="img" aria-label="Locked" />}
+                  {!canAccess && <Lock className="mt-0.5 h-4 w-4 shrink-0 text-gray-500" role="img" aria-label="Locked" />}
                 </div>
 
                 {/* Each fact is one unbreakable item with its own icon instead
                     of a "·" between them: the line wraps between facts in a
                     narrow card, and no separator is left hanging at either end. */}
-                <ul className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-mist-500">
+                <ul className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-gray-500">
                   <li className="flex gap-1.5">
                     <Badge tone={test.isFree ? 'accent' : 'neutral'}>{accessLabel}</Badge>
                     {olympiadStatus && (
@@ -379,7 +379,7 @@ export default function PracticeCatalog({
                     )}
                   </li>
                   {bestLabel && (
-                    <li className="inline-flex items-center gap-1 whitespace-nowrap font-medium tabular-nums text-mist-700">
+                    <li className="inline-flex items-center gap-1 whitespace-nowrap font-medium tabular-nums text-gray-700">
                       <Award className="h-3.5 w-3.5" aria-hidden />
                       {bestLabel}
                     </li>
@@ -398,7 +398,7 @@ export default function PracticeCatalog({
                           {olympiadStatus === 'finished' ? 'See the ranking' : 'Open olympiad'}
                         </Link>
                       ) : attemptLimitReached ? (
-                        <p className="text-sm font-medium text-mist-500">Attempt limit reached</p>
+                        <p className="text-sm font-medium text-gray-500">Attempt limit reached</p>
                       ) : (
                         <StartPracticeLink testId={test.id} />
                       )}
@@ -430,7 +430,7 @@ export default function PracticeCatalog({
                       ) : (
                         // Paused by an admin: a calm fact beside the lock above,
                         // never a link to a page with nothing to buy.
-                        <p className="text-sm text-mist-600">{PREMIUM_PLAN.name} is paused for now</p>
+                        <p className="text-sm text-gray-600">{PREMIUM_PLAN.name} is paused for now</p>
                       )}
                       {test.attemptsUsed > 0 && (
                         <PastResultsLink testId={test.id} attemptsUsed={test.attemptsUsed} />

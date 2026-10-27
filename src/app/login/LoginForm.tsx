@@ -49,8 +49,8 @@ export default function LoginForm({
     <>
       <Card padded>
         <SlopeToGoal />
-        <h1 className="text-xl font-semibold tracking-tight text-mist-900 sm:text-2xl">Welcome back.</h1>
-        <p className="mt-1.5 text-sm text-mist-600">
+        <h1 className="text-xl font-semibold tracking-tight text-gray-900 sm:text-2xl">Welcome back.</h1>
+        <p className="mt-1.5 text-sm text-gray-600">
           {cameFromLink
             ? 'Sign in and we will take you back to the page you opened.'
             : 'Your line is where you left it. Every attempt is saved.'}
@@ -111,7 +111,7 @@ export default function LoginForm({
         </form>
       </Card>
 
-      <p className="mt-6 text-center text-sm text-mist-600">
+      <p className="mt-6 text-center text-sm text-gray-600">
         New to MYSATuz?{' '}
         <Link href={registerHref} className={authLinkClass}>
           Create a free account

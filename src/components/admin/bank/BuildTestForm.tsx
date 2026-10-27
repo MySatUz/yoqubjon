@@ -339,7 +339,7 @@ export default function BuildTestForm({
                 <p className={hintClass}>Each module runs on its own timer and has its own questions.</p>
                 {modules.map((module, index) => (
                   <div key={module.key} className="flex flex-wrap items-center gap-2">
-                    <span className="w-20 text-sm text-mist-600">Module {index + 1}</span>
+                    <span className="w-20 text-sm text-gray-600">Module {index + 1}</span>
                     <Input
                       type="number"
                       min={1}
@@ -408,7 +408,7 @@ export default function BuildTestForm({
           </Field>
 
           <div className="space-y-2 self-end">
-            <label className="flex items-center gap-2 text-sm text-mist-700">
+            <label className="flex items-center gap-2 text-sm text-gray-700">
               <input
                 type="checkbox"
                 checked={visible}
@@ -417,7 +417,7 @@ export default function BuildTestForm({
               />
               Show in Practice
             </label>
-            <label className="flex items-center gap-2 text-sm text-mist-700">
+            <label className="flex items-center gap-2 text-sm text-gray-700">
               <input
                 type="checkbox"
                 checked={isFree}
@@ -463,7 +463,7 @@ export default function BuildTestForm({
       ))}
 
       <div className={cn(cardClass, 'flex flex-wrap items-center justify-end gap-3 px-5 py-4')}>
-        <p className="mr-auto text-sm tabular-nums text-mist-600">
+        <p className="mr-auto text-sm tabular-nums text-gray-600">
           {blocker ?? (
             format === 'single'
               ? `${questionCount(totalQuestions)} on one timer.`
@@ -600,7 +600,7 @@ function ModuleCard({
                       })}
                       suffix={difficulty.label}
                     />
-                    <p className={cn('text-xs tabular-nums', short ? 'text-red-600' : 'text-mist-500')}>
+                    <p className={cn('text-xs tabular-nums', short ? 'text-red-600' : 'text-gray-500')}>
                       {short ? `Only ${inBank} match` : `${inBank} in the bank`}
                     </p>
                   </div>
@@ -621,7 +621,7 @@ function ModuleCard({
                     onChange={() => onRandom({ domains: toggleValue(module.random.domains, domain.value) })}
                     className={checkboxClass}
                   />
-                  <span className="min-w-0 flex-1 text-sm font-medium text-mist-900">{domain.label}</span>
+                  <span className="min-w-0 flex-1 text-sm font-medium text-gray-900">{domain.label}</span>
                 </label>
               ))}
             </div>
@@ -641,7 +641,7 @@ function ModuleCard({
                 Edit this list by hand
               </Button>
             )}
-            {requested === 0 && <p className="text-sm text-mist-500">Set at least one count.</p>}
+            {requested === 0 && <p className="text-sm text-gray-500">Set at least one count.</p>}
           </div>
 
           {pickError && <Alert tone="danger">{pickError}</Alert>}
@@ -658,17 +658,17 @@ function ModuleCard({
       )}
 
       {rows.length > 0 ? (
-        <ol className={cn('divide-y divide-mist-100', module.method === 'random' && 'border-t border-mist-100')}>
+        <ol className={cn('divide-y divide-gray-100', module.method === 'random' && 'border-t border-gray-100')}>
           {rows.map((row, index) => {
             const elsewhere = conflicts.has(row.id) ? usedIn.get(row.id) : undefined;
 
             return (
               <li key={row.id} className="flex items-center gap-3 px-4 py-2 sm:px-5">
-                <span className="w-6 shrink-0 text-right text-xs tabular-nums text-mist-500">{index + 1}</span>
+                <span className="w-6 shrink-0 text-right text-xs tabular-nums text-gray-500">{index + 1}</span>
                 <span className="min-w-0 flex-1">
                   <span
-                    className="line-clamp-1 block text-sm text-mist-700"
-                    dangerouslySetInnerHTML={{ __html: row.previewHtml || '<span class="text-mist-500">Image only</span>' }}
+                    className="line-clamp-1 block text-sm text-gray-700"
+                    dangerouslySetInnerHTML={{ __html: row.previewHtml || '<span class="text-gray-500">Image only</span>' }}
                   />
                   {elsewhere && <span className="block text-xs text-red-600">Also in {elsewhere}</span>}
                 </span>

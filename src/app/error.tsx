@@ -37,10 +37,10 @@ export default function RootError({
   }, [error]);
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-mist-100 px-4 py-12">
+    <main className="flex min-h-screen flex-col items-center justify-center bg-gray-100 px-4 py-12">
       <Link href="/" className={`mb-6 flex items-center gap-2.5 rounded-lg ${focusRingClass}`} aria-label="MYSATuz home">
         <BrandMark size="sm" />
-        <span className="text-base font-semibold tracking-tight text-mist-900">MYSATuz</span>
+        <span className="text-base font-semibold tracking-tight text-gray-900">MYSATuz</span>
       </Link>
       <div className="w-full max-w-md space-y-4">
         <Alert tone="danger" title="This page didn't load">

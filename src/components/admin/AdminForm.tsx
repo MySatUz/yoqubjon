@@ -368,21 +368,21 @@ export default function AdminForm({ collections, defaultCategory: preselected, o
                   className="peer sr-only"
                 />
                 {/* Selected is the accent, never a second colour. The idle
-                    edge is a control's, as on a chip: a mist-200 box read as
+                    edge is a control's, as on a chip: a gray-200 box read as
                     a note rather than as an option to pick. Chosen from the
                     state, not `peer-checked:`, so hover cannot paint over the
                     selected one. */}
                 <span
                   className={cn(
                     'block h-full rounded-xl border px-3.5 py-3 transition-colors',
-                    'peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-board-600',
+                    'peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-ink-600',
                     examFormat === option.value
-                      ? 'border-board-600 bg-board-50'
-                      : 'border-mist-400 hover:border-mist-500 hover:bg-mist-50',
+                      ? 'border-ink-600 bg-ink-50'
+                      : 'border-gray-400 hover:border-gray-500 hover:bg-gray-50',
                   )}
                 >
-                  <span className="block text-sm font-medium text-mist-900">{option.title}</span>
-                  {option.description && <span className="mt-0.5 block text-xs text-mist-500">{option.description}</span>}
+                  <span className="block text-sm font-medium text-gray-900">{option.title}</span>
+                  {option.description && <span className="mt-0.5 block text-xs text-gray-500">{option.description}</span>}
                 </span>
               </label>
             ))}
@@ -392,7 +392,7 @@ export default function AdminForm({ collections, defaultCategory: preselected, o
             <div ref={moduleListRef} className="mt-3 space-y-2">
               {modules.map((module, index) => (
                 <div key={module.id} className="flex flex-wrap items-center gap-2">
-                  <span className="w-20 text-sm text-mist-600">Module {index + 1}</span>
+                  <span className="w-20 text-sm text-gray-600">Module {index + 1}</span>
 
                   <Input
                     type="number"
@@ -504,11 +504,11 @@ export default function AdminForm({ collections, defaultCategory: preselected, o
         />
 
         <div className="flex flex-wrap items-center gap-x-6 gap-y-2 sm:col-span-2">
-          <label className="inline-flex items-center gap-2 text-sm text-mist-700">
+          <label className="inline-flex items-center gap-2 text-sm text-gray-700">
             <input name="isVisible" type="checkbox" value="true" defaultChecked className={checkboxClass} />
             Show in Practice
           </label>
-          <label className="inline-flex items-center gap-2 text-sm text-mist-700">
+          <label className="inline-flex items-center gap-2 text-sm text-gray-700">
             <input name="isFree" type="checkbox" value="true" className={checkboxClass} />
             Free without a subscription
           </label>
@@ -549,7 +549,7 @@ export default function AdminForm({ collections, defaultCategory: preselected, o
       <CardFooter>
         {/* Why the button cannot act yet, beside it. */}
         {blocker && !loading && (
-          <p className="mr-auto text-sm text-mist-500">{blocker}</p>
+          <p className="mr-auto text-sm text-gray-500">{blocker}</p>
         )}
         {/* Secondary beside the primary: a ghost Cancel in a footer read as a caption. */}
         {onClose && (

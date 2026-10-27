@@ -156,12 +156,12 @@ const NO_CHOICES: Choices = { selected: [], crossed: [] };
 /** A grid-in's key, or a key the choices cannot show, printed once "Show answer" is pressed. */
 function RevealedAnswer({ html }: { html: string }) {
   return (
-    <div className="mt-4 rounded-xl border border-lime-700 bg-lime-50 px-4 py-3">
-      <p className="flex items-center gap-1.5 text-sm font-medium text-lime-800">
+    <div className="mt-4 rounded-xl border border-green-700 bg-green-50 px-4 py-3">
+      <p className="flex items-center gap-1.5 text-sm font-medium text-green-800">
         <CircleCheck aria-hidden className="h-4 w-4" />
         Correct answer
       </p>
-      <div className="mt-1 text-xl text-mist-900" dangerouslySetInnerHTML={{ __html: html }} />
+      <div className="mt-1 text-xl text-gray-900" dangerouslySetInnerHTML={{ __html: html }} />
     </div>
   );
 }
@@ -351,16 +351,16 @@ export default function BoardScreen({
       aria-modal="true"
       aria-label="Board"
       // z-50 with the shell's own top layer, and later in the page, so over it.
-      className={cn('fixed inset-0 z-50 flex-col overflow-hidden bg-mist-100', isVisible ? 'flex' : 'hidden')}
+      className={cn('fixed inset-0 z-50 flex-col overflow-hidden bg-gray-100', isVisible ? 'flex' : 'hidden')}
     >
-      <header className="sticky top-0 z-50 flex h-14 shrink-0 items-center justify-between gap-2 border-b border-mist-200 bg-white px-2 sm:px-4 lg:px-6">
+      <header className="sticky top-0 z-50 flex h-14 shrink-0 items-center justify-between gap-2 border-b border-gray-200 bg-white px-2 sm:px-4 lg:px-6">
         <div className="flex min-w-0 flex-1 items-center gap-3">
           <span className="hidden lg:block">
             <BrandMark size="sm" />
           </span>
           <div className="min-w-0 leading-tight">
-            <h1 className="truncate text-sm font-semibold text-mist-900">Board</h1>
-            <p className="mt-0.5 truncate text-xs tabular-nums text-mist-500">{shown.sourceLabel}</p>
+            <h1 className="truncate text-sm font-semibold text-gray-900">Board</h1>
+            <p className="mt-0.5 truncate text-xs tabular-nums text-gray-500">{shown.sourceLabel}</p>
           </div>
         </div>
 
@@ -435,7 +435,7 @@ export default function BoardScreen({
       </div>
 
       {/* The exam's bottom bar and its upward shadow. */}
-      <footer className="sticky bottom-0 z-50 flex h-16 shrink-0 items-center gap-2 border-t border-mist-200 bg-white px-3 shadow-[0_-12px_30px_rgba(15,23,42,0.08)] sm:px-4 lg:px-6">
+      <footer className="sticky bottom-0 z-50 flex h-16 shrink-0 items-center gap-2 border-t border-gray-200 bg-white px-3 shadow-[0_-12px_30px_rgba(15,23,42,0.08)] sm:px-4 lg:px-6">
         <Button variant="secondary" size="lg" onClick={onNewQuestion} aria-label="New question" title="New question">
           <ArrowLeft className="h-4 w-4" />
           <span className="hidden sm:inline">New question</span>
@@ -447,7 +447,7 @@ export default function BoardScreen({
               {next.error}
             </p>
           ) : next?.isLast ? (
-            <p className="hidden text-xs text-mist-500 sm:block">Last question in this list</p>
+            <p className="hidden text-xs text-gray-500 sm:block">Last question in this list</p>
           ) : null}
           <Button variant="secondary" size="lg" onClick={() => setRevealedFor(isRevealed ? null : shown.key)}>
             {isRevealed ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}

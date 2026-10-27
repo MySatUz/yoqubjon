@@ -28,8 +28,8 @@ export default function AccessCodeField({ initialCode, hint, className = 'block'
       label={
         <>
           Test code
-          {/* Text the admin reads, so mist-500: mist-400 is for icons. */}
-          <span className="font-normal text-mist-500"> · {ACCESS_CODE_LENGTH} digits, optional</span>
+          {/* Text the admin reads, so gray-500: gray-400 is for icons. */}
+          <span className="font-normal text-gray-500"> · {ACCESS_CODE_LENGTH} digits, optional</span>
         </>
       }
       htmlFor={inputId}

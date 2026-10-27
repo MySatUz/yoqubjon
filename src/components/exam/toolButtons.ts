@@ -10,7 +10,7 @@ import { cn } from '@/components/ui/cn';
  * Same geometry as `iconButtonClass` (md), grown to a 40px tap target on a
  * coarse pointer, as the primitives grow; spelled out here because the
  * primitive has no pressed state for a toggle. Idle, it is keyed like a
- * `secondary` button (Button.tsx) - a mist-400 box with a mist-500 bottom edge
+ * `secondary` button (Button.tsx) - a gray-400 box with a gray-500 bottom edge
  * over `shadow-xs` - so it matches the secondary buttons in the same bar:
  * ghost, "Reference" and "Calculator" read as two labels in the header rather
  * than as the student's tools. Pressed is the one "selected" treatment the
@@ -19,7 +19,7 @@ import { cn } from '@/components/ui/cn';
 export const toolButtonClass = cn(
   'inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border transition-colors pointer-coarse:h-10 pointer-coarse:w-10',
   // The secondary button's own "not yet" (Button.tsx), never faded.
-  'disabled:cursor-not-allowed disabled:border-mist-200 disabled:bg-mist-100 disabled:text-mist-500 disabled:shadow-none',
+  'disabled:cursor-not-allowed disabled:border-gray-200 disabled:bg-gray-100 disabled:text-gray-500 disabled:shadow-none',
   focusRingClass
 );
 
@@ -32,7 +32,7 @@ export const toolButtonClass = cn(
  */
 export const labelledToolClass = cn(toolButtonClass, 'gap-1.5 text-sm font-medium xl:w-auto xl:px-3 xl:pointer-coarse:w-auto');
 export const toolIdleClass =
-  'border-mist-400 border-b-mist-500 bg-white text-mist-800 shadow-xs hover:border-mist-500 hover:bg-mist-50 hover:text-mist-900 ' +
-  'active:bg-mist-100 active:shadow-none';
-export const toolActiveClass = 'border-board-600 bg-board-50 text-board-700';
+  'border-gray-400 border-b-gray-500 bg-white text-gray-800 shadow-xs hover:border-gray-500 hover:bg-gray-50 hover:text-gray-900 ' +
+  'active:bg-gray-100 active:shadow-none';
+export const toolActiveClass = 'border-ink-600 bg-ink-50 text-ink-700';
 export const toolIconClass = 'h-4 w-4';

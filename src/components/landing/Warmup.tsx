@@ -10,12 +10,15 @@ import { cn } from '@/components/ui/cn';
 import { formatDuration } from '@/lib/olympiad';
 import { useLocationQuery, useReducedMotion } from '@/lib/landing/hooks';
 import {
+  FREE_OFFER_CTA,
   MINUS,
   PER_QUESTION_SECONDS,
   QUESTIONS,
+  SITE_MENU_EVENT,
   checkAnswer,
   feedbackFor,
   formatClock,
+  freeTestsPhrase,
   friendChallengeLine,
   normalizeGridIn,
   publishLiveRun,
@@ -34,7 +37,7 @@ import styles from './landing.module.css';
 
 /*
  * The hero. On the left, what MYSATuz is — the page's one h1, the promise and
- * the button to the free module. On the right, the live demo: three
+ * the button to the free test. On the right, the live demo: three
  * questions, each one harder, 1:35 each — the time a real Digital SAT Math
  * module allows per question. No sign-up; the answers stay in this tab.
  *
@@ -158,12 +161,13 @@ const slideClass: Record<Slide, string> = {
 
 const WHY_NOTE = (
   <p>
-    <span className="font-medium text-mist-900">Why 1:35?</span> On the real Digital SAT, a Math module is 35 minutes
+    <span className="font-medium text-gray-900">Why 1:35?</span> On the real Digital SAT, a Math module is 35 minutes
     for 22 questions.
   </p>
 );
 
-export default function Warmup() {
+/** `freeTests`: how many tests are free (countFreeTests), or null to leave the number out. */
+export default function Warmup({ freeTests }: { freeTests: number | null }) {
   const reduce = useReducedMotion();
   const { search, hash } = useLocationQuery();
   const friendLine = useMemo(() => friendChallengeLine(search, hash), [search, hash]);
@@ -192,14 +196,14 @@ export default function Warmup() {
 
   // What the observers need to know, kept current for callbacks that outlive
   // the render they were made in.
-  const gate = useRef({ visible: false, timer: 0, done: false, checked: false, reduce: false, manual: false });
+  const gate = useRef({ visible: false, timer: 0, done: false, checked: false, reduce: false, manual: false, menu: false });
   useEffect(() => {
     Object.assign(gate.current, { done, checked: current !== null, reduce, manual });
   });
 
   const tryStart = useCallback(() => {
     const g = gate.current;
-    if (g.done || g.checked || (g.reduce && !g.manual)) return;
+    if (g.done || g.checked || g.menu || (g.reduce && !g.manual)) return;
     start();
   }, [start]);
 
@@ -229,9 +233,19 @@ export default function Warmup() {
     };
     document.addEventListener('visibilitychange', onVisibility);
 
+    // The phone menu covers the card without moving it, so the observer
+    // never sees it go: the menu says so itself (SiteNav).
+    const onMenu = (event: Event) => {
+      g.menu = (event as CustomEvent<boolean>).detail;
+      if (g.menu) pause(true);
+      else if (g.visible) tryStart();
+    };
+    window.addEventListener(SITE_MENU_EVENT, onMenu);
+
     return () => {
       observer.disconnect();
       document.removeEventListener('visibilitychange', onVisibility);
+      window.removeEventListener(SITE_MENU_EVENT, onMenu);
       window.clearTimeout(g.timer);
     };
   }, [everStarted, pause, tryStart]);
@@ -270,7 +284,8 @@ export default function Warmup() {
         setSlide('entering');
         requestAnimationFrame(() => requestAnimationFrame(() => setSlide('idle')));
         const card = cardRef.current;
-        if (card && card.getBoundingClientRect().top < 0) card.scrollIntoView({ block: 'start', behavior: 'smooth' });
+        // 80: the card's scroll-mt-20, the room the sticky header takes.
+        if (card && card.getBoundingClientRect().top < 80) card.scrollIntoView({ block: 'start', behavior: 'smooth' });
       }, 180);
     }
     window.setTimeout(() => {
@@ -359,35 +374,37 @@ export default function Warmup() {
       <div>
         <h1
           id="warmup-heading"
-          className="text-3xl/9 font-semibold tracking-tight text-balance text-mist-900 lg:text-5xl lg:leading-[1.05]"
+          className="text-3xl/9 font-semibold tracking-tight text-balance text-gray-900 lg:text-5xl lg:leading-[1.05]"
         >
           Digital SAT Math practice that feels like test day.
         </h1>
-        <p className="mt-4 max-w-[52ch] text-base leading-7 text-pretty text-mist-600 lg:text-lg lg:leading-8">
+        <p className="mt-4 max-w-[52ch] text-base leading-7 text-pretty text-gray-600 lg:text-lg lg:leading-8">
           Full timed tests on a screen like the real one. After each, a score estimate on the 200–800 scale
           and a review of every question. Made for students aiming at 750–800.
         </p>
         <div className="mt-6 flex flex-wrap items-center gap-x-4 gap-y-2">
           <Link href="/register?from=hero" className={buttonClass({ size: 'lg' })}>
-            Start my free module
+            {FREE_OFFER_CTA}
           </Link>
-          <span className="text-sm text-mist-600">No payment details.</span>
+          <span className="text-sm text-gray-600">
+            {freeTests ? `${freeTestsPhrase(freeTests)} ` : ''}No payment details.
+          </span>
         </div>
 
         {/* The demo's own line, with the card's clock in it. It never
             reflows: only the digits change, and they are tabular. */}
-        <div className="mt-8 border-t border-mist-200 pt-6 lg:mt-12">
-          <p className="text-lg font-semibold tracking-tight text-mist-900">
+        <div className="mt-8 border-t border-gray-200 pt-6 lg:mt-12">
+          <p className="text-lg font-semibold tracking-tight text-gray-900">
             Or try three questions first. Each one harder. You have{' '}
-            <span className={cn('inline-flex tabular-nums', hurry ? 'text-amber-700' : 'text-board-600')}>
+            <span className={cn('inline-flex tabular-nums', hurry ? 'text-amber-700' : 'text-ink-600')}>
               <Odometer value={heroClock} animate={!reduce} />
             </span>
             .
           </p>
-          <p key={friendLine ?? 'default'} className={cn('mt-1 text-sm text-mist-600', friendLine && styles.fade)}>
+          <p key={friendLine ?? 'default'} className={cn('mt-1 text-sm text-gray-600', friendLine && styles.fade)}>
             {friendLine ?? 'No sign-up. Your answers stay on this page.'}
           </p>
-          <div className="mt-4 hidden max-w-[52ch] text-sm text-mist-600 lg:block">{WHY_NOTE}</div>
+          <div className="mt-4 hidden max-w-[52ch] text-sm text-gray-600 lg:block">{WHY_NOTE}</div>
         </div>
       </div>
 
@@ -398,29 +415,29 @@ export default function Warmup() {
           aria-label="Warm-up"
           role="region"
           className={cn(
-            'relative min-h-[420px] overflow-hidden rounded-2xl border border-mist-200 bg-white',
+            'relative min-h-[420px] scroll-mt-20 overflow-hidden rounded-2xl border border-gray-200 bg-white',
             styles.cardIn,
           )}
         >
-          <div className="flex h-11 items-center justify-between gap-2 border-b border-mist-100 px-4">
+          <div className="flex h-11 items-center justify-between gap-2 border-b border-gray-100 px-4">
             <div className="flex min-w-0 items-center gap-2">
-              <h2 id={WARMUP_TITLE_ID} tabIndex={-1} className="whitespace-nowrap text-sm font-semibold text-mist-900 focus:outline-hidden">
+              <h2 id={WARMUP_TITLE_ID} tabIndex={-1} className="whitespace-nowrap text-sm font-semibold text-gray-900 focus:outline-hidden">
                 {done ? 'Your warm-up' : `Question ${index + 1} of 3`}
               </h2>
               <Badge>{done ? 'Done' : question.chip}</Badge>
             </div>
             <div className="flex items-center gap-2">
               <RiseMeter ref={meterRef} answers={answers} hidden={done} />
-              <span className={cn('whitespace-nowrap text-sm font-medium tabular-nums', hurry ? 'text-amber-700' : 'text-mist-500')}>
+              <span className={cn('whitespace-nowrap text-sm font-medium tabular-nums', hurry ? 'text-amber-700' : 'text-gray-500')}>
                 {headerClock}
               </span>
             </div>
           </div>
 
-          <div className="relative h-[3px] overflow-hidden bg-mist-100" aria-hidden="true">
+          <div className="relative h-[3px] overflow-hidden bg-gray-100" aria-hidden="true">
             <i
               ref={barRef}
-              className={cn('absolute inset-0 origin-left', hurry ? 'bg-amber-600' : 'bg-board-600')}
+              className={cn('absolute inset-0 origin-left', hurry ? 'bg-amber-600' : 'bg-ink-600')}
               style={{ transform: 'scaleX(1)' }}
             />
           </div>
@@ -492,7 +509,7 @@ export default function Warmup() {
                     <div className={styles.fadeUp}>
                       <Feedback status={current.status} message={feedbackFor(question, current.given, current.status)} />
                       {current.status === 'incorrect' && answers.findIndex((a) => a.status === 'incorrect') === index && (
-                        <span className="mt-1.5 block text-mist-500">Nobody saw that. That’s the point.</span>
+                        <span className="mt-1.5 block text-gray-500">Nobody saw that. That’s the point.</span>
                       )}
                     </div>
                   )}
@@ -509,7 +526,7 @@ export default function Warmup() {
           </div>
         </div>
 
-        <div className="mt-4 text-sm text-mist-600 lg:hidden">{WHY_NOTE}</div>
+        <div className="mt-4 text-sm text-gray-600 lg:hidden">{WHY_NOTE}</div>
       </div>
     </div>
   );
@@ -520,8 +537,8 @@ export default function Warmup() {
 function QuestionBody({ question }: { question: (typeof QUESTIONS)[number] }) {
   if (question.kind === 'grid-in') {
     return (
-      <div className="text-base leading-7 text-mist-900">
-        <p className="mb-1 text-xs text-mist-500">{question.kicker}</p>
+      <div className="text-base leading-7 text-gray-900">
+        <p className="mb-1 text-xs text-gray-500">{question.kicker}</p>
         <p>
           <MathText parts={question.stem} />
         </p>
@@ -537,7 +554,7 @@ function QuestionBody({ question }: { question: (typeof QUESTIONS)[number] }) {
   }
 
   return (
-    <p className="text-base leading-7 text-mist-900">
+    <p className="text-base leading-7 text-gray-900">
       <MathText parts={question.stem} />
     </p>
   );
@@ -570,18 +587,18 @@ function Choices({
             key={option.letter}
             className={cn(
               'relative flex min-h-12 items-center gap-2 rounded-xl border bg-white px-3 py-1.5 text-left text-base',
-              'transition-[color,transform] duration-160 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-board-600',
-              answer === null && 'cursor-pointer hover:border-mist-400 active:scale-[0.98]',
+              'transition-[color,transform] duration-160 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ink-600',
+              answer === null && 'cursor-pointer hover:border-gray-400 active:scale-[0.98]',
               isCorrect
-                ? 'border-lime-700 bg-lime-50'
+                ? 'border-green-700 bg-green-50'
                 : isWrongPick
                   ? 'border-red-600 bg-red-50'
                   : isSelected
-                    ? 'border-board-600 bg-board-50 ring-1 ring-board-600'
-                    : 'border-mist-300',
+                    ? 'border-ink-600 bg-ink-50 ring-1 ring-ink-600'
+                    : 'border-gray-300',
               // The options it was not about step back in the palette, not
               // through opacity, which turned them into off-palette tints.
-              dim && 'text-mist-500',
+              dim && 'text-gray-500',
             )}
           >
             <input
@@ -596,12 +613,12 @@ function Choices({
               className={cn(
                 'grid h-6 w-6 shrink-0 place-items-center rounded-lg border text-xs font-medium',
                 isCorrect
-                  ? 'border-lime-700 bg-lime-700 text-white'
+                  ? 'border-green-700 bg-green-700 text-white'
                   : isWrongPick
                     ? 'border-red-600 bg-red-600 text-white'
                     : isSelected
-                      ? 'border-board-600 bg-board-600 text-white'
-                      : 'border-mist-300 text-mist-600',
+                      ? 'border-ink-600 bg-ink-600 text-white'
+                      : 'border-gray-300 text-gray-600',
               )}
             >
               {option.letter}
@@ -611,7 +628,7 @@ function Choices({
             </span>
             {isCorrect && (
               <>
-                <Check className={cn('absolute right-2.5 top-1/2 -mt-2 h-4 w-4 text-lime-700', styles.pop)} aria-hidden="true" />
+                <Check className={cn('absolute right-2.5 top-1/2 -mt-2 h-4 w-4 text-green-700', styles.pop)} aria-hidden="true" />
                 <span className="sr-only">Correct answer</span>
               </>
             )}
@@ -651,10 +668,10 @@ function GridIn({
   // One border colour at a time: cn() does not merge, and two would fight.
   const tone =
     answer === null
-      ? 'border-mist-400 bg-white hover:border-mist-500'
+      ? 'border-gray-400 bg-white hover:border-gray-500'
       : answer.status === 'incorrect'
         ? 'border-red-600 bg-red-50'
-        : 'border-lime-700 bg-lime-50';
+        : 'border-green-700 bg-green-50';
 
   return (
     <div className="mt-4 flex gap-2">
@@ -672,10 +689,10 @@ function GridIn({
           focusRingClass,
           // No hover once the answer is locked: it no longer does anything.
           shownNegative
-            ? 'border-board-600 bg-board-50 text-board-700'
-            : // Keyed like a secondary button (Button.tsx): a mist-400 box
+            ? 'border-ink-600 bg-ink-50 text-ink-700'
+            : // Keyed like a secondary button (Button.tsx): a gray-400 box
               // with a darker bottom edge, over a hairline shadow.
-              'border-mist-400 border-b-mist-500 bg-white text-mist-900 shadow-xs enabled:hover:border-mist-500 enabled:hover:bg-mist-50 enabled:active:shadow-none',
+              'border-gray-400 border-b-gray-500 bg-white text-gray-900 shadow-xs enabled:hover:border-gray-500 enabled:hover:bg-gray-50 enabled:active:shadow-none',
         )}
       >
         {MINUS}
@@ -698,8 +715,8 @@ function GridIn({
           }
         }}
         className={cn(
-          'h-12 min-w-0 flex-1 rounded-lg border px-3 text-xl font-semibold tabular-nums text-mist-900 focus:outline-hidden',
-          'placeholder:text-base placeholder:font-normal placeholder:text-mist-500',
+          'h-12 min-w-0 flex-1 rounded-lg border px-3 text-xl font-semibold tabular-nums text-gray-900 focus:outline-hidden',
+          'placeholder:text-base placeholder:font-normal placeholder:text-gray-500',
           fieldFocusClass,
           tone,
         )}
@@ -711,13 +728,13 @@ function GridIn({
 function Feedback({ status, message }: { status: WarmupAnswer['status']; message: string }) {
   const tag =
     status === 'correct'
-      ? { text: 'Correct.', className: 'text-lime-800' }
+      ? { text: 'Correct.', className: 'text-green-800' }
       : status === 'skipped'
-        ? { text: 'Not answered.', className: 'text-mist-500' }
+        ? { text: 'Not answered.', className: 'text-gray-500' }
         : { text: 'Not this time.', className: 'text-red-700' };
 
   return (
-    <p className="text-mist-700">
+    <p className="text-gray-700">
       <span className={cn('font-semibold', tag.className)}>{tag.text}</span> {message}
     </p>
   );
@@ -726,10 +743,10 @@ function Feedback({ status, message }: { status: WarmupAnswer['status']; message
 /** After Q2: the two lines the system describes, drawn only once it is answered. */
 function Parallels() {
   return (
-    <div className="mt-3 flex items-center gap-3 text-sm text-mist-500">
+    <div className="mt-3 flex items-center gap-3 text-sm text-gray-500">
       <svg width="100" height="44" viewBox="0 0 100 44" aria-hidden="true">
-        <line x1="4" y1="34" x2="96" y2="6" className={cn('stroke-board-600', styles.drawX)} strokeWidth="2.2" strokeLinecap="round" />
-        <line x1="4" y1="42" x2="96" y2="14" className={cn('stroke-board-600', styles.drawX)} strokeWidth="2.2" strokeLinecap="round" />
+        <line x1="4" y1="34" x2="96" y2="6" className={cn('stroke-ink-600', styles.drawX)} strokeWidth="2.2" strokeLinecap="round" />
+        <line x1="4" y1="42" x2="96" y2="14" className={cn('stroke-ink-600', styles.drawX)} strokeWidth="2.2" strokeLinecap="round" />
       </svg>
       <span>Same slope. Never meet.</span>
     </div>

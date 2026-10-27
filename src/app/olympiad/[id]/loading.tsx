@@ -31,7 +31,7 @@ export default function Loading() {
           ))}
         </div>
         {/* The "Times are Tashkent time" line. */}
-        <div className="border-t border-mist-100 px-5 py-2.5">
+        <div className="border-t border-gray-100 px-5 py-2.5">
           <Skeleton className="h-4 w-36" />
         </div>
       </div>

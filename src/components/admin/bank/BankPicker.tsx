@@ -166,7 +166,7 @@ export function BankPicker({
       description="Search the bank, then tick questions in the order they should be asked. Ticked questions are added at the end of the list."
       footer={
         <>
-          <p className="mr-auto text-sm tabular-nums text-mist-600">
+          <p className="mr-auto text-sm tabular-nums text-gray-600">
             {questionCount(chosen.length)} chosen
           </p>
           <Button onClick={onClose}>Done</Button>
@@ -197,8 +197,8 @@ export function BankPicker({
                     }))}
                     className={checkboxClass}
                   />
-                  <span className="min-w-0 flex-1 text-sm font-medium text-mist-900">{domain.label}</span>
-                  <span className="text-xs tabular-nums text-mist-500">
+                  <span className="min-w-0 flex-1 text-sm font-medium text-gray-900">{domain.label}</span>
+                  <span className="text-xs tabular-nums text-gray-500">
                     {countWhere((row) => row.domain === domain.value)}
                   </span>
                 </label>
@@ -221,8 +221,8 @@ export function BankPicker({
                     className={checkboxClass}
                   />
                   <DifficultyBars level={difficulty.value} />
-                  <span className="min-w-0 flex-1 text-sm font-medium text-mist-900">{difficulty.label}</span>
-                  <span className="text-xs tabular-nums text-mist-500">
+                  <span className="min-w-0 flex-1 text-sm font-medium text-gray-900">{difficulty.label}</span>
+                  <span className="text-xs tabular-nums text-gray-500">
                     {countWhere((row) => row.difficulty === difficulty.value)}
                   </span>
                 </label>
@@ -236,8 +236,8 @@ export function BankPicker({
                     onChange={() => setFilters((current) => ({ ...current, unsorted: !current.unsorted }))}
                     className={checkboxClass}
                   />
-                  <span className="min-w-0 flex-1 text-sm font-medium text-mist-900">Not sorted yet</span>
-                  <span className="text-xs tabular-nums text-mist-500">{unsortedCount}</span>
+                  <span className="min-w-0 flex-1 text-sm font-medium text-gray-900">Not sorted yet</span>
+                  <span className="text-xs tabular-nums text-gray-500">{unsortedCount}</span>
                 </label>
               )}
             </div>
@@ -247,7 +247,7 @@ export function BankPicker({
             <label htmlFor={`${fieldId}-q`} className={labelClass}>Words in the question or file name</label>
             <div className="flex flex-col gap-2 sm:flex-row">
               <div className="relative min-w-0 flex-1">
-                <Search aria-hidden className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-mist-400" />
+                <Search aria-hidden className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                 <input
                   ref={textRef}
                   id={`${fieldId}-q`}
@@ -287,7 +287,7 @@ export function BankPicker({
         {/* Always there, so the first count after a search is announced too. */}
         <p
           role="status"
-          className={cn('text-sm font-semibold tabular-nums text-mist-900', !listing && 'sr-only')}
+          className={cn('text-sm font-semibold tabular-nums text-gray-900', !listing && 'sr-only')}
         >
           {listing
             ? listing.total === 0 ? 'No questions found' : `${questionCount(listing.total)} found`
@@ -306,8 +306,8 @@ export function BankPicker({
           />
         ) : (
           // Scrolls inside the dialog, so the search stays in view.
-          <div className="max-h-96 overflow-y-auto rounded-xl border border-mist-200">
-            <ul className="divide-y divide-mist-100">
+          <div className="max-h-96 overflow-y-auto rounded-xl border border-gray-200">
+            <ul className="divide-y divide-gray-100">
               {listing.rows.map((row) => {
                 const ticked = chosenIds.has(row.id);
                 const elsewhere = usedElsewhere.get(row.id);
@@ -318,7 +318,7 @@ export function BankPicker({
                     <label
                       className={cn(
                         'flex items-start gap-3 px-4 py-3 transition-colors',
-                        elsewhere ? 'cursor-not-allowed' : 'cursor-pointer hover:bg-mist-50',
+                        elsewhere ? 'cursor-not-allowed' : 'cursor-pointer hover:bg-gray-50',
                       )}
                     >
                       <input
@@ -330,10 +330,10 @@ export function BankPicker({
                       />
                       <span className="min-w-0 flex-1 space-y-1.5">
                         <span
-                          className={cn('line-clamp-2 block text-sm', elsewhere ? 'text-mist-500' : 'text-mist-800')}
-                          dangerouslySetInnerHTML={{ __html: row.previewHtml || '<span class="text-mist-500">Image only</span>' }}
+                          className={cn('line-clamp-2 block text-sm', elsewhere ? 'text-gray-500' : 'text-gray-800')}
+                          dangerouslySetInnerHTML={{ __html: row.previewHtml || '<span class="text-gray-500">Image only</span>' }}
                         />
-                        <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-mist-500">
+                        <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-gray-500">
                           <span className="inline-flex items-center gap-1.5">
                             <DifficultyBars level={row.difficulty} />
                             {isBankDifficulty(row.difficulty) && <span>{getDifficultyLabel(row.difficulty)}</span>}

@@ -18,7 +18,7 @@ export default function Loading() {
         </div>
         <Skeleton className="h-9 w-32 pointer-coarse:h-11" />
       </div>
-      <div className={cn(cardClass, 'divide-y divide-mist-100')}>
+      <div className={cn(cardClass, 'divide-y divide-gray-100')}>
         {Array.from({ length: 6 }, (_, i) => (
           <div key={i} className="flex items-center gap-4 px-4 py-3 sm:px-5">
             <div className="flex-1 space-y-1.5 py-0.5">

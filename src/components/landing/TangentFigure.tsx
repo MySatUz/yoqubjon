@@ -108,7 +108,7 @@ function setLine(group: SVGGElement, m: number) {
   group.setAttribute('transform', `rotate(${angleOf(m)})`);
 }
 
-/** Touch points are filled lime, crossings hollow; returns what this slope does. */
+/** Touch points are filled green, crossings hollow; returns what this slope does. */
 function drawPoints(nodes: FigureNodes, m: number, fixed: Point[]) {
   const found = contacts(m);
   const shown: { point: Point; touch: boolean }[] = fixed.map((point) => ({ point, touch: true }));
@@ -126,7 +126,7 @@ function drawPoints(nodes: FigureNodes, m: number, fixed: Point[]) {
     dot.setAttribute('visibility', 'visible');
     dot.setAttribute('cx', String(X(item.point[0])));
     dot.setAttribute('cy', String(Y(item.point[1])));
-    dot.setAttribute('class', item.touch ? 'fill-lime-700 stroke-lime-700' : 'fill-white stroke-mist-900');
+    dot.setAttribute('class', item.touch ? 'fill-green-700 stroke-green-700' : 'fill-white stroke-gray-900');
   });
   nodes.captionA.textContent = describe(m, found);
   return found;
@@ -281,7 +281,7 @@ export default function TangentFigure({
 
   return (
     <>
-      <div ref={figureRef} className="relative mt-3 overflow-hidden rounded-xl border border-mist-100 bg-white">
+      <div ref={figureRef} className="relative mt-3 overflow-hidden rounded-xl border border-gray-100 bg-white">
         <svg
           data-part="svg"
           viewBox={`0 0 320 ${VIEW_HEIGHT}`}
@@ -294,36 +294,36 @@ export default function TangentFigure({
               <rect x="0" y="0" width="320" height="208" />
             </clipPath>
             <pattern id="warmup-grid" width="32" height="32" patternUnits="userSpaceOnUse" x="0" y="16">
-              <path d="M32 0H0V32" fill="none" className="stroke-mist-100" />
+              <path d="M32 0H0V32" fill="none" className="stroke-gray-100" />
             </pattern>
           </defs>
           <rect width="320" height="208" fill="url(#warmup-grid)" />
-          <line x1="0" y1="208" x2="320" y2="208" className="stroke-mist-300" />
-          <line x1="160" y1="0" x2="160" y2="212" className="stroke-mist-300" />
+          <line x1="0" y1="208" x2="320" y2="208" className="stroke-gray-300" />
+          <line x1="160" y1="0" x2="160" y2="212" className="stroke-gray-300" />
           {[-4, -2, 2, 4].map((x) => (
             <g key={x}>
-              <line x1={X(x)} y1="205" x2={X(x)} y2="211" className="stroke-mist-300" />
-              <text x={X(x)} y="223" fontSize="12" textAnchor="middle" className="fill-mist-500 tabular-nums">
+              <line x1={X(x)} y1="205" x2={X(x)} y2="211" className="stroke-gray-300" />
+              <text x={X(x)} y="223" fontSize="12" textAnchor="middle" className="fill-gray-500 tabular-nums">
                 {x < 0 ? `${MINUS}${-x}` : x}
               </text>
             </g>
           ))}
           {/* Above the vertex: beside it, the 8 sat on the curve. */}
-          <text x="166" y={Y(8) - 6} fontSize="12" className="fill-mist-500 tabular-nums">8</text>
-          <text x="166" y={Y(16) + 4} fontSize="12" className="fill-mist-500 tabular-nums">16</text>
+          <text x="166" y={Y(8) - 6} fontSize="12" className="fill-gray-500 tabular-nums">8</text>
+          <text x="166" y={Y(16) + 4} fontSize="12" className="fill-gray-500 tabular-nums">16</text>
 
           {/* y = x² + 8 on x ∈ [−4, 4] is exactly this quadratic Bézier; its
               midpoint (160, 144) is the vertex (0, 8). */}
-          <path d="M32 16 Q160 272 288 16" fill="none" className="stroke-mist-900" strokeWidth="2" />
+          <path d="M32 16 Q160 272 288 16" fill="none" className="stroke-gray-900" strokeWidth="2" />
           {/* SVG text in KaTeX's faces, like MathText's Var and MathRun. */}
-          <text x="176" y="52" fontSize="14" className={cn('fill-mist-900', math.upright)}>
+          <text x="176" y="52" fontSize="14" className={cn('fill-gray-900', math.upright)}>
             <tspan className={math.variable}>y</tspan> = <tspan className={math.variable}>x</tspan>² + 8
           </text>
 
           <g clipPath="url(#warmup-plot)">
             <g transform="translate(160 176)">
               <g data-part="second" opacity={0} className="transition-opacity duration-200">
-                <line x1="-260" y1="0" x2="260" y2="0" className="stroke-board-600" strokeWidth="2.5" strokeDasharray="6 5" strokeLinecap="round" />
+                <line x1="-260" y1="0" x2="260" y2="0" className="stroke-ink-600" strokeWidth="2.5" strokeDasharray="6 5" strokeLinecap="round" />
               </g>
               <g data-part="first">
                 <line
@@ -331,7 +331,7 @@ export default function TangentFigure({
                   y1="0"
                   x2="260"
                   y2="0"
-                  className="stroke-board-600"
+                  className="stroke-ink-600"
                   strokeWidth="3"
                   strokeLinecap="round"
                   strokeDasharray={checked ? undefined : '5 6'}
@@ -343,8 +343,8 @@ export default function TangentFigure({
             ))}
           </g>
 
-          <circle cx="160" cy="176" r="5" className="fill-white stroke-board-600" strokeWidth="2.5" />
-          <text x="118" y="190" fontSize="13" textAnchor="end" className={cn('fill-mist-600', math.upright)}>
+          <circle cx="160" cy="176" r="5" className="fill-white stroke-ink-600" strokeWidth="2.5" />
+          <text x="118" y="190" fontSize="13" textAnchor="end" className={cn('fill-gray-600', math.upright)}>
             <tspan className={math.variable}>y</tspan> = <tspan className={math.variable}>mx</tspan> + 4
           </text>
 
@@ -375,27 +375,27 @@ export default function TangentFigure({
           >
             {/* 44 px of target around an 8 px knob. */}
             <circle r="22" fill="transparent" />
-            <circle r="8" className="fill-white stroke-board-600" strokeWidth="3" />
+            <circle r="8" className="fill-white stroke-ink-600" strokeWidth="3" />
             {/* Keyboard focus: a ring clear of the knob, the SVG form of
                 focusRingClass. A thicker knob edge alone was easy to miss. */}
-            <circle r="13" className="fill-none stroke-board-600 opacity-0 group-focus-visible:opacity-100" strokeWidth="2" />
+            <circle r="13" className="fill-none stroke-ink-600 opacity-0 group-focus-visible:opacity-100" strokeWidth="2" />
           </g>
         </svg>
 
         {settled && hint && (
-          <span className="pointer-events-none absolute left-2 top-2 rounded-md bg-white px-1.5 py-0.5 text-xs text-mist-600">
+          <span className="pointer-events-none absolute left-2 top-2 rounded-md bg-white px-1.5 py-0.5 text-xs text-gray-600">
             Drag the line. Find both touches.
           </span>
         )}
 
-        <div className="flex min-h-8 justify-between gap-2 border-t border-mist-100 px-3 py-1.5 text-sm tabular-nums text-mist-600">
+        <div className="flex min-h-8 justify-between gap-2 border-t border-gray-100 px-3 py-1.5 text-sm tabular-nums text-gray-600">
           <span data-part="caption-a" className="whitespace-nowrap">Line through (0,{NBSP}4)</span>
           <span data-part="caption-b" className="text-right" />
         </div>
       </div>
 
       {settled && (
-        <p className={cn('mt-3 text-sm leading-6 text-mist-900', styles.fadeUpSlow)}>
+        <p className={cn('mt-3 text-sm leading-6 text-gray-900', styles.fadeUpSlow)}>
           <Var>x</Var>² + 8 = <Var>mx</Var> + 4 → <Var>x</Var>² {MINUS} <Var>mx</Var> + 4 = 0. One point means
           discriminant 0: <Var>m</Var>² {MINUS} 16 = 0. <span className="font-semibold">Sum: 0.</span>
         </p>

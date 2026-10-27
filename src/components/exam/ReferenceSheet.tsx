@@ -56,8 +56,8 @@ function Figure({
   return (
     // Narrower sides in a sheet under 22rem - a 360px phone - so two 148px
     // figures still fit side by side there without spilling over the frame.
-    <figure className="flex flex-col items-center rounded-xl border border-mist-200 px-1 pb-3 pt-4 @[22rem]:px-2.5">
-      <div className="relative text-mist-700" style={{ width: FIGURE_WIDTH, height: FIGURE_HEIGHT }}>
+    <figure className="flex flex-col items-center rounded-xl border border-gray-200 px-1 pb-3 pt-4 @[22rem]:px-2.5">
+      <div className="relative text-gray-700" style={{ width: FIGURE_WIDTH, height: FIGURE_HEIGHT }}>
         <svg
           viewBox={`0 0 ${FIGURE_WIDTH} ${FIGURE_HEIGHT}`}
           width={FIGURE_WIDTH}
@@ -75,7 +75,7 @@ function Figure({
           <span
             key={`${label.tex}-${label.x}-${label.y}`}
             aria-hidden
-            className="absolute -translate-x-1/2 -translate-y-1/2 whitespace-nowrap text-xs leading-none text-mist-900"
+            className="absolute -translate-x-1/2 -translate-y-1/2 whitespace-nowrap text-xs leading-none text-gray-900"
             style={{ left: label.x, top: label.y }}
           >
             {m(label.tex)}
@@ -83,7 +83,7 @@ function Figure({
         ))}
       </div>
       {formulas.length > 0 ? (
-        <figcaption className="mt-3 space-y-1 text-center text-sm text-mist-900">
+        <figcaption className="mt-3 space-y-1 text-center text-sm text-gray-900">
           <span className="sr-only">{name}: </span>
           {formulas.map((formula) => (
             <span key={formula} className="block">
@@ -92,7 +92,7 @@ function Figure({
           ))}
         </figcaption>
       ) : (
-        <figcaption className="mt-3 text-center text-xs text-mist-500">
+        <figcaption className="mt-3 text-center text-xs text-gray-500">
           {name}
           {spoken && <span className="sr-only">: {spoken}</span>}
         </figcaption>
@@ -264,7 +264,7 @@ export default function ReferenceSheet() {
         </Figure>
       </div>
 
-      <ul className="space-y-1.5 rounded-xl border border-mist-200 px-4 py-3 text-sm text-mist-700">
+      <ul className="space-y-1.5 rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-700">
         <li>The number of degrees of arc in a circle is {m('360')}.</li>
         <li>The number of radians of arc in a circle is {m('2\\pi')}.</li>
         <li>The sum of the measures in degrees of the angles of a triangle is {m('180')}.</li>

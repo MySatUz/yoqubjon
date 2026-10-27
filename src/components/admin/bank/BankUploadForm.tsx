@@ -164,7 +164,7 @@ export default function BankUploadForm() {
       </CardBody>
 
       <CardFooter>
-        {blocker && !saving && <p className="mr-auto text-sm text-mist-500">{blocker}</p>}
+        {blocker && !saving && <p className="mr-auto text-sm text-gray-500">{blocker}</p>}
         <Button type="submit" disabled={saving || blocker !== null}>
           {saving ? (
             <>

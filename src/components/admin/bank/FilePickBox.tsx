@@ -8,11 +8,11 @@ import { cn } from '@/components/ui/cn';
  * The hidden file input covers the whole box, so a click anywhere opens the
  * picker. Focus is the accent of `fieldFocusClass`, on the box, because the
  * focused input itself is invisible. A box that holds a choice says it in
- * mist-900; an empty one reads like a placeholder.
+ * gray-900; an empty one reads like a placeholder.
  */
 const dropzoneClass =
-  'flex h-14 min-w-0 items-center justify-center gap-2 rounded-xl border border-dashed border-mist-400 px-4 text-sm transition-colors '
-  + 'group-hover:border-mist-500 group-hover:bg-mist-50 group-focus-within:border-board-600 group-focus-within:ring-1 group-focus-within:ring-board-600';
+  'flex h-14 min-w-0 items-center justify-center gap-2 rounded-xl border border-dashed border-gray-400 px-4 text-sm transition-colors '
+  + 'group-hover:border-gray-500 group-hover:bg-gray-50 group-focus-within:border-ink-600 group-focus-within:ring-1 group-focus-within:ring-ink-600';
 
 /** One file picker of an import form: the `.tex`, or its images. */
 export function FilePickBox({
@@ -59,7 +59,7 @@ export function FilePickBox({
           onChange={(event) => onFiles(Array.from(event.target.files ?? []))}
           className="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0 disabled:cursor-not-allowed"
         />
-        <div className={cn(dropzoneClass, summary ? 'text-mist-900' : 'text-mist-500')}>
+        <div className={cn(dropzoneClass, summary ? 'text-gray-900' : 'text-gray-500')}>
           <span className="shrink-0 [&_svg]:h-4 [&_svg]:w-4">{icon}</span>
           <span className="truncate">{summary ?? placeholder}</span>
         </div>

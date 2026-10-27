@@ -31,7 +31,7 @@ function formatCount(count: number) {
 /** A tile's count, once the bank's counts are known. */
 function TileCount({ value }: { value: number | undefined }) {
   if (value === undefined) return null;
-  return <span className="text-xs tabular-nums text-mist-500">{value}</span>;
+  return <span className="text-xs tabular-nums text-gray-500">{value}</span>;
 }
 
 /**
@@ -132,7 +132,7 @@ export default function BankPicker({
                     onChange={() => onToggleDomain(domain.value)}
                     className={checkboxClass}
                   />
-                  <span className="min-w-0 flex-1 text-sm font-medium text-mist-900">{domain.label}</span>
+                  <span className="min-w-0 flex-1 text-sm font-medium text-gray-900">{domain.label}</span>
                   <TileCount value={counts ? counts.domains[domain.value] ?? 0 : undefined} />
                 </label>
               ))}
@@ -151,7 +151,7 @@ export default function BankPicker({
                     className={checkboxClass}
                   />
                   <DifficultyBars level={difficulty.value} />
-                  <span className="min-w-0 flex-1 text-sm font-medium text-mist-900">{difficulty.label}</span>
+                  <span className="min-w-0 flex-1 text-sm font-medium text-gray-900">{difficulty.label}</span>
                   <TileCount value={counts ? counts.difficulties[difficulty.value] ?? 0 : undefined} />
                 </label>
               ))}
@@ -161,7 +161,7 @@ export default function BankPicker({
           <div className="space-y-2">
             <label htmlFor="board-bank-search" className={labelClass}>Words in the question or file name</label>
             <div className="relative max-w-xl">
-              <Search aria-hidden className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-mist-400" />
+              <Search aria-hidden className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
               <input
                 id="board-bank-search"
                 type="text"
@@ -194,8 +194,8 @@ export default function BankPicker({
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2 border-t border-mist-100 px-5 py-3">
-          <p className="mr-auto text-xs tabular-nums text-mist-500" role="status">
+        <div className="flex flex-wrap items-center gap-2 border-t border-gray-100 px-5 py-3">
+          <p className="mr-auto text-xs tabular-nums text-gray-500" role="status">
             {needsChoice
               ? 'Choose a domain or a difficulty, or type words, then search.'
               : bankTotal !== null
@@ -233,9 +233,9 @@ export default function BankPicker({
           <h2
             id="board-bank-results"
             aria-live="polite"
-            className="flex items-center gap-2 text-base font-semibold tabular-nums text-mist-900"
+            className="flex items-center gap-2 text-base font-semibold tabular-nums text-gray-900"
           >
-            {isSearching && <Loader2 aria-hidden className="h-4 w-4 animate-spin text-mist-500" />}
+            {isSearching && <Loader2 aria-hidden className="h-4 w-4 animate-spin text-gray-500" />}
             {isSearching ? 'Searching' : total === 0 ? 'No questions found' : `${formatCount(total)} found`}
           </h2>
 
@@ -256,10 +256,10 @@ export default function BankPicker({
                       {/* Spans, not blocks: a button holds phrasing content only. */}
                       <span className="block min-w-0 flex-1">
                         <span
-                          className="block truncate text-sm font-medium text-mist-900"
+                          className="block truncate text-sm font-medium text-gray-900"
                           dangerouslySetInnerHTML={{ __html: row.previewHtml }}
                         />
-                        <span className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-mist-500">
+                        <span className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-gray-500">
                           <DifficultyBars level={row.difficulty} />
                           {hasDifficulty && <span>{getDifficultyLabel(row.difficulty)}</span>}
                           {hasDomain && (
@@ -277,7 +277,7 @@ export default function BankPicker({
                         </span>
                       </span>
                       {pendingId === row.id ? (
-                        <Loader2 aria-hidden className="h-4 w-4 shrink-0 animate-spin text-mist-500" />
+                        <Loader2 aria-hidden className="h-4 w-4 shrink-0 animate-spin text-gray-500" />
                       ) : (
                         <ChevronRight aria-hidden className={rowChevronClass} />
                       )}
@@ -304,8 +304,8 @@ export default function BankPicker({
                 {isLoadingMore && <Loader2 className="h-4 w-4 animate-spin" />}
                 Show more
               </Button>
-              {/* On the mist-100 canvas, where mist-500 misses AA. */}
-              <span className="text-xs tabular-nums text-mist-600">
+              {/* On the gray-100 canvas, where gray-500 misses AA. */}
+              <span className="text-xs tabular-nums text-gray-600">
                 {rows.length} of {total}
               </span>
             </div>

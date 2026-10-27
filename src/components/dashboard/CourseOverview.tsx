@@ -41,8 +41,8 @@ function StartHere({ test }: { test: NonNullable<PracticeOverview['startHere']> 
           it into a narrow column between the icon and the button. */}
       <div className="min-w-0 flex-1 basis-60">
         {/* "Free" only when it is: a subscriber can be shown a paid test here. */}
-        <h2 className="text-base font-semibold text-mist-900">{test.isFree ? 'Start here: a free test' : 'Start here'}</h2>
-        <p className="mt-0.5 text-sm text-mist-600">
+        <h2 className="text-base font-semibold text-gray-900">{test.isFree ? 'Start here: a free test' : 'Start here'}</h2>
+        <p className="mt-0.5 text-sm text-gray-600">
           {test.title} · {test.facts}.{' '}
           {/* A check under 10 questions gives no score estimate, so it is not promised one. */}
           {test.hasScore
@@ -91,8 +91,8 @@ function CourseCard({ course, userId }: { course: CourseSummary; userId: string 
     <Card as="article" className="@container flex min-w-0 flex-col p-5">
       <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
         <div className="min-w-0">
-          <h2 className="text-base font-semibold text-mist-900">{course.label}</h2>
-          {course.description && <p className="mt-0.5 line-clamp-2 text-sm text-mist-600">{course.description}</p>}
+          <h2 className="text-base font-semibold text-gray-900">{course.label}</h2>
+          {course.description && <p className="mt-0.5 line-clamp-2 text-sm text-gray-600">{course.description}</p>}
         </div>
         {course.access && <AccessBadge access={course.access} />}
       </div>
@@ -104,10 +104,10 @@ function CourseCard({ course, userId }: { course: CourseSummary; userId: string 
         <div className="min-w-0 space-y-4">
           <div>
             <div className="flex items-baseline justify-between gap-3 text-sm">
-              <span className="font-medium text-mist-900 tabular-nums">
+              <span className="font-medium text-gray-900 tabular-nums">
                 {course.testsDone} of {course.testsTotal} {course.testsTotal === 1 ? 'test' : 'tests'} done
               </span>
-              <span className="text-xs tabular-nums text-mist-500">{percent}%</span>
+              <span className="text-xs tabular-nums text-gray-500">{percent}%</span>
             </div>
             <Progress className="mt-2" value={percent} />
           </div>
@@ -117,13 +117,13 @@ function CourseCard({ course, userId }: { course: CourseSummary; userId: string 
       </div>
 
       {course.lastResult && (
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t border-mist-100 pt-3 text-sm">
-          <span className="min-w-0 text-mist-600">
-            Last: <span className="font-medium text-mist-900">{course.lastResult.title}</span> · {course.lastResult.date}
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t border-gray-100 pt-3 text-sm">
+          <span className="min-w-0 text-gray-600">
+            Last: <span className="font-medium text-gray-900">{course.lastResult.title}</span> · {course.lastResult.date}
             {course.lastResult.score !== null && (
               <>
                 {' · '}
-                <span className="font-medium tabular-nums text-mist-900">{course.lastResult.score}</span>
+                <span className="font-medium tabular-nums text-gray-900">{course.lastResult.score}</span>
               </>
             )}
           </span>
@@ -197,7 +197,7 @@ function NextStep({ course, userId }: { course: CourseSummary; userId: string })
           <RotateCw className="h-4 w-4 shrink-0" />
           <span className="truncate">Continue {unfinished.title}</span>
         </Link>
-        <span className="text-xs tabular-nums text-mist-500">
+        <span className="text-xs tabular-nums text-gray-500">
           {moduleCount > 1 ? `Unfinished · Module ${moduleIndex} of ${moduleCount}` : 'Unfinished'}
         </span>
       </div>
@@ -211,7 +211,7 @@ function NextStep({ course, userId }: { course: CourseSummary; userId: string })
           <Play className="h-4 w-4 shrink-0" />
           <span className="truncate">Start {course.nextTest.title}</span>
         </Link>
-        <span className="text-xs text-mist-500">{course.nextTest.facts}</span>
+        <span className="text-xs text-gray-500">{course.nextTest.facts}</span>
       </div>
     );
   }
@@ -224,7 +224,7 @@ function NextStep({ course, userId }: { course: CourseSummary; userId: string })
       <Link href={`/dashboard?set=${encodeURIComponent(getCategoryQueryValue(course.category))}`} className={buttonClass({ variant: 'secondary' })}>
         Open the course
       </Link>
-      <span className="text-xs text-mist-500">
+      <span className="text-xs text-gray-500">
         {course.testsTotal === 0
           ? 'Tests for this course are on their way.'
           : allDone
@@ -246,10 +246,10 @@ function ScoreLine({ line, best }: { line: number[]; best: number | null }) {
 
   if (line.length < 2) {
     return (
-      <div className={cn(insetClass, 'p-3 text-xs text-mist-600')}>
-        <span className="block text-2xl font-semibold tabular-nums text-mist-900">
+      <div className={cn(insetClass, 'p-3 text-xs text-gray-600')}>
+        <span className="block text-2xl font-semibold tabular-nums text-gray-900">
           {latest}
-          <span className="text-sm font-medium text-mist-500"> / 800</span>
+          <span className="text-sm font-medium text-gray-500"> / 800</span>
         </span>
         Your line starts after the second full test in this course.
       </div>
@@ -265,11 +265,11 @@ function ScoreLine({ line, best }: { line: number[]; best: number | null }) {
   return (
     <div className={cn(insetClass, 'p-3')}>
       <div className="flex items-baseline justify-between gap-2">
-        <span className="text-2xl font-semibold tabular-nums text-mist-900">
+        <span className="text-2xl font-semibold tabular-nums text-gray-900">
           {latest}
-          <span className="text-sm font-medium text-mist-500"> / 800</span>
+          <span className="text-sm font-medium text-gray-500"> / 800</span>
         </span>
-        {best !== null && <span className="text-xs tabular-nums text-mist-500">best {best}</span>}
+        {best !== null && <span className="text-xs tabular-nums text-gray-500">best {best}</span>}
       </div>
       <svg
         viewBox={`0 0 ${width} ${height}`}
@@ -277,9 +277,9 @@ function ScoreLine({ line, best }: { line: number[]; best: number | null }) {
         role="img"
         aria-label={`Latest scores in this course: ${line.join(', ')}`}
       >
-        <line x1="4" x2={width - 4} y1={y(800)} y2={y(800)} className="stroke-mist-300" strokeDasharray="3 4" />
-        <polyline points={points} fill="none" className="stroke-board-600" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
-        <circle cx={x(line.length - 1)} cy={y(latest)} r="3.5" className="fill-board-600" />
+        <line x1="4" x2={width - 4} y1={y(800)} y2={y(800)} className="stroke-gray-300" strokeDasharray="3 4" />
+        <polyline points={points} fill="none" className="stroke-ink-600" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
+        <circle cx={x(line.length - 1)} cy={y(latest)} r="3.5" className="fill-ink-600" />
       </svg>
     </div>
   );

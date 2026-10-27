@@ -33,7 +33,7 @@ async function readMenuProps() {
 /* ---------- mobile header avatar: opens the account menu ---------- */
 
 export function ShellUserAvatarSkeleton() {
-  return <div className="h-8 w-8 animate-pulse rounded-full bg-mist-200" />;
+  return <div className="h-8 w-8 animate-pulse rounded-full bg-gray-200" />;
 }
 
 export async function ShellUserAvatar() {
@@ -47,8 +47,8 @@ export function ShellUserCardSkeleton() {
   // layout shift.
   return (
     <div className="flex h-12 items-center gap-3 pl-1 pr-3">
-      <div className="h-10 w-10 shrink-0 animate-pulse rounded-full bg-board-900" />
-      <div className="h-3 w-24 animate-pulse rounded-full bg-board-900 collapsed:hidden" />
+      <div className="h-10 w-10 shrink-0 animate-pulse rounded-full bg-ink-900" />
+      <div className="h-3 w-24 animate-pulse rounded-full bg-ink-900 collapsed:hidden" />
     </div>
   );
 }

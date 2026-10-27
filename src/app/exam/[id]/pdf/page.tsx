@@ -50,13 +50,13 @@ function QuestionPdfCard({ question, number }: { question: QuestionForPdf; numbe
 
   return (
     <section className="break-inside-avoid p-5 print:px-0 print:py-4">
-      <h3 className="mb-3 text-sm font-semibold tabular-nums text-mist-900">
+      <h3 className="mb-3 text-sm font-semibold tabular-nums text-gray-900">
         Question {number}
       </h3>
 
       {/* Diagram first, stem second - the same order the exam screen uses. */}
       {question.imageUrl && (
-        <div className="mb-4 overflow-hidden rounded-xl border border-mist-200 p-3 print:rounded-lg">
+        <div className="mb-4 overflow-hidden rounded-xl border border-gray-200 p-3 print:rounded-lg">
           <img
             src={question.imageUrl}
             alt={`Question ${question.order} diagram`}
@@ -65,12 +65,12 @@ function QuestionPdfCard({ question, number }: { question: QuestionForPdf; numbe
         </div>
       )}
 
-      <div className="text-base leading-relaxed text-mist-900 print:text-[12pt]">
+      <div className="text-base leading-relaxed text-gray-900 print:text-[12pt]">
         {renderMathText(question.content)}
       </div>
 
       {options.length > 0 && isMultiSelectKey(question.correctAnswer) && (
-        <p className="mt-4 text-sm font-medium text-mist-700">
+        <p className="mt-4 text-sm font-medium text-gray-700">
           Select all that apply
         </p>
       )}
@@ -80,19 +80,19 @@ function QuestionPdfCard({ question, number }: { question: QuestionForPdf; numbe
           {options.map((option, index) => (
             <div
               key={`${question.id}-${index}`}
-              className="flex gap-3 rounded-xl border border-mist-200 px-3 py-2.5 print:rounded-lg print:py-2"
+              className="flex gap-3 rounded-xl border border-gray-200 px-3 py-2.5 print:rounded-lg print:py-2"
             >
-              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border border-mist-300 text-xs font-semibold text-mist-700">
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border border-gray-300 text-xs font-semibold text-gray-700">
                 {String.fromCharCode(65 + index)}
               </span>
-              <div className="min-w-0 text-sm leading-relaxed text-mist-800 print:text-[11pt]">
+              <div className="min-w-0 text-sm leading-relaxed text-gray-800 print:text-[11pt]">
                 {renderMathText(optionAsMath(option))}
               </div>
             </div>
           ))}
         </div>
       ) : (
-        <div className="mt-4 rounded-xl border border-dashed border-mist-300 px-4 py-3 text-sm text-mist-500 print:rounded-lg">
+        <div className="mt-4 rounded-xl border border-dashed border-gray-300 px-4 py-3 text-sm text-gray-500 print:rounded-lg">
           Student-produced response
         </div>
       )}
@@ -142,7 +142,7 @@ export default async function ExamPdfPage({ params }: { params: Promise<{ id: st
 
   // Outside the app shell, so the page paints the shell's canvas itself.
   return (
-    <main className="min-h-screen bg-mist-100 px-4 py-6 text-mist-900 sm:px-6 lg:py-8 print:bg-white print:px-0 print:py-0">
+    <main className="min-h-screen bg-gray-100 px-4 py-6 text-gray-900 sm:px-6 lg:py-8 print:bg-white print:px-0 print:py-0">
       <style>{`
         @page {
           size: A4;
@@ -167,9 +167,9 @@ export default async function ExamPdfPage({ params }: { params: Promise<{ id: st
         </div>
 
         <article className={cn(cardClass, 'overflow-hidden print:overflow-visible print:rounded-none print:border-0')}>
-          <header className="border-b border-mist-200 p-5 print:border-mist-300 print:px-0 print:pb-6 print:pt-0">
-            <h1 className="text-xl font-semibold tracking-tight text-mist-900 sm:text-2xl">{test.title}</h1>
-            <p className="mt-1 text-sm text-mist-500 tabular-nums">
+          <header className="border-b border-gray-200 p-5 print:border-gray-300 print:px-0 print:pb-6 print:pt-0">
+            <h1 className="text-xl font-semibold tracking-tight text-gray-900 sm:text-2xl">{test.title}</h1>
+            <p className="mt-1 text-sm text-gray-500 tabular-nums">
               {/* "Module" only where the test has modules: a one-block test is one set of questions. */}
               Printable test · {isModular ? `${modules.length} modules · ` : ''}
               {questions.length} {questions.length === 1 ? 'question' : 'questions'} · Generated from MYSATuz
@@ -177,18 +177,18 @@ export default async function ExamPdfPage({ params }: { params: Promise<{ id: st
           </header>
 
           {modules.map((module) => (
-            <div key={module.index} className="border-b border-mist-200 last:border-b-0 print:border-mist-300">
+            <div key={module.index} className="border-b border-gray-200 last:border-b-0 print:border-gray-300">
               {isModular && (
-                <div className="break-inside-avoid border-b border-mist-200 bg-mist-50 px-5 py-3 print:border-mist-300 print:bg-white print:px-0 print:pt-6">
-                  <h2 className="text-sm font-semibold text-mist-900">
+                <div className="break-inside-avoid border-b border-gray-200 bg-gray-50 px-5 py-3 print:border-gray-300 print:bg-white print:px-0 print:pt-6">
+                  <h2 className="text-sm font-semibold text-gray-900">
                     Module {module.index}
                   </h2>
-                  <p className="mt-0.5 text-xs text-mist-500 tabular-nums">
+                  <p className="mt-0.5 text-xs text-gray-500 tabular-nums">
                     {module.questions.length} {module.questions.length === 1 ? 'question' : 'questions'} · {formatDuration(module.durationSeconds)}
                   </p>
                 </div>
               )}
-              <div className="divide-y divide-mist-100 print:divide-mist-300">
+              <div className="divide-y divide-gray-100 print:divide-gray-300">
                 {module.questions.map((question, index) => (
                   <QuestionPdfCard key={question.id} question={question} number={index + 1} />
                 ))}

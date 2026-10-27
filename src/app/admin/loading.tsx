@@ -25,7 +25,7 @@ export default function Loading() {
         </div>
       </div>
 
-      <div className={cn(cardClass, 'divide-y divide-mist-100')}>
+      <div className={cn(cardClass, 'divide-y divide-gray-100')}>
         <div className="px-5 py-4">
           <Skeleton className="h-5 w-36" />
         </div>
@@ -42,10 +42,10 @@ export default function Loading() {
       </div>
 
       <div className={cn(cardClass, 'overflow-hidden')}>
-        <div className="border-b border-mist-200 bg-mist-50 px-4 py-2.5">
+        <div className="border-b border-gray-200 bg-gray-50 px-4 py-2.5">
           <Skeleton className="h-3 w-full max-w-xl" />
         </div>
-        <div className="divide-y divide-mist-100">
+        <div className="divide-y divide-gray-100">
           {Array.from({ length: 5 }, (_, i) => (
             <div key={i} className="flex items-center gap-6 px-4 py-3">
               <Skeleton className="h-4 w-56 max-w-[40%]" />

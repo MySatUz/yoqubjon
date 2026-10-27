@@ -57,8 +57,8 @@ type Decision = 'approve' | 'reject';
 function Detail({ label, wide = false, children }: { label: string; wide?: boolean; children: ReactNode }) {
   return (
     <div className={cn('min-w-0', wide && 'sm:col-span-2')}>
-      <dt className="text-xs text-mist-500">{label}</dt>
-      <dd className={cn('mt-0.5 break-words text-sm', wide ? 'text-mist-700' : 'font-medium text-mist-900')}>
+      <dt className="text-xs text-gray-500">{label}</dt>
+      <dd className={cn('mt-0.5 break-words text-sm', wide ? 'text-gray-700' : 'font-medium text-gray-900')}>
         {children}
       </dd>
     </div>
@@ -191,7 +191,7 @@ function PaymentDecision({
   const isBusy = pendingDecision !== null;
 
   return (
-    <div className="space-y-3 border-t border-mist-100 pt-4">
+    <div className="space-y-3 border-t border-gray-100 pt-4">
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <form onSubmit={(event) => void decide('approve', event)} className="space-y-2">
           <input type="hidden" name="requestId" value={request.id} />
@@ -335,8 +335,8 @@ export default function ManualPaymentRequests({ requests, accessDays }: ManualPa
             );
           })}
         </div>
-        {/* On the mist-100 canvas, where mist-500 misses AA. */}
-        <p className="shrink-0 pt-2 text-xs tabular-nums text-mist-600">
+        {/* On the gray-100 canvas, where gray-500 misses AA. */}
+        <p className="shrink-0 pt-2 text-xs tabular-nums text-gray-600">
           {requests.length} {requests.length === 1 ? 'request' : 'requests'}
         </p>
       </div>
@@ -354,19 +354,19 @@ export default function ManualPaymentRequests({ requests, accessDays }: ManualPa
                   aria-pressed={isSelected}
                   // listRowClass carries the inset focus ring.
                   className={cn(
-                    isSelected ? cn(listRowClass, 'bg-board-50') : listRowInteractiveClass,
+                    isSelected ? cn(listRowClass, 'bg-ink-50') : listRowInteractiveClass,
                     'group w-full text-left',
                   )}
                 >
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-mist-900">
+                    <p className="truncate text-sm font-medium text-gray-900">
                       {request.user.name || request.payerName || 'No name'} · {formatAmount(request.amount, request.currency)}
                     </p>
-                    <p className="mt-0.5 truncate text-xs text-mist-500">{request.user.email}</p>
+                    <p className="mt-0.5 truncate text-xs text-gray-500">{request.user.email}</p>
                   </div>
                   <div className="flex shrink-0 flex-col items-end gap-1">
                     <PaymentStatusBadge status={request.status} />
-                    <span className="text-xs tabular-nums text-mist-500">{formatDateTime(request.createdAt)}</span>
+                    <span className="text-xs tabular-nums text-gray-500">{formatDateTime(request.createdAt)}</span>
                   </div>
                   {/* Every pressable row ends in a chevron: it opens the details. */}
                   <ChevronRight className={rowChevronClass} aria-hidden />
@@ -386,8 +386,8 @@ export default function ManualPaymentRequests({ requests, accessDays }: ManualPa
                 description={selectedRequest.user.email}
                 actions={
                   <div className="text-right">
-                    <p className="text-xs text-mist-500">Amount</p>
-                    <p className="text-base font-semibold tabular-nums text-mist-900">
+                    <p className="text-xs text-gray-500">Amount</p>
+                    <p className="text-base font-semibold tabular-nums text-gray-900">
                       {formatAmount(selectedRequest.amount, selectedRequest.currency)}
                     </p>
                   </div>
@@ -422,13 +422,13 @@ export default function ManualPaymentRequests({ requests, accessDays }: ManualPa
                       Open receipt
                     </a>
                   ) : (
-                    <span className="inline-flex items-center gap-2 text-sm text-mist-500">
+                    <span className="inline-flex items-center gap-2 text-sm text-gray-500">
                       <FileText className="h-4 w-4" />
                       Receipt unavailable
                     </span>
                   )}
                   {selectedRequest.receiptFileName && (
-                    <span className="max-w-full truncate text-xs text-mist-500">
+                    <span className="max-w-full truncate text-xs text-gray-500">
                       {selectedRequest.receiptFileName}
                     </span>
                   )}

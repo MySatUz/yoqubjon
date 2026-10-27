@@ -7,7 +7,8 @@ import { Card } from '@/components/ui/Card';
 import { isEmailEnabled } from '@/lib/email';
 import { TELEGRAM_URL } from '@/lib/landing/warmup';
 
-export const metadata: Metadata = { title: 'Reset password' };
+// noindex: a step inside a flow, not a page anyone should land on from search.
+export const metadata: Metadata = { title: 'Reset password', robots: { index: false } };
 
 /** A code by email, then a new password. Without email set up, the way back is Telegram. */
 export default async function ResetPasswordPage() {
@@ -25,8 +26,8 @@ export default async function ResetPasswordPage() {
         <ResetPasswordForm />
       ) : (
         <Card padded>
-          <h1 className="text-xl font-semibold tracking-tight text-mist-900 sm:text-2xl">Reset your password</h1>
-          <p className="mt-1.5 text-sm text-mist-600">
+          <h1 className="text-xl font-semibold tracking-tight text-gray-900 sm:text-2xl">Reset your password</h1>
+          <p className="mt-1.5 text-sm text-gray-600">
             Write to us in{' '}
             <a href={TELEGRAM_URL} target="_blank" rel="noopener noreferrer" className={authLinkClass}>
               Telegram<span className="sr-only"> (opens Telegram)</span>

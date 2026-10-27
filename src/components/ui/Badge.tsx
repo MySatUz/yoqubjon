@@ -5,20 +5,20 @@ import { cn } from '@/components/ui/cn';
 export type Tone = 'neutral' | 'accent' | 'success' | 'warning' | 'danger';
 
 const tones: Record<Tone, string> = {
-  neutral: 'bg-mist-100 text-mist-700',
-  accent: 'bg-board-50 text-board-700',
-  success: 'bg-lime-50 text-lime-800',
+  neutral: 'bg-gray-100 text-gray-700',
+  accent: 'bg-ink-50 text-ink-700',
+  success: 'bg-green-50 text-green-800',
   warning: 'bg-amber-50 text-amber-800',
   danger: 'bg-red-50 text-red-700',
 };
 
 /*
- * The neutral badge is mist-100, which is also the app shell's canvas: set
+ * The neutral badge is gray-100, which is also the app shell's canvas: set
  * straight on the canvas (a page header's meta line) it vanished into the
- * ground. `onCanvas` steps it to mist-200. Still flat: a badge never has a
+ * ground. `onCanvas` steps it to gray-200. Still flat: a badge never has a
  * border, so it can never be mistaken for a button or a filter chip.
  */
-const neutralOnCanvas = 'bg-mist-200 text-mist-800';
+const neutralOnCanvas = 'bg-gray-200 text-gray-800';
 
 /** The one icon per status, so "correct" or "waiting" is never colour alone. */
 const statusIcons: Partial<Record<Tone, React.ReactNode>> = {
@@ -47,7 +47,7 @@ export function badgeClass({
  * accent = selected/current, neutral = facts.
  * A status (success, warning, danger) leads with its icon unless the children
  * already bring one (any element child counts as the icon) or `icon={false}`.
- * Pass `onCanvas` when a neutral badge sits on the mist-100 canvas rather than
+ * Pass `onCanvas` when a neutral badge sits on the gray-100 canvas rather than
  * in a card.
  */
 export function Badge({

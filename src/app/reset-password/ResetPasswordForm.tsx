@@ -38,13 +38,13 @@ export default function ResetPasswordForm() {
   return (
     <>
       <Card padded>
-        <h1 className="text-xl font-semibold tracking-tight text-mist-900 sm:text-2xl">Reset your password</h1>
+        <h1 className="text-xl font-semibold tracking-tight text-gray-900 sm:text-2xl">Reset your password</h1>
 
         {!onCodeStep ? (
           <>
             {/* &#8209; is a non-breaking hyphen: "6-" at a line end and "digit" on
                 the next read as a broken word on a phone. */}
-            <p className="mt-1.5 text-sm text-mist-600">Enter the email you signed up with. We will send it a 6&#8209;digit code.</p>
+            <p className="mt-1.5 text-sm text-gray-600">Enter the email you signed up with. We will send it a 6&#8209;digit code.</p>
             <form action={requestAction} className="mt-5 space-y-4" aria-busy={requesting}>
               <Field
                 label="Email"
@@ -72,7 +72,7 @@ export default function ResetPasswordForm() {
         ) : (
           <>
             {/* break-words: the email has no space to wrap at. */}
-            <p className="mt-1.5 break-words text-sm text-mist-600" aria-live="polite">
+            <p className="mt-1.5 break-words text-sm text-gray-600" aria-live="polite">
               {requestState?.notice ?? `Enter the code we sent to ${email} and a new password.`}
             </p>
             <form
@@ -113,13 +113,13 @@ export default function ResetPasswordForm() {
             <form
               action={requestAction}
               onSubmit={() => setResends((count) => count + 1)}
-              className="mt-4 border-t border-mist-100 pt-4"
+              className="mt-4 border-t border-gray-100 pt-4"
               aria-busy={requesting}
             >
               <input type="hidden" name="email" value={email} />
               <input type="hidden" name="step" value="code" />
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="text-sm text-mist-600">No email? Check spam, or</p>
+                <p className="text-sm text-gray-600">No email? Check spam, or</p>
                 <Button type="submit" variant="secondary" size="sm">
                   {requesting && <Loader2 className="h-4 w-4 motion-safe:animate-spin" aria-hidden />}
                   Send a new code
@@ -133,7 +133,7 @@ export default function ResetPasswordForm() {
         )}
       </Card>
 
-      <p className="mt-6 text-center text-sm text-mist-600">
+      <p className="mt-6 text-center text-sm text-gray-600">
         Remembered it?{' '}
         <Link href="/login" className={authLinkClass}>
           Sign in

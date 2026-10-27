@@ -45,7 +45,7 @@ export default function OlympiadDate({ olympiad, checkedAt }: { olympiad: Landin
           ? 'This olympiad has closed.'
           : 'Olympiad dates are announced in Telegram.';
     return (
-      <p className="mt-4 text-sm text-mist-600">
+      <p className="mt-4 text-sm text-gray-600">
         {lead}{' '}
         <a href={TELEGRAM_URL} target="_blank" rel="noopener noreferrer" className={linkClass}>
           Ask when the next one opens
@@ -85,8 +85,8 @@ export default function OlympiadDate({ olympiad, checkedAt }: { olympiad: Landin
   return (
     <div className={cn(cardClass, 'mt-6 flex flex-wrap items-center justify-between gap-3 px-5 py-4')}>
       <div className="min-w-0">
-        <p className="font-semibold text-mist-900">{title}</p>
-        <p className="mt-0.5 text-sm text-mist-600">{detail}</p>
+        <p className="font-semibold text-gray-900">{title}</p>
+        <p className="mt-0.5 text-sm text-gray-600">{detail}</p>
       </div>
       {action}
     </div>

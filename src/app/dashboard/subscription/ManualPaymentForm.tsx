@@ -46,14 +46,14 @@ type ManualPaymentFormProps = {
 
 /**
  * Styles the native file button like a secondary <Button size="sm">: keyed, a
- * mist-400 box whose bottom edge is mist-500, over shadow-xs (Button.tsx).
+ * gray-400 box whose bottom edge is gray-500, over shadow-xs (Button.tsx).
  * Tailwind's preflight already gives ::file-selector-button a solid zero-width
  * border, so `file:border` is enough to draw it.
  */
 const fileInputClass =
-  'block w-full rounded-lg text-sm text-mist-600 file:mr-3 file:h-8 file:cursor-pointer file:rounded-lg file:border ' +
-  'file:border-mist-400 file:border-b-mist-500 file:bg-white file:px-3 file:text-sm file:font-medium file:text-mist-800 ' +
-  'file:shadow-xs file:transition-colors hover:file:border-mist-500 hover:file:bg-mist-50 active:file:shadow-none ' +
+  'block w-full rounded-lg text-sm text-gray-600 file:mr-3 file:h-8 file:cursor-pointer file:rounded-lg file:border ' +
+  'file:border-gray-400 file:border-b-gray-500 file:bg-white file:px-3 file:text-sm file:font-medium file:text-gray-800 ' +
+  'file:shadow-xs file:transition-colors hover:file:border-gray-500 hover:file:bg-gray-50 active:file:shadow-none ' +
   'pointer-coarse:file:h-10 ' +
   focusRingClass;
 
@@ -179,7 +179,7 @@ export function ManualPaymentForm({
         />
         <dl className="grid grid-cols-2 gap-4 p-5">
           <div className="col-span-2 min-w-0">
-            <dt className="text-xs text-mist-500">Card number</dt>
+            <dt className="text-xs text-gray-500">Card number</dt>
             <dd className="mt-1">
               {/* Keyed like a secondary button (Button.tsx), not a grey inset:
                   the whole row copies, and it has to look pressable before it
@@ -189,16 +189,16 @@ export function ManualPaymentForm({
                 type="button"
                 onClick={copyCardNumber}
                 className={cn(
-                  'group flex h-10 w-full items-center justify-between gap-3 rounded-lg border border-mist-400 border-b-mist-500 bg-white px-3 text-left shadow-xs',
-                  'transition-colors hover:border-mist-500 hover:bg-mist-50 active:bg-mist-100 active:shadow-none pointer-coarse:h-11',
+                  'group flex h-10 w-full items-center justify-between gap-3 rounded-lg border border-gray-400 border-b-gray-500 bg-white px-3 text-left shadow-xs',
+                  'transition-colors hover:border-gray-500 hover:bg-gray-50 active:bg-gray-100 active:shadow-none pointer-coarse:h-11',
                   focusRingClass,
                 )}
               >
-                <span className="truncate text-lg font-semibold tabular-nums tracking-wide text-mist-900">
+                <span className="truncate text-lg font-semibold tabular-nums tracking-wide text-gray-900">
                   {transfer.cardNumber}
                 </span>
-                <span className="inline-flex shrink-0 items-center gap-1.5 text-sm font-medium text-mist-700 transition-colors group-hover:text-mist-900">
-                  {copied ? <Check className="h-4 w-4 text-lime-700" /> : <Copy className="h-4 w-4" />}
+                <span className="inline-flex shrink-0 items-center gap-1.5 text-sm font-medium text-gray-700 transition-colors group-hover:text-gray-900">
+                  {copied ? <Check className="h-4 w-4 text-green-700" /> : <Copy className="h-4 w-4" />}
                   {copied ? 'Copied' : 'Copy'}
                 </span>
               </button>
@@ -315,11 +315,11 @@ export function ManualPaymentForm({
                     meta={request.receiptFileName ? `Receipt: ${request.receiptFileName}` : undefined}
                   />
                   {request.adminNote && (
-                    <p className="mt-1.5 text-xs text-mist-600">Admin note: {request.adminNote}</p>
+                    <p className="mt-1.5 text-xs text-gray-600">Admin note: {request.adminNote}</p>
                   )}
                   {/* A declined receipt is the moment a student needs a person. */}
                   {request.status === 'REJECTED' && (
-                    <p className="mt-1 text-xs text-mist-600">
+                    <p className="mt-1 text-xs text-gray-600">
                       Not sure why?{' '}
                       <a href={TELEGRAM_URL} target="_blank" rel="noopener noreferrer" className={linkClass}>
                         Ask in Telegram

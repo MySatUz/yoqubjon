@@ -60,8 +60,8 @@ const pageLinkClass = cn(
   'inline-flex h-8 min-w-8 items-center justify-center rounded-lg border px-2 text-sm font-medium tabular-nums transition-colors pointer-coarse:h-10 pointer-coarse:min-w-10',
   focusRingClass,
 );
-const pageIdleClass = 'border-mist-400 border-b-mist-500 bg-white text-mist-700 shadow-xs hover:bg-mist-50';
-const pageOffClass = 'border-mist-200 bg-mist-100 text-mist-400';
+const pageIdleClass = 'border-gray-400 border-b-gray-500 bg-white text-gray-700 shadow-xs hover:bg-gray-50';
+const pageOffClass = 'border-gray-200 bg-gray-100 text-gray-400';
 
 /**
  * The question bank. Like the College Board's educator bank it opens on the
@@ -133,7 +133,7 @@ export default async function QuestionBankPage({
         ? 'grid-in' as const
         : isMultiSelectKey(row.correctAnswer) ? 'multi-select' as const : 'choice' as const,
       // Typeset on the server; empty only for a question that is all image.
-      preview: renderQuestionPreview(row.content) || '<span class="text-mist-500">Image only</span>',
+      preview: renderQuestionPreview(row.content) || '<span class="text-gray-500">Image only</span>',
       tests: usage.get(row.id) ?? 0,
     };
   });
@@ -170,8 +170,8 @@ export default async function QuestionBankPage({
                         defaultChecked={filters.domains.includes(domain.value)}
                         className={checkboxClass}
                       />
-                      <span className="min-w-0 flex-1 text-sm font-medium text-mist-900">{domain.label}</span>
-                      <span className="text-xs tabular-nums text-mist-500">{domainCount(domain.value)}</span>
+                      <span className="min-w-0 flex-1 text-sm font-medium text-gray-900">{domain.label}</span>
+                      <span className="text-xs tabular-nums text-gray-500">{domainCount(domain.value)}</span>
                     </label>
                   ))}
                 </div>
@@ -190,8 +190,8 @@ export default async function QuestionBankPage({
                         className={checkboxClass}
                       />
                       <DifficultyBars level={difficulty.value} />
-                      <span className="min-w-0 flex-1 text-sm font-medium text-mist-900">{difficulty.label}</span>
-                      <span className="text-xs tabular-nums text-mist-500">{difficultyCount(difficulty.value)}</span>
+                      <span className="min-w-0 flex-1 text-sm font-medium text-gray-900">{difficulty.label}</span>
+                      <span className="text-xs tabular-nums text-gray-500">{difficultyCount(difficulty.value)}</span>
                     </label>
                   ))}
                   {/* Only while there is something to sort, or the filter is on. */}
@@ -204,8 +204,8 @@ export default async function QuestionBankPage({
                         defaultChecked={filters.unsorted}
                         className={checkboxClass}
                       />
-                      <span className="min-w-0 flex-1 text-sm font-medium text-mist-900">Not sorted yet</span>
-                      <span className="text-xs tabular-nums text-mist-500">{unsorted}</span>
+                      <span className="min-w-0 flex-1 text-sm font-medium text-gray-900">Not sorted yet</span>
+                      <span className="text-xs tabular-nums text-gray-500">{unsorted}</span>
                     </label>
                   )}
                 </div>
@@ -214,7 +214,7 @@ export default async function QuestionBankPage({
               <div className="space-y-2">
                 <label htmlFor="bank-search" className={labelClass}>Words in the question or file name</label>
                 <div className="relative max-w-xl">
-                  <Search aria-hidden className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-mist-400" />
+                  <Search aria-hidden className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                   <input
                     id="bank-search"
                     type="search"
@@ -229,8 +229,8 @@ export default async function QuestionBankPage({
               </div>
             </div>
 
-            <div className="flex flex-wrap items-center gap-2 border-t border-mist-100 px-5 py-3">
-              <p className="mr-auto text-xs tabular-nums text-mist-500">{formatCount(total)} in the bank</p>
+            <div className="flex flex-wrap items-center gap-2 border-t border-gray-100 px-5 py-3">
+              <p className="mr-auto text-xs tabular-nums text-gray-500">{formatCount(total)} in the bank</p>
               {filtered && (
                 <Link href={bankListHref(EMPTY_BANK_FILTERS, 1, size)} prefetch={false} className={buttonClass({ variant: 'secondary' })}>
                   Clear
@@ -246,12 +246,12 @@ export default async function QuestionBankPage({
           {filtered && (
             <section aria-labelledby="bank-results" className="space-y-3">
               <div className="flex flex-wrap items-center justify-between gap-3">
-                <h2 id="bank-results" className="text-base font-semibold tabular-nums text-mist-900">
+                <h2 id="bank-results" className="text-base font-semibold tabular-nums text-gray-900">
                   {matching === 0 ? 'No questions found' : `${formatCount(matching)} found`}
                 </h2>
                 {matching > BANK_PAGE_SIZES[0] && (
                   <div className="flex items-center gap-2">
-                    <span className="text-xs text-mist-600">Per page</span>
+                    <span className="text-xs text-gray-600">Per page</span>
                     <nav aria-label="Questions per page" className={segmentedClass}>
                       {BANK_PAGE_SIZES.map((option) => (
                         <Link
@@ -304,10 +304,10 @@ export default async function QuestionBankPage({
                           <tr key={row.id} className={cn(linkRowClass, 'group')}>
                             <td className={cn(tdClass, 'w-full max-w-0')}>
                               <Link href={`/admin/bank/${row.id}`} prefetch={false} className={cn(rowLinkClass, 'block font-normal')}>
-                                <span className="line-clamp-2 text-mist-800" dangerouslySetInnerHTML={{ __html: row.preview }} />
+                                <span className="line-clamp-2 text-gray-800" dangerouslySetInnerHTML={{ __html: row.preview }} />
                               </Link>
                               {(row.kind !== 'choice' || row.source) && (
-                                <span className="mt-1 flex items-center gap-2 text-xs text-mist-500">
+                                <span className="mt-1 flex items-center gap-2 text-xs text-gray-500">
                                   <KindBadge kind={row.kind} />
                                   {row.source && <span className="truncate">{row.source}</span>}
                                 </span>
@@ -319,13 +319,13 @@ export default async function QuestionBankPage({
                             <td className={cn(tdClass, 'whitespace-nowrap')}>
                               <span className="flex items-center gap-2">
                                 <DifficultyBars level={row.difficulty} />
-                                <span className="text-xs text-mist-600">
+                                <span className="text-xs text-gray-600">
                                   {isBankDifficulty(row.difficulty) ? getDifficultyLabel(row.difficulty) : '—'}
                                 </span>
                               </span>
                             </td>
                             <td className={cn(tdClass, 'text-right tabular-nums')}>
-                              {row.tests > 0 ? row.tests : <span className="text-mist-500">—</span>}
+                              {row.tests > 0 ? row.tests : <span className="text-gray-500">—</span>}
                             </td>
                             <td className={cn(tdClass, 'whitespace-nowrap')}>{formatDate(row.createdAt)}</td>
                             <td className={tdClass}>
@@ -343,8 +343,8 @@ export default async function QuestionBankPage({
                       <li key={row.id}>
                         <Link href={`/admin/bank/${row.id}`} prefetch={false} className={cn(listRowInteractiveClass, 'group items-start')}>
                           <div className="min-w-0 flex-1 space-y-1.5">
-                            <div className="line-clamp-3 text-sm text-mist-800" dangerouslySetInnerHTML={{ __html: row.preview }} />
-                            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-mist-500">
+                            <div className="line-clamp-3 text-sm text-gray-800" dangerouslySetInnerHTML={{ __html: row.preview }} />
+                            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-gray-500">
                               <DifficultyBars level={row.difficulty} />
                               <span>{isBankDomain(row.domain) ? getDomainShortLabel(row.domain) : 'Not sorted'}</span>
                               <KindBadge kind={row.kind} />
@@ -361,8 +361,8 @@ export default async function QuestionBankPage({
 
               {totalPages > 1 && (
                 <nav aria-label="Question bank pages" className="flex flex-wrap items-center justify-between gap-3">
-                  {/* On the mist-100 canvas, where mist-500 misses AA. */}
-                  <p className="text-xs tabular-nums text-mist-600">
+                  {/* On the gray-100 canvas, where gray-500 misses AA. */}
+                  <p className="text-xs tabular-nums text-gray-600">
                     {skip + 1}–{skip + rowFacts.length} of {matching}
                   </p>
                   <div className="flex items-center gap-1">
@@ -382,7 +382,7 @@ export default async function QuestionBankPage({
                     )}
                     {pageItems(page, totalPages).map((item, index) =>
                       item === 'gap' ? (
-                        <span key={`gap-${index}`} aria-hidden className="px-1 text-sm text-mist-500">…</span>
+                        <span key={`gap-${index}`} aria-hidden className="px-1 text-sm text-gray-500">…</span>
                       ) : (
                         <Link
                           key={item}
@@ -390,7 +390,7 @@ export default async function QuestionBankPage({
                           prefetch={false}
                           aria-current={item === page ? 'page' : undefined}
                           aria-label={`Page ${item}`}
-                          className={cn(pageLinkClass, item === page ? 'border-board-600 bg-board-50 text-board-800' : pageIdleClass)}
+                          className={cn(pageLinkClass, item === page ? 'border-ink-600 bg-ink-50 text-ink-800' : pageIdleClass)}
                         >
                           {item}
                         </Link>

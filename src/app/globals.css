@@ -1,37 +1,68 @@
 @import "tailwindcss";
 
-/* The palette is "Board" — see AGENTS.md, "Design system". Components write
-   `bg-board-600` / `text-mist-600` / `text-red-600` directly; there is
+/* The palette is "Ink" — see AGENTS.md, "Design system". Components write
+   `bg-ink-600` / `text-gray-600` / `text-red-600` directly; there is
    deliberately no parallel token vocabulary for them, because the previous one
    (`--color-accent`, `--color-surface`, …) drifted out of sync with the classes
    actually in use and nothing noticed.
-   Four of the five families are Tailwind's own scales (mist, lime, amber,
-   red). The accent is not: no Tailwind hue is the classroom-board green the
-   owner chose, so `board` is defined below as one more scale of the same
-   shape, 50–950, so it is used exactly like the built-in ones.
+   Ink is blue ballpoint on a squared school notebook, palette A of the
+   from-scratch plan, which the owner chose on 2026-10-27 over Board green.
+   Three of the five families are defined below, each as a full 50–950 scale
+   used exactly like Tailwind's own: `ink` (no Tailwind hue is this ink blue),
+   and `gray` and `green`, which replace Tailwind's values of the same names.
+   Amber and red are Tailwind's own.
    The few colours CSS itself needs below (page ground, text, selection,
-   scrollbar) read the scales' own variables, `var(--color-mist-900)` and so
+   scrollbar) read the scales' own variables, `var(--color-gray-900)` and so
    on, never hex copies. */
 
 @theme inline {
   --font-sans: var(--font-fira-sans), "Segoe UI", Roboto, "Noto Sans", Arial, sans-serif;
 }
 
-/* Board: a deep classroom-board green. One hue (177.5) through the whole
-   scale; 600 is the accent (#0E6657 in the plan, white text 6.9:1), 700 its
-   hover and the text on 50, 950 the sidebar. */
+/* - ink: one hue (263) through the scale; 600 is the accent #1F4FBF (white
+     text 7.2:1), 700 #183F99 its hover and the text on 50 (#E7EEFB), 800
+     #143380 pressed, 950 #0F1B3D the navy sidebar.
+   - gray: the notebook's cool blue-grey (hue 257) at the lightness steps the
+     app was tuned on (Tailwind's mist), so every contrast in AGENTS.md holds.
+   - green: success, #1A6B37 at 700 on #E4F2E9 at 50. Beside a blue accent a
+     real green cannot be taken for "selected", so it no longer needs lime's
+     yellow cast. */
 @theme {
-  --color-board-50: oklch(95.3% 0.018 177.5);
-  --color-board-100: oklch(90.5% 0.03 177.5);
-  --color-board-200: oklch(83.5% 0.046 177.5);
-  --color-board-300: oklch(74.5% 0.064 177.5);
-  --color-board-400: oklch(64% 0.079 177.5);
-  --color-board-500: oklch(54.5% 0.086 177.5);
-  --color-board-600: oklch(45.8% 0.081 177.5);
-  --color-board-700: oklch(38.8% 0.067 177.5);
-  --color-board-800: oklch(33.2% 0.056 177.5);
-  --color-board-900: oklch(30.5% 0.05 177.5);
-  --color-board-950: oklch(25.5% 0.044 177.5);
+  --color-ink-50: oklch(94.8% 0.019 263);
+  --color-ink-100: oklch(90.5% 0.042 263);
+  --color-ink-200: oklch(83.5% 0.075 263);
+  --color-ink-300: oklch(74.5% 0.115 263.2);
+  --color-ink-400: oklch(64.5% 0.155 263.3);
+  --color-ink-500: oklch(55.5% 0.18 263.4);
+  --color-ink-600: oklch(46.8% 0.184 263.4);
+  --color-ink-700: oklch(40% 0.154 263.4);
+  --color-ink-800: oklch(35.1% 0.135 264);
+  --color-ink-900: oklch(29.5% 0.1 265);
+  --color-ink-950: oklch(23.3% 0.067 266.6);
+
+  --color-gray-50: oklch(98.7% 0.003 257);
+  --color-gray-100: oklch(96.3% 0.005 257);
+  --color-gray-200: oklch(92.5% 0.009 257);
+  --color-gray-300: oklch(87.2% 0.012 257);
+  --color-gray-400: oklch(72.3% 0.022 257);
+  --color-gray-500: oklch(56% 0.03 257);
+  --color-gray-600: oklch(45% 0.03 257);
+  --color-gray-700: oklch(37.8% 0.028 257);
+  --color-gray-800: oklch(27.5% 0.024 257);
+  --color-gray-900: oklch(21.8% 0.022 257);
+  --color-gray-950: oklch(14.8% 0.016 257);
+
+  --color-green-50: oklch(94.8% 0.019 157.9);
+  --color-green-100: oklch(91% 0.04 155);
+  --color-green-200: oklch(87% 0.06 154);
+  --color-green-300: oklch(80% 0.09 152);
+  --color-green-400: oklch(70% 0.12 151);
+  --color-green-500: oklch(60% 0.135 151);
+  --color-green-600: oklch(53% 0.125 151);
+  --color-green-700: oklch(46.7% 0.113 150.8);
+  --color-green-800: oklch(41% 0.098 151);
+  --color-green-900: oklch(36% 0.083 151);
+  --color-green-950: oklch(26% 0.06 151);
 }
 
 /* `collapsed:` — styles for the icon-only desktop sidebar. The attribute is set
@@ -40,8 +71,8 @@
 @custom-variant collapsed (&:where([data-sidebar="collapsed"] *));
 
 body {
-  background: var(--color-mist-50);
-  color: var(--color-mist-900);
+  background: var(--color-gray-50);
+  color: var(--color-gray-900);
 }
 
 /* ═══════════════════════════════════════════════
@@ -55,11 +86,11 @@ body {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--color-mist-300);
+  background: var(--color-gray-300);
   border-radius: 999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--color-mist-400);
+  background: var(--color-gray-400);
 }
 
 /* ═══════════════════════════════════════════════
@@ -72,15 +103,15 @@ body {
    landing's motion lives in src/components/landing/landing.module.css. */
 
 /* The frosted-panel, gradient and noise-overlay utilities that used to live
-   here are gone. Panels are plain surfaces with a mist border; depth comes
+   here are gone. Panels are plain surfaces with a gray border; depth comes
    from the elevation scale in AGENTS.md, not from tinted translucency. */
 
 /* ═══════════════════════════════════════════════
    SELECTION
    ═══════════════════════════════════════════════ */
-/* board-100, a step of the scale rather than a mix; mist-900 text stays well
+/* ink-100, a step of the scale rather than a mix; gray-900 text stays well
    readable on it. */
 ::selection {
-  background: var(--color-board-100);
-  color: var(--color-mist-900);
+  background: var(--color-ink-100);
+  color: var(--color-gray-900);
 }

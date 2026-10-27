@@ -118,7 +118,7 @@ export function BankQuestionEditor({
             hint={
               <>
                 One option letter, a value for a grid-in, or several letters such as
-                {' '}<code className="font-medium text-mist-700">B, C</code> to make the question multi-select.
+                {' '}<code className="font-medium text-gray-700">B, C</code> to make the question multi-select.
               </>
             }
           >
@@ -138,7 +138,7 @@ export function BankQuestionEditor({
 
       <CardFooter>
         {result?.success && (
-          <p role="status" className="mr-auto inline-flex items-center gap-1.5 text-sm text-lime-800">
+          <p role="status" className="mr-auto inline-flex items-center gap-1.5 text-sm text-green-800">
             <CheckCircle2 className="h-4 w-4" />
             {usedIn > 0 ? `Saved here and in ${testCount(usedIn)}.` : 'Question saved.'}
           </p>

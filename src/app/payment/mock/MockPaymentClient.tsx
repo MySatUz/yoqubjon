@@ -48,16 +48,16 @@ export default function MockPaymentClient() {
     }
   };
 
-  // Outside the app shell, so this page paints the canvas itself: mist-100,
-  // like the auth pages and the root error page, not the body's mist-50.
+  // Outside the app shell, so this page paints the canvas itself: gray-100,
+  // like the auth pages and the root error page, not the body's gray-50.
   if (status === 'success') {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-mist-100 px-4 py-10">
+      <div className="flex min-h-screen items-center justify-center bg-gray-100 px-4 py-10">
         <div role="status" className={cn(cardClass, 'w-full max-w-sm p-6 text-center')}>
           {/* A status icon: the status colour, no circle (AGENTS.md, Icons). */}
-          <CheckCircle2 className="mx-auto h-6 w-6 text-lime-700" aria-hidden />
-          <h1 className="mt-3 text-lg font-semibold text-mist-900">Payment successful</h1>
-          <p className="mt-1 text-sm text-mist-500">
+          <CheckCircle2 className="mx-auto h-6 w-6 text-green-700" aria-hidden />
+          <h1 className="mt-3 text-lg font-semibold text-gray-900">Payment successful</h1>
+          <p className="mt-1 text-sm text-gray-500">
             {PREMIUM_PLAN.name} is active. Taking you to Practice…
           </p>
         </div>
@@ -66,11 +66,11 @@ export default function MockPaymentClient() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-mist-100 px-4 py-10">
+    <div className="flex min-h-screen items-center justify-center bg-gray-100 px-4 py-10">
       <div className="w-full max-w-sm space-y-6">
         <div className="flex items-center justify-center gap-2.5">
           <BrandMark />
-          <span className="text-lg font-semibold tracking-tight text-mist-900">MYSATuz Pay</span>
+          <span className="text-lg font-semibold tracking-tight text-gray-900">MYSATuz Pay</span>
         </div>
 
         <div className={cardClass}>
@@ -78,16 +78,16 @@ export default function MockPaymentClient() {
               and the subscription page show them. No price: the amount is
               shown only in the manual payment details while sales are open
               (the owner's rule), and this test page charges nothing. */}
-          <div className="border-b border-mist-100 px-5 py-4">
-            <h1 className="text-base font-semibold text-mist-900">{PREMIUM_PLAN.name}</h1>
-            <p className="mt-0.5 text-sm text-mist-500">{PREMIUM_PLAN.summary}</p>
+          <div className="border-b border-gray-100 px-5 py-4">
+            <h1 className="text-base font-semibold text-gray-900">{PREMIUM_PLAN.name}</h1>
+            <p className="mt-0.5 text-sm text-gray-500">{PREMIUM_PLAN.summary}</p>
           </div>
 
           <dl className="px-5 py-4">
             <KeyValue label="Card holder" value="MOCK TEST USER" />
           </dl>
 
-          <div className="space-y-2 border-t border-mist-100 px-5 py-4">
+          <div className="space-y-2 border-t border-gray-100 px-5 py-4">
             {error && <Alert tone="danger">{error}</Alert>}
 
             <Button size="lg" block onClick={handlePayment} disabled={loading}>
@@ -111,7 +111,7 @@ export default function MockPaymentClient() {
             </Link>
           </div>
 
-          <p className="border-t border-mist-100 px-5 py-3 text-center text-xs text-mist-500">
+          <p className="border-t border-gray-100 px-5 py-3 text-center text-xs text-gray-500">
             Development simulation: a mock transaction for local testing only.
           </p>
         </div>

@@ -91,7 +91,7 @@ export default function AdminUsersPanel({ users, ownerEmail }: AdminUsersPanelPr
       <CardBody className="space-y-4">
         <form action={handleGrant} className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_auto]">
           <div className="relative">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-mist-400" />
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
             <input
               name="email"
               type="email"
@@ -105,7 +105,7 @@ export default function AdminUsersPanel({ users, ownerEmail }: AdminUsersPanelPr
             />
 
             {suggestedUsers.length > 0 && (
-              <div className="absolute inset-x-0 top-full z-20 mt-1 rounded-2xl border border-mist-200 bg-white p-1 shadow-lg">
+              <div className="absolute inset-x-0 top-full z-20 mt-1 rounded-2xl border border-gray-200 bg-white p-1 shadow-lg">
                 {suggestedUsers.map((user) => {
                   const isOwner = user.email.toLowerCase() === ownerEmail;
                   const isAdmin = user.role === 'ADMIN' || isOwner;
@@ -115,11 +115,11 @@ export default function AdminUsersPanel({ users, ownerEmail }: AdminUsersPanelPr
                       key={user.id}
                       type="button"
                       onClick={() => setEmailQuery(user.email)}
-                      className="flex w-full items-center justify-between gap-3 rounded-xl px-3 py-2 text-left transition-colors hover:bg-mist-50 focus-visible:bg-mist-50 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-board-600"
+                      className="flex w-full items-center justify-between gap-3 rounded-xl px-3 py-2 text-left transition-colors hover:bg-gray-50 focus-visible:bg-gray-50 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ink-600"
                     >
                       <span className="min-w-0">
-                        <span className="block truncate text-sm font-medium text-mist-900">{user.name || user.email}</span>
-                        <span className="block truncate text-xs text-mist-500">{user.email}</span>
+                        <span className="block truncate text-sm font-medium text-gray-900">{user.name || user.email}</span>
+                        <span className="block truncate text-xs text-gray-500">{user.email}</span>
                       </span>
                       {isAdmin && <Badge tone="accent">{isOwner ? 'Owner' : 'Admin'}</Badge>}
                     </button>
@@ -139,18 +139,18 @@ export default function AdminUsersPanel({ users, ownerEmail }: AdminUsersPanelPr
         {grantResult?.error && <Alert tone="danger">{grantResult.error}</Alert>}
       </CardBody>
 
-      <ul className="divide-y divide-mist-100 border-t border-mist-100">
+      <ul className="divide-y divide-gray-100 border-t border-gray-100">
         {visibleUsers.map((user) => {
           const isOwner = user.email.toLowerCase() === ownerEmail;
           return (
             <li key={user.id} className={listRowClass}>
               <div className="min-w-0 flex-1">
                 <div className="flex min-w-0 items-center gap-2">
-                  <span className="min-w-0 truncate text-sm font-medium text-mist-900">{user.name || user.email}</span>
+                  <span className="min-w-0 truncate text-sm font-medium text-gray-900">{user.name || user.email}</span>
                   {/* Only admins and the owner are listed here. */}
                   <Badge tone="accent">{isOwner ? 'Owner' : 'Admin'}</Badge>
                 </div>
-                {user.name && <p className="mt-0.5 truncate text-xs text-mist-500">{user.email}</p>}
+                {user.name && <p className="mt-0.5 truncate text-xs text-gray-500">{user.email}</p>}
               </div>
 
               {/* Outlined like the other row actions, red only on hover and focus. */}
@@ -173,7 +173,7 @@ export default function AdminUsersPanel({ users, ownerEmail }: AdminUsersPanelPr
         })}
 
         {visibleUsers.length === 0 && (
-          <li className="px-5 py-6 text-center text-sm text-mist-500">
+          <li className="px-5 py-6 text-center text-sm text-gray-500">
             No admins yet. Search for a user above to give admin access.
           </li>
         )}

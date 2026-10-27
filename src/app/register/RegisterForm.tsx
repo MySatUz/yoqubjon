@@ -44,15 +44,15 @@ export default function RegisterForm({ callbackUrl, loginHref }: { callbackUrl: 
   return (
     <>
       <Card padded>
-        <h1 className="text-xl font-semibold tracking-tight text-mist-900 sm:text-2xl">Create your free account</h1>
+        <h1 className="text-xl font-semibold tracking-tight text-gray-900 sm:text-2xl">Create your free account</h1>
         {/* The plan's own name and lines (src/lib/plans.ts), the ones the
             landing and the subscription page show, so sign-up cannot promise
             something else. */}
-        <p className="mt-1.5 text-sm text-mist-600">You start on {FREE_PLAN.name}. No payment details.</p>
+        <p className="mt-1.5 text-sm text-gray-600">You start on {FREE_PLAN.name}. No payment details.</p>
         <ul className="mt-3 grid gap-1.5">
           {FREE_PLAN.features.map((feature) => (
-            <li key={feature} className="flex gap-2 text-sm text-mist-600">
-              <Check className="mt-0.5 h-4 w-4 shrink-0 text-board-600" aria-hidden />
+            <li key={feature} className="flex gap-2 text-sm text-gray-600">
+              <Check className="mt-0.5 h-4 w-4 shrink-0 text-ink-600" aria-hidden />
               {feature}
             </li>
           ))}
@@ -117,7 +117,7 @@ export default function RegisterForm({ callbackUrl, loginHref }: { callbackUrl: 
         </form>
       </Card>
 
-      <p className="mt-6 text-center text-sm text-mist-600">
+      <p className="mt-6 text-center text-sm text-gray-600">
         Already have an account?{' '}
         <Link href={loginHref} className={authLinkClass}>
           Sign in

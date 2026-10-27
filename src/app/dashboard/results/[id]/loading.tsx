@@ -38,7 +38,7 @@ export default function Loading() {
             <Skeleton className="mt-3 h-4 w-80 max-w-full" />
           </div>
         </div>
-        <div className="grid grid-cols-2 gap-4 border-t border-mist-100 px-5 py-4 @lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-4 border-t border-gray-100 px-5 py-4 @lg:grid-cols-4">
           {Array.from({ length: 4 }, (_, i) => (
             // KeyValue: a 16px label line, then a 20px value line.
             <div key={i} className="space-y-1">
@@ -47,7 +47,7 @@ export default function Loading() {
             </div>
           ))}
         </div>
-        <div className="flex flex-wrap items-center gap-3 border-t border-mist-100 px-5 py-4">
+        <div className="flex flex-wrap items-center gap-3 border-t border-gray-100 px-5 py-4">
           <div className="min-w-0 flex-1 basis-64">
             <Skeleton className="h-4 w-80 max-w-full" />
           </div>
@@ -60,7 +60,7 @@ export default function Loading() {
       </div>
 
       <div className={cardClass}>
-        <div className="flex flex-wrap items-start justify-between gap-3 border-b border-mist-100 px-5 py-4">
+        <div className="flex flex-wrap items-start justify-between gap-3 border-b border-gray-100 px-5 py-4">
           <div className="space-y-1.5">
             <Skeleton className="h-5 w-36" />
             <Skeleton className="h-4 w-48" />

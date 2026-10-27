@@ -148,20 +148,20 @@ function CopyTestDialog({
         </Field>
 
         {olympiadWindow && (
-          <label className="flex items-start gap-2.5 text-sm text-mist-700">
+          <label className="flex items-start gap-2.5 text-sm text-gray-700">
             <input name="keepOlympiadWindow" type="checkbox" value="true" defaultChecked className={cn(checkboxClass, 'mt-0.5')} />
             <span>
-              <span className="font-medium text-mist-900">Keep the olympiad window</span>
+              <span className="font-medium text-gray-900">Keep the olympiad window</span>
               {' '}&mdash; {formatOlympiadMoment(olympiadWindow.startsAt)} to {formatOlympiadMoment(olympiadWindow.endsAt)}, Tashkent time.
               <span className={cn(hintClass, 'block')}>Without it the copy is an ordinary test.</span>
             </span>
           </label>
         )}
         {test.accessCode && (
-          <label className="flex items-start gap-2.5 text-sm text-mist-700">
+          <label className="flex items-start gap-2.5 text-sm text-gray-700">
             <input name="keepAccessCode" type="checkbox" value="true" defaultChecked className={cn(checkboxClass, 'mt-0.5')} />
             <span>
-              <span className="font-medium text-mist-900">Keep the test code</span>
+              <span className="font-medium text-gray-900">Keep the test code</span>
               {' '}<span className="tabular-nums">{test.accessCode}</span>.
               <span className={cn(hintClass, 'block')}>Without it the copy opens with no code.</span>
             </span>
@@ -256,8 +256,8 @@ export default function CourseTests({
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        {/* On the mist-100 canvas, where mist-500 misses AA. */}
-        <p className="text-sm text-mist-600">
+        {/* On the gray-100 canvas, where gray-500 misses AA. */}
+        <p className="text-sm text-gray-600">
           {optimisticTests.length === 1 ? '1 test' : `${optimisticTests.length} tests`}, in the order students see them.
         </p>
         <div className="flex flex-wrap items-center gap-2">
@@ -295,13 +295,13 @@ export default function CourseTests({
             return (
               <li key={test.id}>
                 {/* The title's link covers the row (after:inset-0); the controls sit above it (relative z-10). */}
-                <div className="group relative flex flex-col gap-3 px-4 py-3 transition-colors hover:bg-mist-50 sm:px-5 lg:flex-row lg:items-center lg:gap-4">
+                <div className="group relative flex flex-col gap-3 px-4 py-3 transition-colors hover:bg-gray-50 sm:px-5 lg:flex-row lg:items-center lg:gap-4">
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                       <Link
                         href={`/admin/tests/${test.id}`}
                         prefetch={false}
-                        className="min-w-0 text-sm font-medium text-mist-900 wrap-anywhere after:absolute after:inset-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-board-600"
+                        className="min-w-0 text-sm font-medium text-gray-900 wrap-anywhere after:absolute after:inset-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink-600"
                       >
                         {test.title}
                       </Link>
@@ -311,7 +311,7 @@ export default function CourseTests({
                         </span>
                       )}
                     </div>
-                    <p className="mt-0.5 text-xs text-mist-500">
+                    <p className="mt-0.5 text-xs text-gray-500">
                       {formatQuestionCount(test.questionCount)} · {formatTestLength(test)}
                       {test.questionSource && <> · Copy of &ldquo;{test.questionSource.title}&rdquo;</>}
                       {!test.questionSource && test._count.questionCopies > 0 && ` · Shown in ${test._count.questionCopies} ${test._count.questionCopies === 1 ? 'copy' : 'copies'}`}

@@ -27,7 +27,7 @@ type AppShellFrameProps = {
  * shown. Everything that needs runtime data is injected through the slots
  * above, wrapped by the caller in its own <Suspense> boundary.
  *
- * The page canvas is `bg-mist-100` and the sidebar is deep board green (`board-950`)
+ * The page canvas is `bg-gray-100` and the sidebar is deep navy (`ink-950`)
  * with no border: the active nav row is drawn in the canvas colour, so it reads
  * as a tab cut out of the sidebar and joined to the page (see SidebarNotch in
  * ShellNav). The mobile header and bottom bar stay white.
@@ -42,13 +42,13 @@ export default function AppShellFrame({
   banner,
 }: AppShellFrameProps) {
   return (
-    <div className="min-h-screen bg-mist-100 flex flex-col md:flex-row">
+    <div className="min-h-screen bg-gray-100 flex flex-col md:flex-row">
       {/* The first stop for the keyboard, so a page is not reached through every
           sidebar link on every visit. Off screen until focused, never sr-only:
           a sighted keyboard user has to see where the first Tab went. */}
       <a
         href="#content"
-        className={`fixed left-4 top-3 z-50 inline-flex h-10 -translate-y-20 items-center rounded-lg border border-mist-200 bg-white px-4 text-sm font-medium text-board-600 focus:translate-y-0 focus:shadow-lg ${focusRingClass}`}
+        className={`fixed left-4 top-3 z-50 inline-flex h-10 -translate-y-20 items-center rounded-lg border border-gray-200 bg-white px-4 text-sm font-medium text-ink-600 focus:translate-y-0 focus:shadow-lg ${focusRingClass}`}
       >
         Skip to content
       </a>
@@ -57,10 +57,10 @@ export default function AppShellFrame({
           the whole session, and a backdrop filter makes the compositor re-blur the
           full screen width on every scroll frame — for a 95 %-opaque background
           nobody can see. */}
-      <div className="sticky top-0 z-40 md:hidden bg-white border-b border-mist-200 h-14 px-4 flex items-center justify-between">
+      <div className="sticky top-0 z-40 md:hidden bg-white border-b border-gray-200 h-14 px-4 flex items-center justify-between">
         <Link href="/dashboard" className={`flex items-center gap-2.5 rounded-lg ${focusRingClass}`}>
           <BrandMark size="sm" />
-          <span className="text-base font-semibold tracking-tight text-mist-900">MYSATuz</span>
+          <span className="text-base font-semibold tracking-tight text-gray-900">MYSATuz</span>
         </Link>
         {userAvatar}
       </div>
@@ -69,17 +69,17 @@ export default function AppShellFrame({
           over the page, and must not slide under a positioned card there. */}
       {/* w-56: wide enough for the longest label ("Question bank") beside its
           socket, no wider - at w-60 the right third of the panel was empty. */}
-      <aside className="hidden md:flex w-56 collapsed:w-20 shrink-0 bg-board-950 flex-col sticky top-0 z-30 h-screen">
+      <aside className="hidden md:flex w-56 collapsed:w-20 shrink-0 bg-ink-950 flex-col sticky top-0 z-30 h-screen">
         {/* The logo row is the same in both states; collapsed, the name goes
             sr-only and the logo stays where it was, above the sockets. */}
         <div className="flex h-16 items-center gap-3 pl-4 pr-3">
-          {/* Outline outside the tile, not sidebarFocusClass's inset one: inset,
-              a white outline on the white tile disappears. */}
+          {/* Outline outside the logo, not sidebarFocusClass's inset one: inset,
+              a white outline on the logo's white disc disappears. */}
           <Link
             href="/dashboard"
             className="flex min-w-0 items-center gap-3 rounded-xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
           >
-            <BrandMark onBrand />
+            <BrandMark />
             {/* sr-only when collapsed, not hidden: it is the link's name. */}
             <span className="truncate text-lg font-semibold tracking-tight text-white collapsed:sr-only">MYSATuz</span>
           </Link>
@@ -95,7 +95,7 @@ export default function AppShellFrame({
             lower concave corner (20px, SidebarNotch) has to fit under it. */}
         {/* A hairline between the places and the account: the bottom group is
             about you, not about the work. */}
-        <span aria-hidden className="mx-4 mb-3 h-px shrink-0 bg-board-900" />
+        <span aria-hidden className="mx-4 mb-3 h-px shrink-0 bg-ink-900" />
         <div className="flex flex-col gap-1 pb-6 pl-3">
           {subscriptionNav}
           {userCard}
@@ -109,7 +109,7 @@ export default function AppShellFrame({
         {children}
       </main>
 
-      <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-mist-200 bg-white px-2 pb-[max(env(safe-area-inset-bottom),0.5rem)] pt-2 shadow-[0_-12px_30px_rgba(15,23,42,0.08)] md:hidden">
+      <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-gray-200 bg-white px-2 pb-[max(env(safe-area-inset-bottom),0.5rem)] pt-2 shadow-[0_-12px_30px_rgba(15,23,42,0.08)] md:hidden">
         <ShellNav variant="mobile" adminSlot={mobileAdminNav} />
       </nav>
     </div>

@@ -8,6 +8,7 @@ import { insetClass } from '@/components/ui/Card';
 import { cn } from '@/components/ui/cn';
 import { formatDuration } from '@/lib/olympiad';
 import {
+  FREE_OFFER_CTA,
   challengeLink,
   countCorrect,
   verdictFor,
@@ -20,7 +21,7 @@ import styles from './landing.module.css';
  * The card in result mode. It refuses to name a score: three questions are a
  * slope, not a measurement. It shows only what was measured — correct and
  * time — and says where a score estimate comes from, rather than drawing an
- * empty score for the free module to fill in.
+ * empty score for the free test to fill in.
  *
  * The header meter grows into the plane here (FLIP): `from` is the meter's box
  * measured just before the switch, and the plane starts drawn over it at the
@@ -67,20 +68,20 @@ export default function WarmupResult({
 
   return (
     <div>
-      <p className="mb-4 mt-0.5 text-3xl font-semibold leading-[1.1] tracking-tight text-mist-900">
+      <p className="mb-4 mt-0.5 text-3xl font-semibold leading-[1.1] tracking-tight text-gray-900">
         That’s a slope.
         <br />
         Not a score.
       </p>
 
-      <div ref={planeRef} className="relative aspect-[9/4] w-full origin-top-left rounded-xl border border-mist-100 bg-mist-50">
+      <div ref={planeRef} className="relative aspect-[9/4] w-full origin-top-left rounded-xl border border-gray-100 bg-gray-50">
         <svg viewBox="-4 -6 98 50" preserveAspectRatio="none" aria-hidden="true" className="block size-full overflow-visible">
           <line
             x1={0}
             y1={40}
             x2={90}
             y2={0}
-            className={cn('stroke-mist-300 transition-opacity duration-300', settled && correct < 3 ? 'opacity-100' : 'opacity-0')}
+            className={cn('stroke-gray-300 transition-opacity duration-300', settled && correct < 3 ? 'opacity-100' : 'opacity-0')}
             strokeWidth={1}
             strokeDasharray="3 3"
             vectorEffect="non-scaling-stroke"
@@ -90,7 +91,7 @@ export default function WarmupResult({
         <span
           className={cn(
             'absolute right-1.5 top-1 text-xs font-semibold tabular-nums',
-            settled && correct === 3 ? cn('text-board-600', styles.pulse) : 'text-mist-500',
+            settled && correct === 3 ? cn('text-ink-600', styles.pulse) : 'text-gray-500',
           )}
         >
           800
@@ -98,7 +99,7 @@ export default function WarmupResult({
         {correct < 3 && (
           <span
             className={cn(
-              'absolute bottom-1.5 right-2 text-xs text-mist-500 transition-opacity duration-300',
+              'absolute bottom-1.5 right-2 text-xs text-gray-500 transition-opacity duration-300',
               settled ? 'opacity-100' : 'opacity-0',
             )}
           >
@@ -114,8 +115,8 @@ export default function WarmupResult({
             className={cn(insetClass, 'min-w-0 px-3 py-2', styles.fadeUpSlow)}
             style={{ animationDelay: `${450 + index * 60}ms` }}
           >
-            <dt className="text-xs text-mist-500">{stat.label}</dt>
-            <dd className="whitespace-nowrap text-xl font-semibold tracking-tight tabular-nums text-mist-900">
+            <dt className="text-xs text-gray-500">{stat.label}</dt>
+            <dd className="whitespace-nowrap text-xl font-semibold tracking-tight tabular-nums text-gray-900">
               {stat.value}
             </dd>
           </div>
@@ -124,13 +125,13 @@ export default function WarmupResult({
 
       {/* Where a score comes from, instead of an empty one: the owner's rule is
           no score on screen before there is one. */}
-      <p className="mt-4 text-base leading-6 text-mist-600">
+      <p className="mt-4 text-base leading-6 text-gray-600">
         {verdictFor(correct)} One full test gives you a score estimate on the 200–800 scale.
       </p>
 
       <div className="mt-4 grid gap-2">
         <Link href="/register?from=warmup" className={buttonClass({ size: 'lg', block: true })}>
-          Start my free module
+          {FREE_OFFER_CTA}
         </Link>
         <a
           href={challengeLink(correct, totalMs)}

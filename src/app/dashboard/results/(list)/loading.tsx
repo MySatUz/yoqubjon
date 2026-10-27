@@ -21,7 +21,7 @@ export default function Loading() {
             so 36px, or 40px on a coarse pointer - the page must not shift
             by 4px on a phone when the real control arrives. */}
         <Skeleton className="h-9 w-52 pointer-coarse:h-10" />
-        <div className={cn(cardClass, 'divide-y divide-mist-100')}>
+        <div className={cn(cardClass, 'divide-y divide-gray-100')}>
           {Array.from({ length: 8 }, (_, i) => (
             // Same geometry as listRowClass + RowText: py-3, a 20px title line, a 16px meta line.
             <div key={i} className="flex items-center gap-4 px-4 py-3 sm:px-5">

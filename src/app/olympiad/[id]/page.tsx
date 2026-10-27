@@ -164,7 +164,7 @@ export default async function OlympiadPage({ params }: { params: Promise<{ id: s
         }
         title={test.title}
         meta={
-          // onCanvas: the neutral "Finished" pill is mist-100, the canvas
+          // onCanvas: the neutral "Finished" pill is gray-100, the canvas
           // colour itself, and disappeared on it.
           <Badge tone={badge.tone} onCanvas>
             <Trophy />
@@ -181,13 +181,13 @@ export default async function OlympiadPage({ params }: { params: Promise<{ id: s
           <KeyValue label="Closes" value={<span className="tabular-nums">{closesAt}</span>} />
           <KeyValue label="Time limit" value={<span className="tabular-nums">{timeLimit}</span>} />
         </dl>
-        <p className="border-t border-mist-100 px-5 py-2.5 text-xs text-mist-500">Times are Tashkent time.</p>
+        <p className="border-t border-gray-100 px-5 py-2.5 text-xs text-gray-500">Times are Tashkent time.</p>
       </div>
 
       {status === 'upcoming' && (
         <Card as="section" padded>
-          <h2 className="text-base font-semibold text-mist-900">This olympiad has not started yet</h2>
-          <p className="mt-1 text-sm text-mist-600">
+          <h2 className="text-base font-semibold text-gray-900">This olympiad has not started yet</h2>
+          <p className="mt-1 text-sm text-gray-600">
             It opens on {opensAt}. Start by {startBy} to finish before it closes. The ranking appears here once
             the olympiad is over.
           </p>
@@ -198,8 +198,8 @@ export default async function OlympiadPage({ params }: { params: Promise<{ id: s
         <Card as="section" padded>
           {entryOpen && !canAccess ? (
             <>
-              <h2 className="text-base font-semibold text-mist-900">The olympiad is live</h2>
-              <p className="mt-1 text-sm text-mist-600">
+              <h2 className="text-base font-semibold text-gray-900">The olympiad is live</h2>
+              <p className="mt-1 text-sm text-gray-600">
                 It is open to students with {PREMIUM_PLAN.name} or with access to its course. The ranking appears
                 here once the olympiad is over.
               </p>
@@ -210,20 +210,20 @@ export default async function OlympiadPage({ params }: { params: Promise<{ id: s
                   Unlock with {PREMIUM_PLAN.name}
                 </Link>
               ) : (
-                <p className="mt-2 text-sm text-mist-600">{PREMIUM_PLAN.name} is paused for now.</p>
+                <p className="mt-2 text-sm text-gray-600">{PREMIUM_PLAN.name} is paused for now.</p>
               )}
             </>
           ) : entryOpen && attemptsLeft === 0 ? (
             <>
-              <h2 className="text-base font-semibold text-mist-900">You have used every attempt</h2>
-              <p className="mt-1 text-sm text-mist-600">
+              <h2 className="text-base font-semibold text-gray-900">You have used every attempt</h2>
+              <p className="mt-1 text-sm text-gray-600">
                 Your best attempt counts. The ranking appears here once the olympiad closes at {closesAt}.
               </p>
             </>
           ) : entryOpen ? (
             <>
-              <h2 className="text-base font-semibold text-mist-900">The olympiad is live</h2>
-              <p className="mt-1 text-sm text-mist-600">
+              <h2 className="text-base font-semibold text-gray-900">The olympiad is live</h2>
+              <p className="mt-1 text-sm text-gray-600">
                 The clock starts when you press Start test. Start by {startBy}: an attempt counts only if it is
                 sent before {closesAt}. Your best attempt counts.
               </p>
@@ -233,8 +233,8 @@ export default async function OlympiadPage({ params }: { params: Promise<{ id: s
             </>
           ) : (
             <>
-              <h2 className="text-base font-semibold text-mist-900">Entry is closed</h2>
-              <p className="mt-1 text-sm text-mist-600">
+              <h2 className="text-base font-semibold text-gray-900">Entry is closed</h2>
+              <p className="mt-1 text-sm text-gray-600">
                 A new attempt needs {formatDuration(totalDurationSeconds)}, and less than that is left before it
                 closes at {closesAt}. The last moment to start was {startBy}. The ranking appears here once the
                 olympiad is over.
@@ -246,8 +246,8 @@ export default async function OlympiadPage({ params }: { params: Promise<{ id: s
 
       {status === 'finished' && !showRanking && (
         <Card as="section" padded>
-          <h2 className="text-base font-semibold text-mist-900">This olympiad is over</h2>
-          <p className="mt-1 text-sm text-mist-600">Its ranking is shown to the students of its course.</p>
+          <h2 className="text-base font-semibold text-gray-900">This olympiad is over</h2>
+          <p className="mt-1 text-sm text-gray-600">Its ranking is shown to the students of its course.</p>
         </Card>
       )}
 
@@ -264,7 +264,7 @@ export default async function OlympiadPage({ params }: { params: Promise<{ id: s
               // None with nobody in it: the empty state below says so, and
               // "0 participants" beside it was the same news twice.
               results.participants > 0 && (
-                <span className="inline-flex items-center gap-1.5 text-sm text-mist-600">
+                <span className="inline-flex items-center gap-1.5 text-sm text-gray-600">
                   <Users className="h-4 w-4" />
                   <span className="tabular-nums">{results.participants}</span>
                   {results.participants === 1 ? ' participant' : ' participants'}
@@ -292,39 +292,39 @@ export default async function OlympiadPage({ params }: { params: Promise<{ id: s
                     const isMe = standing.userId === myUserId;
 
                     return (
-                      <tr key={standing.userId} className={isMe ? 'bg-board-50' : undefined}>
+                      <tr key={standing.userId} className={isMe ? 'bg-ink-50' : undefined}>
                         <td className={cn(tdClass, 'tabular-nums')}>
-                          {/* First place is marked, not coloured: lime means
+                          {/* First place is marked, not coloured: green means
                               "correct" in this app and amber "pending". */}
                           {standing.rank === 1 ? (
-                            <span className="inline-flex items-center gap-1.5 font-semibold text-mist-900">
+                            <span className="inline-flex items-center gap-1.5 font-semibold text-gray-900">
                               {standing.rank}
-                              <Trophy className="h-3.5 w-3.5 text-mist-500" />
+                              <Trophy className="h-3.5 w-3.5 text-gray-500" />
                             </span>
                           ) : (
-                            <span className="text-mist-500">{standing.rank}</span>
+                            <span className="text-gray-500">{standing.rank}</span>
                           )}
                         </td>
                         {/* wrap-anywhere: names are typed by students (up to 60
                             characters), and one unbroken name would otherwise
                             widen the whole table. */}
                         <td className={cn(tdClass, 'wrap-anywhere')}>
-                          <span className="font-medium text-mist-900">
+                          <span className="font-medium text-gray-900">
                             {standing.name ?? 'Participant'}
                           </span>
-                          {isMe && <span className="ml-2 text-xs font-medium text-board-700">You</span>}
+                          {isMe && <span className="ml-2 text-xs font-medium text-ink-700">You</span>}
                           {standing.attempts > 1 && (
-                            <span className="ml-2 text-xs text-mist-500">
+                            <span className="ml-2 text-xs text-gray-500">
                               <span className="tabular-nums">{standing.attempts}</span> attempts
                             </span>
                           )}
                         </td>
                         <td className={cn(numericTdClass, 'whitespace-nowrap')}>
-                          <span className="font-semibold text-mist-900">
+                          <span className="font-semibold text-gray-900">
                             {formatCreditTotal(standing.correctCount)}
                           </span>
-                          {/* mist-500, not 400: the total is part of the figure. */}
-                          <span className="text-mist-500"> / {results.totalQuestions}</span>
+                          {/* gray-500, not 400: the total is part of the figure. */}
+                          <span className="text-gray-500"> / {results.totalQuestions}</span>
                         </td>
                         <td className={cn(numericTdClass, 'whitespace-nowrap')}>
                           {formatDuration(standing.timeSpent)}

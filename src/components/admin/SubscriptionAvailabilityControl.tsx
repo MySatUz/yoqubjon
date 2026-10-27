@@ -97,12 +97,12 @@ export default function SubscriptionAvailabilityControl({
       <div className="flex items-center justify-between gap-4 px-5 py-4">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <h2 className="text-base font-semibold text-mist-900">
+            <h2 className="text-base font-semibold text-gray-900">
               {isEnabled ? 'Premium sales are open' : 'Premium sales are closed'}
             </h2>
             <Badge tone="accent">Admins only</Badge>
           </div>
-          <p className="mt-0.5 text-sm text-mist-500">
+          <p className="mt-0.5 text-sm text-gray-500">
             {isEnabled
               ? 'Students see the transfer details and can send payment receipts.'
               : 'Students see that new subscriptions are paused. Card details and new payment requests are hidden.'}
@@ -120,7 +120,7 @@ export default function SubscriptionAvailabilityControl({
           disabled={isToggling}
           onClick={() => void toggleAvailability()}
           className={cn(
-            'inline-flex h-8 shrink-0 items-center gap-2 rounded-lg text-sm font-medium text-mist-700 pointer-coarse:h-10',
+            'inline-flex h-8 shrink-0 items-center gap-2 rounded-lg text-sm font-medium text-gray-700 pointer-coarse:h-10',
             focusRingClass,
             // While saving, the spinner in the knob says so; no fade, which would
             // turn the accent into an off-palette pastel.
@@ -130,12 +130,12 @@ export default function SubscriptionAvailabilityControl({
           <span
             className={cn(
               'inline-flex h-5 w-9 shrink-0 items-center rounded-full p-0.5 transition-colors',
-              isEnabled ? 'bg-board-600' : 'bg-mist-300',
+              isEnabled ? 'bg-ink-600' : 'bg-gray-300',
             )}
           >
             <span
               className={cn(
-                'inline-flex h-4 w-4 items-center justify-center rounded-full bg-white text-mist-500 transition-transform',
+                'inline-flex h-4 w-4 items-center justify-center rounded-full bg-white text-gray-500 transition-transform',
                 isEnabled ? 'translate-x-4' : 'translate-x-0',
               )}
             >
@@ -153,11 +153,11 @@ export default function SubscriptionAvailabilityControl({
       )}
 
       {canEditPaymentSettings && initialPaymentSettings && (
-        <div className="border-t border-mist-100 px-5 py-4">
+        <div className="border-t border-gray-100 px-5 py-4">
           <div className="mb-4 flex flex-wrap items-start justify-between gap-x-3 gap-y-1">
             <div className="min-w-0">
-              <h3 className="text-sm font-semibold text-mist-900">Payment details</h3>
-              <p className="mt-0.5 text-sm text-mist-500">
+              <h3 className="text-sm font-semibold text-gray-900">Payment details</h3>
+              <p className="mt-0.5 text-sm text-gray-500">
                 These values appear on the student subscription page and in new payment requests.
               </p>
             </div>
@@ -223,7 +223,7 @@ export default function SubscriptionAvailabilityControl({
 
             <div className="flex flex-wrap items-center justify-end gap-3">
               {saved && (
-                <p role="status" className="mr-auto inline-flex items-center gap-1.5 text-sm text-lime-800">
+                <p role="status" className="mr-auto inline-flex items-center gap-1.5 text-sm text-green-800">
                   <CircleCheck className="h-4 w-4" />
                   Payment settings saved.
                 </p>

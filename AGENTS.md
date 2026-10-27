@@ -8,7 +8,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 Tailwind v4, configured entirely in `src/app/globals.css` (`@theme`) — there
 is no `tailwind.config.js`. Components use colour scales directly
-(`bg-board-600`, `text-mist-500`); there is no parallel token vocabulary
+(`bg-ink-600`, `text-gray-500`); there is no parallel token vocabulary
 (`bg-accent`, `text-muted`), on purpose. An earlier one drifted out of sync with
 the classes actually in use and nothing caught it.
 
@@ -36,51 +36,61 @@ so a second colour or padding would fight the primitive's own. Dates go through
 `formatDate` / `formatDateTime` (`src/lib/formatDate.ts`): English, Tashkent
 time — never a bare `toLocaleDateString()`.
 
-**Colour — five families, no more. The palette is "Board".**
+**Colour — five families, no more. The palette is "Ink".**
 
 | role | class | means |
 |---|---|---|
-| accent | `board-600` / `board-700` hover and text on subtle / `board-50` subtle | primary action, active nav, selected item, links |
-| neutral | `mist-*` | everything structural |
-| success | `lime-700` (`lime-800` on `lime-50`) | correct answer, active subscription, approved payment, a score that went up |
+| accent | `ink-600` / `ink-700` hover and text on subtle / `ink-50` subtle | primary action, active nav, selected item, links |
+| neutral | `gray-*` | everything structural |
+| success | `green-700` (`green-800` on `green-50`) | correct answer, active subscription, approved payment, a score that went up |
 | warning | `amber-600` (`amber-800` on `amber-50`) | **pending / expiring / flagged only** — never "look here" emphasis |
 | danger | `red-600` | wrong answer, validation error, destructive action |
 
-`board` is the one scale that is not Tailwind's own: no Tailwind hue is the
-deep classroom-board green the owner chose, so it is defined in `globals.css`
-as a full 50–950 scale and used exactly like the built-in ones. The owner
-picked it on 2026-10-25 from the three palettes of the from-scratch plan (Ink,
-Graphite, Board) and asked for it everywhere, the sidebar included; it replaced
-indigo, which had replaced blue. `mist` is Tailwind's cool grey with a trace of
-green, the plan's Board neutrals almost exactly. Success moved from emerald to
-`lime` with it: a green accent beside a green "correct" would make a selected
-answer and a right answer look alike, so the two greens are kept apart by hue
-(blue-green against yellow-green) and every status also carries an icon and a
-word.
+Ink is blue ballpoint on a squared school notebook: palette A of the
+from-scratch plan (`C:\Projects\slope-platform\05-design-system.md`). The
+owner chose it on 2026-10-27 after seeing it in the running app; it replaced
+Board (a classroom-board green, 2026-10-25), which had replaced indigo, which
+had replaced blue. `ink`, `gray` and `green` are defined in `globals.css` as
+full 50–950 scales and used exactly like Tailwind's own: `ink` because no
+Tailwind hue is this ink blue (600 is `#1F4FBF`, 950 the navy `#0F1B3D`);
+`gray` and `green` replace Tailwind's values of the same names — `gray` is the
+notebook's cool blue-grey at the lightness steps the app was tuned on, so the
+contrasts quoted here hold, and `green` is the plan's success `#1A6B37`. Beside
+a blue accent a real green cannot be taken for "selected", and every status
+also carries an icon and a word. Amber and red are Tailwind's own.
 
-No `slate`, `indigo`, `emerald`, `blue`, `sky`, `green`, `teal`, `rose`,
-`orange`, `violet`. Lime never means "selected" and amber never means
+No `slate`, `zinc`, `neutral`, `stone`, `mist`, `indigo`, `blue`, `sky`,
+`emerald`, `lime`, `teal`, `rose`, `orange`, `violet`, and no `board`. Green
+never means "selected" and amber never means
 "premium" or "first place". Do not colour a row of cards or stat tiles in
 rotating hues — one accent treatment, and let the icon and label carry the
-difference. There is one primary button colour, `board-600`; dark `mist-900`
+difference. There is one primary button colour, `ink-600`; dark `gray-900`
 buttons are out. The one exception is the exam screen's question-number tile
 and its "Question N of M" navigator pill: they copy Bluebook, the app students
 sit the real test in.
 
-**Canvas.** The app shell's page ground is `bg-mist-100`; cards are white on
-it. The desktop sidebar is the one brand surface — deep board green
-`bg-board-950` (so the `board-600` buttons stay the brightest accent on
-screen), labels `board-100`, icons `board-200`, hover `board-900`, the
-active socket `board-600`, keyboard focus a white outline
-(`sidebarFocusClass`), a hovered row lit `board-900` in the active tab's own
+**Canvas.** The app shell's page ground is `bg-gray-100`; cards are white on
+it. The desktop sidebar is the one brand surface — deep navy
+`bg-ink-950` (so the `ink-600` buttons stay the brightest accent on
+screen), labels `ink-100`, icons `ink-200`, hover `ink-900`, the
+active socket `ink-600`, keyboard focus a white outline
+(`sidebarFocusClass`), a hovered row lit `ink-900` in the active tab's own
 shape, `w-56` open and an 80px rail collapsed, with the collapse toggle a small
 keyed circle on its right edge, level with the logo, in both states — and
 its active tab is drawn in the canvas colour (see `ShellNav`), so a page inside
-the shell must not paint its own full-height background. Nowhere else is board a surface colour, with
-one exception: the logo tile (`BrandMark`) is `bg-board-600` with a white mark on
-light pages and white with a board mark on the sidebar — a mark, not a surface.
-The browser-tab icon (`src/app/icon.svg`, `apple-icon.png`) and the link
-preview (`opengraph-image.tsx`) draw the same mark in the same green.
+the shell must not paint its own full-height background. Nowhere else is ink a
+surface colour.
+
+**Logo.** The owner's own: a crowned green snake climbing a rising blue line,
+in a white disc with an ink-blue ring, from their site kit of 2026-10-27. It is
+a picture, not a drawing, and its colours are its own — the snake's green and
+the crown's brown belong to the mark and are not palette colours to reuse.
+`BrandMark` shows it at 32 or 40px from `public/brand/mark-96.webp`, with
+"MYSATuz" set beside it in Fira Sans; the white disc reads on light pages and
+on the navy sidebar alike. The tab icon (`src/app/favicon.ico`, `icon.png`),
+`apple-icon.png`, the manifest icons (`public/icons/`, `manifest.ts`) and the
+link preview (`public/brand/social-card.png`, `SITE_OG_IMAGE`) are the kit's
+files as delivered; replace them from a new kit, never redraw them.
 
 The auth pages (sign-in, sign-up, email confirmation, password reset) share
 `AuthShell`: the landing's header line over one narrow column held to the top —
@@ -97,13 +107,13 @@ generated SaaS. Maths stays in KaTeX's serif.
 Body copy is `text-sm`. Page title `text-xl sm:text-2xl
 font-semibold tracking-tight` (PageHeader) · section and card titles
 `text-base font-semibold` · row titles `text-sm font-medium` · meta and captions
-`text-xs text-mist-500` on white, `text-mist-600` on any tinted ground — the
-`mist-100` canvas, `mist-50` inset panels and table headers (page
-descriptions, back links: mist-500 there is about 4.1–4.4:1, under AA) ·
+`text-xs text-gray-500` on white, `text-gray-600` on any tinted ground — the
+`gray-100` canvas, `gray-50` inset panels and table headers (page
+descriptions, back links: gray-500 there is about 4.1–4.4:1, under AA) ·
 stat values `text-xl sm:text-2xl font-semibold
 tabular-nums` · the one score headline on a result page `text-4xl sm:text-5xl
 font-semibold tabular-nums tracking-tight` with a `text-lg font-medium
-text-mist-500` "/ 800" — the only number larger than a page title. Maths is set
+text-gray-500` "/ 800" — the only number larger than a page title. Maths is set
 in KaTeX's fonts; their names carry underscores (`KaTeX_Main`), which Tailwind's
 arbitrary values turn into spaces, so they live in CSS, never in
 `[font-family:…]`. Nothing below `text-xs` except the mobile tab labels
@@ -140,9 +150,9 @@ plain text" — so buttons are drawn like keys:
 
 - `primary` (and `danger`): a solid fill with a darker inner edge along the
   bottom;
-- `secondary`: white, a `mist-400` box whose bottom edge is `mist-500`, over
+- `secondary`: white, a `gray-400` box whose bottom edge is `gray-500`, over
   `shadow-xs` — a key standing on the page; pressing removes the edge;
-- `quiet`: white, a light `mist-300` box and a `board-700` label, for a
+- `quiet`: white, a light `gray-300` box and a `ink-700` label, for a
   low-priority action that repeats in rows and toolbars ("Extend 1 month",
   "Copy email");
 - `ghost`: only in toolbars where the surrounding chrome already says
@@ -150,27 +160,27 @@ plain text" — so buttons are drawn like keys:
 - `danger-secondary`: a destructive action repeated down a list — keyed like
   secondary, red only on hover and focus, never a column of red bins.
 
-A link inside text or a meta line is `linkClass`: `board-700` and always
+A link inside text or a meta line is `linkClass`: `ink-700` and always
 underlined, so it is told from plain text without colour and without hover.
 Every pressable row ends in a chevron.
 
-Text inputs: `border-mist-400` (cards keep `mist-200`), hover `mist-500`,
-placeholder `mist-500`, focus `border-board-600` + `ring-1 ring-board-600`
+Text inputs: `border-gray-400` (cards keep `gray-200`), hover `gray-500`,
+placeholder `gray-500`, focus `border-ink-600` + `ring-1 ring-ink-600`
 (`fieldFocusClass`), error `aria-invalid:border-red-600`. A `Field` with
 `htmlFor` wires its hint or error to the control with `aria-describedby`. A
-button that cannot act yet is drawn from the palette — `disabled:bg-mist-200
-disabled:text-mist-500` on the solid variants — never `opacity-50`, which
+button that cannot act yet is drawn from the palette — `disabled:bg-gray-200
+disabled:text-gray-500` on the solid variants — never `opacity-50`, which
 turned the accent into an off-palette pastel; say why next to it where the
 reason is not obvious. Keyboard focus on buttons is `focusRingClass` (2px
-`outline-board-600`); text fields use `focus:outline-hidden`, never
+`outline-ink-600`); text fields use `focus:outline-hidden`, never
 `outline-none`, so Windows high-contrast mode still shows where the focus is.
 
 **Status and filters never share a shape.** A status `Badge` is flat — no
 border, `rounded-md`, a tinted ground — and a success, warning or danger badge
 leads with its icon (the primitive adds it), so a status is never colour
 alone. A filter or picker with more than four options is a row of chips
-(`chipClass`): a pill with a `mist-400` edge; the chosen one is `board-50`
-with a `board-600` edge and leads with `<ChipCheck active />`. A segmented
+(`chipClass`): a pill with a `gray-400` edge; the chosen one is `ink-50`
+with a `ink-600` edge and leads with `<ChipCheck active />`. A segmented
 control is for two to four options and must not wrap onto a second line.
 
 **Empty states** sit where the content will be, at its size: `EmptyState`, a
@@ -181,15 +191,17 @@ real button. Never a paragraph, sample numbers or a page of centred grey text.
 items) and status badges · `rounded-lg` buttons, inputs, icon buttons ·
 `rounded-xl` inner elements (inset panels, alerts, answer rows) · `rounded-2xl`
 cards, panels, popovers and modals · `rounded-full` avatars, filter chips,
-progress bars and the sidebar's active tab. No `rounded-3xl`, no bare
+progress bars, the sidebar's active tab and the landing's floating header with
+its links and buttons (`buttonClass({ pill: true })`). No `rounded-3xl`, no bare
 `rounded`, no arbitrary `rounded-[2rem]`.
 
-**Elevation — three steps, one light source, never tinted.** `border-mist-200`
-alone for a card (the default — cards are flat) · `shadow-lg` for dropdowns and
-popovers · `shadow-2xl` for modals. On controls only the key edges above:
+**Elevation — three steps, one light source, never tinted.** `border-gray-200`
+alone for a card (the default — cards are flat) · `shadow-lg` for dropdowns,
+popovers and the landing's header (`SiteNav`: a white pill that stays at the top
+while the page scrolls, plain white with no blur) · `shadow-2xl` for modals. On controls only the key edges above:
 `shadow-xs` under a secondary button and the primary's inset bottom edge
 (Button.tsx), plus `shadow-sm` on the selected segment of a segmented control.
-Coloured shadows (`shadow-board-200`, `shadow-lime-100`, …) are out — the
+Coloured shadows (`shadow-ink-200`, `shadow-green-100`, …) are out — the
 default neutral shadow is the single light source. The two arbitrary upward
 shadows on the sticky bottom bars are deliberate: Tailwind has no utility for a
 shadow cast upward.
@@ -202,24 +214,27 @@ objects with their own actions (a test in the catalog, a plan).
 them.
 
 - Entry icon — a card that is a link, a short list of places, an empty
-  state: `text-board-600` in a `bg-board-50` circle, `h-9 w-9` circle, 18px icon,
+  state: `text-ink-600` in a `bg-ink-50` circle, `h-9 w-9` circle, 18px icon,
   via `iconCircleClass` (Misc.tsx). It is the calm version of the sidebar's
-  active socket. The same green on every card — never a hue per card.
+  active socket. The same blue on every card — never a hue per card.
 - Icon in a button: the button's own text colour, no circle, no colour class.
-- Status icon (lock, warning, not included): `mist-500` or the status
+- Status icon (lock, warning, not included): `gray-500` or the status
   colour, no circle.
 - Long lists and tables: no icons in the rows — a column of thirty circles is
   noise.
-- Row and card chevrons: `mist-400`, `mist-600` on hover, via
-  `rowChevronClass` (List.tsx). Never `mist-300`: 1.5:1 on white, and gone.
-- An icon inside an input (the search glass) is `mist-400`: an icon, not
-  text, so it is not held to the placeholder's `mist-500`.
+- Row and card chevrons: `gray-400`, `gray-600` on hover, via
+  `rowChevronClass` (List.tsx). Never `gray-300`: 1.5:1 on white, and gone.
+- An icon inside an input (the search glass) is `gray-400`: an icon, not
+  text, so it is not held to the placeholder's `gray-500`.
 
 **Motion.** `transition-colors` on hover. No hover lifts, scale or rotate, no
 entrance animations on page content. The one exception is the public landing
 (`src/components/landing/`), where the motion *is* the demo: it lives in
 `landing.module.css`, animates only transform, opacity and stroke offset,
 pauses off screen and has a `prefers-reduced-motion` version. Keep it there.
+The landing's phone menu (`SiteNav`) is the one piece of chrome that moves: its
+panel fades in, its items rise 16px 60ms apart, and its toggle's two drawn bars
+turn into a cross; the rules and their reduced-motion answer sit in the same file.
 
 **Not in this codebase:** gradients, `backdrop-filter`, noise or grain overlays,
 blurred colour "orbs" or decorative blobs, glassmorphism, dark "hero" banners,

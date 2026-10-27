@@ -6,7 +6,7 @@ import { buttonClass } from '@/components/ui/Button';
 import { cn } from '@/components/ui/cn';
 import { formatDuration } from '@/lib/olympiad';
 import { useWarmupEcho } from '@/lib/landing/hooks';
-import { countCorrect } from '@/lib/landing/warmup';
+import { FREE_OFFER_CTA, countCorrect, freeTestsPhrase } from '@/lib/landing/warmup';
 
 /*
  * The phone's bottom bar. It appears once the warm-up card has scrolled up
@@ -23,7 +23,8 @@ const CARD_ID = 'warmup-card';
 const TITLE_ID = 'warmup-title';
 const QUIET_ZONES = ['parents-plans', 'closing', 'site-footer'];
 
-export default function StickyCta() {
+/** `freeTests`: how many tests are free (countFreeTests), or null to leave the number out. */
+export default function StickyCta({ freeTests }: { freeTests: number | null }) {
   const { live, stored } = useWarmupEcho();
   const [cardGone, setCardGone] = useState(false);
   const [inQuietZone, setInQuietZone] = useState(false);
@@ -78,7 +79,7 @@ export default function StickyCta() {
       aria-hidden={!show}
       inert={!show}
       className={cn(
-        'fixed inset-x-0 bottom-0 z-40 flex items-center justify-between gap-3 border-t border-mist-200 bg-white lg:hidden',
+        'fixed inset-x-0 bottom-0 z-40 flex items-center justify-between gap-3 border-t border-gray-200 bg-white lg:hidden',
         'px-4 pt-3 pb-[max(env(safe-area-inset-bottom),0.75rem)] shadow-[0_-12px_30px_rgba(15,23,42,0.08)]',
         'transition-transform duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none',
         show ? 'translate-y-0' : 'translate-y-[110%]',
@@ -86,7 +87,7 @@ export default function StickyCta() {
     >
       {midWarmup ? (
         <>
-          <span className="text-sm font-medium text-mist-900">
+          <span className="text-sm font-medium text-gray-900">
             Paused · Question {live.index + 1} of 3
           </span>
           <button type="button" onClick={resume} className={buttonClass({ variant: 'secondary', size: 'lg' })}>
@@ -95,17 +96,17 @@ export default function StickyCta() {
         </>
       ) : (
         <>
-          <span className="min-w-0 text-sm font-medium text-mist-900">
+          <span className="min-w-0 text-sm font-medium text-gray-900">
             {finished ? (
               <span className="tabular-nums">
                 Warm-up: {countCorrect(finished.answers)} of 3 in {formatDuration(finished.totalMs / 1000)}
               </span>
             ) : (
-              'Your first Math module is free.'
+              `${freeTests ? `${freeTestsPhrase(freeTests, true)} ` : ''}No payment details.`
             )}
           </span>
           <Link href="/register?from=sticky" className={buttonClass({ size: 'lg' })}>
-            Start free
+            {FREE_OFFER_CTA}
           </Link>
         </>
       )}

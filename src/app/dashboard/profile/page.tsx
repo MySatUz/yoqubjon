@@ -208,14 +208,14 @@ async function ProfileCard({
         <Avatar name={displayName} size="lg" />
         <div className="min-w-0">
           <div className="flex min-w-0 items-center gap-2">
-            <h2 className="truncate text-base font-semibold text-mist-900">{displayName}</h2>
+            <h2 className="truncate text-base font-semibold text-gray-900">{displayName}</h2>
             <Badge tone={isPremium ? "success" : "neutral"}>{isPremium ? PREMIUM_PLAN.name : FREE_PLAN.name}</Badge>
           </div>
-          <p className="mt-0.5 truncate text-sm text-mist-500">{email}</p>
+          <p className="mt-0.5 truncate text-sm text-gray-500">{email}</p>
         </div>
       </div>
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 sm:justify-end">
-        <p className="text-sm text-mist-500">
+        <p className="text-sm text-gray-500">
           {isPremium && subscription
             ? `Active until ${formatDate(subscription.expiresAt)}`
             : salesOpen
@@ -286,14 +286,14 @@ async function CollectionsCard({ userId, email }: { userId: string; email?: stri
   return (
     <Card as="section">
       <CardHeader title="Progress by course" description="Tests finished at least once, and your best full-test score." />
-      <ul className="divide-y divide-mist-100">
+      <ul className="divide-y divide-gray-100">
         {byCollection.map((collection) => {
           const body = (
             <>
               <div className="min-w-0 flex-1">
                 <div className="flex items-baseline justify-between gap-3">
-                  <p className="truncate text-sm font-medium text-mist-900">{collection.label}</p>
-                  <span className="shrink-0 text-xs tabular-nums text-mist-500">
+                  <p className="truncate text-sm font-medium text-gray-900">{collection.label}</p>
+                  <span className="shrink-0 text-xs tabular-nums text-gray-500">
                     {collection.testsDone} of {collection.testsTotal} {collection.testsTotal === 1 ? "test" : "tests"}
                   </span>
                 </div>
@@ -305,11 +305,11 @@ async function CollectionsCard({ userId, email }: { userId: string; email?: stri
               <div className="w-20 shrink-0 text-right">
                 {collection.best !== null ? (
                   <>
-                    <p className="text-sm font-semibold tabular-nums text-mist-900">{collection.best}</p>
-                    <p className="text-xs text-mist-500">best</p>
+                    <p className="text-sm font-semibold tabular-nums text-gray-900">{collection.best}</p>
+                    <p className="text-xs text-gray-500">best</p>
                   </>
                 ) : (
-                  <p className="text-xs text-mist-500">No score yet</p>
+                  <p className="text-xs text-gray-500">No score yet</p>
                 )}
               </div>
             </>
@@ -352,7 +352,7 @@ function ProfileCardFallback() {
   return (
     <div className={cn(cardClass, "flex flex-col gap-4 px-5 py-4 sm:flex-row sm:items-center")}>
       <div className="flex min-w-0 flex-1 items-center gap-3">
-        <div className="h-12 w-12 shrink-0 animate-pulse rounded-full bg-mist-200/70" />
+        <div className="h-12 w-12 shrink-0 animate-pulse rounded-full bg-gray-200/70" />
         <div className="min-w-0 flex-1 space-y-2">
           <Skeleton className="h-5 w-40 max-w-full" />
           <Skeleton className="h-4 w-56 max-w-full" />
@@ -382,11 +382,11 @@ function StatsFallback() {
 function CollectionsFallback() {
   return (
     <div className={cardClass}>
-      <div className="space-y-1.5 border-b border-mist-100 px-5 py-4">
+      <div className="space-y-1.5 border-b border-gray-100 px-5 py-4">
         <Skeleton className="h-5 w-48" />
         <Skeleton className="h-4 w-72 max-w-full" />
       </div>
-      <div className="divide-y divide-mist-100">
+      <div className="divide-y divide-gray-100">
         {[0, 1].map((i) => (
           <div key={i} className="flex items-center gap-4 px-4 py-3 sm:px-5">
             <div className="min-w-0 flex-1 space-y-2.5">

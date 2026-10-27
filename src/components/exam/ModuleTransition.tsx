@@ -24,7 +24,7 @@ interface ModuleTransitionProps {
 
 type Rule = { icon: React.ReactNode; text: React.ReactNode };
 
-const ruleIconClass = 'mt-0.5 h-4 w-4 shrink-0 text-mist-500';
+const ruleIconClass = 'mt-0.5 h-4 w-4 shrink-0 text-gray-500';
 
 /*
  * A coarse clock for the olympiad's closing time. The exam page lets a
@@ -126,7 +126,7 @@ export default function ModuleTransition({
       text: (
         <>
           The attempt counts if it is finished before{' '}
-          <span className="font-medium text-mist-900">{formatOlympiadMoment(new Date(olympiadEndsAtMs))}</span>.
+          <span className="font-medium text-gray-900">{formatOlympiadMoment(new Date(olympiadEndsAtMs))}</span>.
         </>
       ),
     });
@@ -155,7 +155,7 @@ export default function ModuleTransition({
   return (
     <div className="flex-1 overflow-y-auto px-4 py-8 sm:py-16">
       <div className={cn(cardClass, 'mx-auto w-full max-w-md p-5')}>
-        {/* Neutral, not lime: lime means a correct answer. */}
+        {/* Neutral, not green: green means a correct answer. */}
         {!isFirst && (
           <Badge className="mb-3">
             <Check />
@@ -166,26 +166,26 @@ export default function ModuleTransition({
         <h2
           ref={headingRef}
           tabIndex={-1}
-          className="text-xl font-semibold tracking-tight break-words text-mist-900 focus:outline-hidden"
+          className="text-xl font-semibold tracking-tight break-words text-gray-900 focus:outline-hidden"
         >
           {isModular ? `Module ${moduleIndex} of ${moduleCount}` : title}
         </h2>
-        {isModular && isFirst && <p className="mt-1 text-sm break-words text-mist-500">{title}</p>}
+        {isModular && isFirst && <p className="mt-1 text-sm break-words text-gray-500">{title}</p>}
 
-        <p className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-mist-700 tabular-nums">
+        <p className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-700 tabular-nums">
           <span className="inline-flex items-center gap-1.5">
-            <ListChecks className="h-4 w-4 text-mist-500" />
+            <ListChecks className="h-4 w-4 text-gray-500" />
             {questionCount} {questionCount === 1 ? 'question' : 'questions'}
           </span>
           <span className="inline-flex items-center gap-1.5">
-            <Clock3 className="h-4 w-4 text-mist-500" />
+            <Clock3 className="h-4 w-4 text-gray-500" />
             {formatDuration(durationSeconds)}
           </span>
         </p>
 
-        <ul className="mt-5 space-y-3 border-t border-mist-100 pt-5">
+        <ul className="mt-5 space-y-3 border-t border-gray-100 pt-5">
           {rules.map((rule, index) => (
-            <li key={index} className="flex gap-3 text-sm text-mist-700">
+            <li key={index} className="flex gap-3 text-sm text-gray-700">
               {rule.icon}
               <span>{rule.text}</span>
             </li>
@@ -218,7 +218,7 @@ export function ModuleTransitionSkeleton() {
         <Skeleton className="h-6 w-40" />
         <Skeleton className="mt-2 h-4 w-28" />
         <Skeleton className="mt-4 h-4 w-44" />
-        <div className="mt-5 space-y-3 border-t border-mist-100 pt-5">
+        <div className="mt-5 space-y-3 border-t border-gray-100 pt-5">
           <Skeleton className="h-4 w-full" />
           <Skeleton className="h-4 w-11/12" />
           <Skeleton className="h-4 w-10/12" />

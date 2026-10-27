@@ -59,7 +59,7 @@ export function TestBadges({
 }: {
   test: BadgeTest;
   sectionMaxAttempts?: number;
-  /** In a page header on the mist-100 canvas, where a neutral pill would vanish. */
+  /** In a page header on the gray-100 canvas, where a neutral pill would vanish. */
   onCanvas?: boolean;
 }) {
   const olympiadWindow = readOlympiadWindow(test);

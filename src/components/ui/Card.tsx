@@ -1,11 +1,11 @@
 import React from 'react';
 import { cn } from '@/components/ui/cn';
 
-/** The one card surface: white, mist-200 border, rounded-2xl, flat. */
-export const cardClass = 'rounded-2xl border border-mist-200 bg-white';
+/** The one card surface: white, gray-200 border, rounded-2xl, flat. */
+export const cardClass = 'rounded-2xl border border-gray-200 bg-white';
 
 /** A tinted block nested inside a card (key/value tiles, previews, code). */
-export const insetClass = 'rounded-xl bg-mist-50';
+export const insetClass = 'rounded-xl bg-gray-50';
 
 export function Card({
   as: Tag = 'div',
@@ -38,10 +38,10 @@ export function CardHeader({
   className?: string;
 }) {
   return (
-    <div className={cn('flex flex-wrap items-start justify-between gap-3 border-b border-mist-100 px-5 py-4', className)}>
+    <div className={cn('flex flex-wrap items-start justify-between gap-3 border-b border-gray-100 px-5 py-4', className)}>
       <div className="min-w-0">
-        <h2 className="text-base font-semibold text-mist-900">{title}</h2>
-        {description && <p className="mt-0.5 max-w-2xl text-sm text-mist-500">{description}</p>}
+        <h2 className="text-base font-semibold text-gray-900">{title}</h2>
+        {description && <p className="mt-0.5 max-w-2xl text-sm text-gray-500">{description}</p>}
       </div>
       {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
     </div>
@@ -55,7 +55,7 @@ export function CardBody({ className, children }: { className?: string; children
 /** Footer row for card actions (save, cancel). */
 export function CardFooter({ className, children }: { className?: string; children: React.ReactNode }) {
   return (
-    <div className={cn('flex flex-wrap items-center justify-end gap-2 border-t border-mist-100 px-5 py-3', className)}>
+    <div className={cn('flex flex-wrap items-center justify-end gap-2 border-t border-gray-100 px-5 py-3', className)}>
       {children}
     </div>
   );

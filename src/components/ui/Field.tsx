@@ -4,16 +4,16 @@ import { cn } from '@/components/ui/cn';
 
 /**
  * The one focus treatment for text controls: a solid 2px of the accent (the
- * border plus a 1px ring). The old board-100 ring was 1.22:1 against white,
+ * border plus a 1px ring). The old ink-100 ring was 1.22:1 against white,
  * so a focused field looked almost the same as an idle one.
  */
-export const fieldFocusClass = 'focus:border-board-600 focus:ring-1 focus:ring-board-600';
+export const fieldFocusClass = 'focus:border-ink-600 focus:ring-1 focus:ring-ink-600';
 
 /*
- * mist-400 border and mist-500 placeholder: a control's edge is a step darker
- * than a card's (mist-200), so a field is found on a white card before it is
- * hovered, and a placeholder that carries a hint has to be readable (mist-400
- * is 2.4:1). Card borders stay mist-200.
+ * gray-400 border and gray-500 placeholder: a control's edge is a step darker
+ * than a card's (gray-200), so a field is found on a white card before it is
+ * hovered, and a placeholder that carries a hint has to be readable (gray-400
+ * is 2.4:1). Card borders stay gray-200.
  *
  * `focus:outline-hidden`, not `outline-none`: in Tailwind v4 `outline-none`
  * removes the outline outright, and Windows high-contrast mode, which repaints
@@ -23,9 +23,9 @@ export const fieldFocusClass = 'focus:border-board-600 focus:ring-1 focus:ring-b
  * focus: a resting field would wear it too.
  */
 const control =
-  'w-full rounded-lg border border-mist-400 bg-white text-sm text-mist-900 transition-colors focus:outline-hidden ' +
-  'placeholder:text-mist-500 hover:border-mist-500 ' + fieldFocusClass + ' ' +
-  'disabled:cursor-not-allowed disabled:border-mist-200 disabled:bg-mist-50 disabled:text-mist-500 ' +
+  'w-full rounded-lg border border-gray-400 bg-white text-sm text-gray-900 transition-colors focus:outline-hidden ' +
+  'placeholder:text-gray-500 hover:border-gray-500 ' + fieldFocusClass + ' ' +
+  'disabled:cursor-not-allowed disabled:border-gray-200 disabled:bg-gray-50 disabled:text-gray-500 ' +
   'aria-invalid:border-red-600 aria-invalid:focus:ring-red-600';
 
 /**
@@ -76,21 +76,21 @@ export function textareaClass({ className }: { className?: string } = {}) {
  * through `has-*`. Same colours and heights as `control` above.
  */
 const affixBox =
-  'flex w-full items-center gap-2 rounded-lg border border-mist-400 bg-white px-3 text-sm transition-colors ' +
-  'hover:border-mist-500 focus-within:border-board-600 focus-within:ring-1 focus-within:ring-board-600 ' +
-  'has-disabled:cursor-not-allowed has-disabled:border-mist-200 has-disabled:bg-mist-50 ' +
+  'flex w-full items-center gap-2 rounded-lg border border-gray-400 bg-white px-3 text-sm transition-colors ' +
+  'hover:border-gray-500 focus-within:border-ink-600 focus-within:ring-1 focus-within:ring-ink-600 ' +
+  'has-disabled:cursor-not-allowed has-disabled:border-gray-200 has-disabled:bg-gray-50 ' +
   'has-aria-invalid:border-red-600 has-aria-invalid:focus-within:ring-red-600';
 const affixInput =
-  'h-full w-full min-w-0 flex-1 bg-transparent text-mist-900 placeholder:text-mist-500 focus:outline-hidden ' +
-  'disabled:cursor-not-allowed disabled:text-mist-500';
-/** A unit is text the user reads, so mist-500 like a placeholder, not the 400 of an icon. */
-const affixUnit = 'shrink-0 text-xs text-mist-500';
+  'h-full w-full min-w-0 flex-1 bg-transparent text-gray-900 placeholder:text-gray-500 focus:outline-hidden ' +
+  'disabled:cursor-not-allowed disabled:text-gray-500';
+/** A unit is text the user reads, so gray-500 like a placeholder, not the 400 of an icon. */
+const affixUnit = 'shrink-0 text-xs text-gray-500';
 
 /* A native checkbox tinted with accent-color. The `rounded border-slate-300
    text-blue-600` it used to carry were for the forms plugin, which this app
    does not load: the browser draws the box and ignored them. */
 export const checkboxClass =
-  'h-4 w-4 shrink-0 accent-board-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-board-600';
+  'h-4 w-4 shrink-0 accent-ink-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink-600';
 
 /* ComponentProps<'input'> and friends include `ref`, which React 19 passes to
    a function component as a plain prop: the spreads below hand it on. */
@@ -136,7 +136,7 @@ export function Input({ size = 'md', suffix, className, ...props }: InputProps) 
 type SelectProps = Omit<React.ComponentProps<'select'>, 'size'> & { size?: 'md' | 'lg' };
 
 /**
- * The chevron is mist-500, darker than the mist-400 of an icon inside a
+ * The chevron is gray-500, darker than the gray-400 of an icon inside a
  * field: it is what tells a select from a text box before anyone presses it.
  * pointer-events-none, so a click on it still opens the list. `className`
  * goes on the wrapper (layout only), which holds the chevron in place.
@@ -147,7 +147,7 @@ export function Select({ size, className, ...props }: SelectProps) {
       <select className={cn(selectClass({ size }), 'peer')} {...props} />
       <ChevronDown
         aria-hidden
-        className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-mist-500 peer-disabled:text-mist-400"
+        className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500 peer-disabled:text-gray-400"
       />
     </div>
   );
@@ -157,8 +157,8 @@ export function Textarea({ className, ...props }: React.ComponentProps<'textarea
   return <textarea className={textareaClass({ className })} {...props} />;
 }
 
-export const labelClass = 'block text-sm font-medium text-mist-700';
-export const hintClass = 'text-xs text-mist-500';
+export const labelClass = 'block text-sm font-medium text-gray-700';
+export const hintClass = 'text-xs text-gray-500';
 export const errorTextClass = 'text-xs text-red-600';
 
 type DescribableProps = {

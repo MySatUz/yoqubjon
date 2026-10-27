@@ -149,7 +149,7 @@ export default function ExamRunner({
   return (
     // `h-dvh`, not `h-screen`: on a phone 100vh reaches under the browser's
     // own toolbar and hides the bottom bar with Next on it.
-    <main className="flex h-dvh flex-col overflow-hidden bg-mist-100">
+    <main className="flex h-dvh flex-col overflow-hidden bg-gray-100">
       <TopNav testId={testId} title={title} modules={specs} canDraw={canDraw} referenceSheet={referenceSheet} />
       {!isReady ? (
         // No question until the attempt is in: question 1 must not be
@@ -207,7 +207,7 @@ export default function ExamRunner({
         description={
           <p>
             You have an unfinished attempt on{' '}
-            {otherTitle ? <span className="font-medium text-mist-900">{otherTitle}</span> : 'another test'}.
+            {otherTitle ? <span className="font-medium text-gray-900">{otherTitle}</span> : 'another test'}.
             Continue it, or discard it and start this test.
           </p>
         }

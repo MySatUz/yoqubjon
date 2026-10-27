@@ -8,7 +8,7 @@ import { Card, CardBody, CardHeader } from '@/components/ui/Card';
 
 /** A number in the summary line, set darker than the words around it. */
 function Count({ value }: { value: number }) {
-  return <span className="font-medium text-mist-900">{value}</span>;
+  return <span className="font-medium text-gray-900">{value}</span>;
 }
 
 interface ModuleReviewProps {
@@ -54,17 +54,17 @@ export default function ModuleReview({
   const isLastModule = nextModuleSeconds === null;
 
   return (
-    <div className="flex-1 overflow-y-auto bg-mist-100 px-4 py-6 sm:py-10">
+    <div className="flex-1 overflow-y-auto bg-gray-100 px-4 py-6 sm:py-10">
       <div className="mx-auto w-full max-w-[680px] space-y-4">
         <div>
           <h2
             ref={headingRef}
             tabIndex={-1}
-            className="text-xl font-semibold tracking-tight text-mist-900 focus:outline-hidden sm:text-2xl"
+            className="text-xl font-semibold tracking-tight text-gray-900 focus:outline-hidden sm:text-2xl"
           >
             Check your work
           </h2>
-          <p className="mt-1 text-sm text-mist-600">Pick any question to go back to it.</p>
+          <p className="mt-1 text-sm text-gray-600">Pick any question to go back to it.</p>
         </div>
 
         {/* The counts as one line over the grid they describe, not three
@@ -85,7 +85,7 @@ export default function ModuleReview({
           </CardBody>
         </Card>
 
-        <p className="text-sm text-mist-600">
+        <p className="text-sm text-gray-600">
           {isLastModule
             ? 'Finishing sends your answers and opens your result.'
             : `Once you finish, you cannot come back to Module ${moduleIndex}. Module ${moduleIndex + 1} is timed on its own (${formatDuration(nextModuleSeconds)}) and starts when you press Start.`}
