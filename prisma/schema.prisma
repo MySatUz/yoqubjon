@@ -250,6 +250,16 @@ model Result {
   correctCount Float?
   timeSpent   Int      // Time spent in seconds
   answers     Json     // User's selected answers
+  // The client's id for the attempt this result finishes, so a second send of
+  // the same attempt returns this row instead of filing another one. Null on
+  // rows from before the column and from clients that do not send it.
+  //
+  // Unique per user through the PARTIAL index "Result_userId_attemptId_key"
+  // ON ("userId", "attemptId") WHERE "attemptId" IS NOT NULL, created by hand in
+  // migration 202610150001_add_result_attempt_id: Prisma cannot express a
+  // partial index, so it is not declared here and `prisma migrate diff` will
+  // propose a DROP INDEX for it - delete that line from any generated migration.
+  attemptId   String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
