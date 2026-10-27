@@ -382,7 +382,7 @@ export default function AdminForm({ collections, defaultCategory: preselected, o
                   )}
                 >
                   <span className="block text-sm font-medium text-gray-900">{option.title}</span>
-                  {option.description && <span className="mt-0.5 block text-xs text-gray-500">{option.description}</span>}
+                  {option.description && <span className={cn('mt-0.5 block text-xs', examFormat === option.value ? 'text-gray-600' : 'text-gray-500')}>{option.description}</span>}
                 </span>
               </label>
             ))}

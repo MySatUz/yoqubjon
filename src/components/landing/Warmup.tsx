@@ -396,7 +396,7 @@ export default function Warmup({ freeTests }: { freeTests: number | null }) {
         <div className="mt-8 border-t border-gray-200 pt-6 lg:mt-12">
           <p className="text-lg font-semibold tracking-tight text-gray-900">
             Or try three questions first. Each one harder. You have{' '}
-            <span className={cn('inline-flex tabular-nums', hurry ? 'text-amber-700' : 'text-ink-600')}>
+            <span className={cn('inline-flex tabular-nums', hurry && 'text-amber-700')}>
               <Odometer value={heroClock} animate={!reduce} />
             </span>
             .
@@ -586,7 +586,7 @@ function Choices({
           <label
             key={option.letter}
             className={cn(
-              'relative flex min-h-12 items-center gap-2 rounded-xl border bg-white px-3 py-1.5 text-left text-base',
+              'relative flex min-h-12 items-center gap-2 rounded-xl border px-3 py-1.5 text-left text-base',
               'transition-[color,transform] duration-160 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ink-600',
               answer === null && 'cursor-pointer hover:border-gray-400 active:scale-[0.98]',
               isCorrect
@@ -595,7 +595,7 @@ function Choices({
                   ? 'border-red-600 bg-red-50'
                   : isSelected
                     ? 'border-ink-600 bg-ink-50 ring-1 ring-ink-600'
-                    : 'border-gray-300',
+                    : 'border-gray-300 bg-white',
               // The options it was not about step back in the palette, not
               // through opacity, which turned them into off-palette tints.
               dim && 'text-gray-500',

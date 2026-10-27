@@ -21,7 +21,7 @@ import {
 import { bankQuestionWhere, countTestsUsing, readOptions } from '@/lib/questionBankServer';
 import { isMultiSelectKey } from '@/lib/resultAnswers';
 import { renderQuestionPreview } from '@/app/admin/tests/questionPreview';
-import { DifficultyBars, KindBadge, choiceTileClass } from '@/components/admin/bank/bankBadges';
+import { DifficultyBars, KindBadge, choiceTileClass, choiceTileCountClass } from '@/components/admin/bank/bankBadges';
 import { linkRowClass, rowLinkClass } from '@/components/admin/adminControls';
 import { Badge } from '@/components/ui/Badge';
 import { buttonClass, focusRingClass } from '@/components/ui/Button';
@@ -171,7 +171,7 @@ export default async function QuestionBankPage({
                         className={checkboxClass}
                       />
                       <span className="min-w-0 flex-1 text-sm font-medium text-gray-900">{domain.label}</span>
-                      <span className="text-xs tabular-nums text-gray-500">{domainCount(domain.value)}</span>
+                      <span className={choiceTileCountClass}>{domainCount(domain.value)}</span>
                     </label>
                   ))}
                 </div>
@@ -191,7 +191,7 @@ export default async function QuestionBankPage({
                       />
                       <DifficultyBars level={difficulty.value} />
                       <span className="min-w-0 flex-1 text-sm font-medium text-gray-900">{difficulty.label}</span>
-                      <span className="text-xs tabular-nums text-gray-500">{difficultyCount(difficulty.value)}</span>
+                      <span className={choiceTileCountClass}>{difficultyCount(difficulty.value)}</span>
                     </label>
                   ))}
                   {/* Only while there is something to sort, or the filter is on. */}
@@ -205,7 +205,7 @@ export default async function QuestionBankPage({
                         className={checkboxClass}
                       />
                       <span className="min-w-0 flex-1 text-sm font-medium text-gray-900">Not sorted yet</span>
-                      <span className="text-xs tabular-nums text-gray-500">{unsorted}</span>
+                      <span className={choiceTileCountClass}>{unsorted}</span>
                     </label>
                   )}
                 </div>

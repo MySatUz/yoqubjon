@@ -82,5 +82,8 @@ export function DifficultyBars({ level, className }: { level: number | null; cla
  * the words (flex-1) and, where known, a count.
  */
 export const choiceTileClass =
-  'flex h-11 cursor-pointer items-center gap-3 rounded-xl border border-gray-300 bg-white px-3.5 transition-colors ' +
+  'group flex h-11 cursor-pointer items-center gap-3 rounded-xl border border-gray-300 bg-white px-3.5 transition-colors ' +
   'hover:border-gray-400 hover:bg-gray-50 has-checked:border-ink-600 has-checked:bg-ink-50 pointer-coarse:h-12';
+
+/** A tile's count: meta grey on white, the 600 step once the tile is ticked and turns ink-50 (gray-500 there is 4.0:1). */
+export const choiceTileCountClass = 'text-xs tabular-nums text-gray-500 group-has-checked:text-gray-600';

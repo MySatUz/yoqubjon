@@ -4,7 +4,7 @@ import React, { useId, useRef, useState } from 'react';
 import { Loader2, Search, SearchX } from 'lucide-react';
 import { searchBankQuestions } from '@/app/admin/bank/actions';
 import type { BankAvailability } from '@/components/admin/bank/BuildTestForm';
-import { DifficultyBars, KindBadge, choiceTileClass } from '@/components/admin/bank/bankBadges';
+import { DifficultyBars, KindBadge, choiceTileClass, choiceTileCountClass } from '@/components/admin/bank/bankBadges';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Dialog } from '@/components/ui/Dialog';
@@ -198,7 +198,7 @@ export function BankPicker({
                     className={checkboxClass}
                   />
                   <span className="min-w-0 flex-1 text-sm font-medium text-gray-900">{domain.label}</span>
-                  <span className="text-xs tabular-nums text-gray-500">
+                  <span className={choiceTileCountClass}>
                     {countWhere((row) => row.domain === domain.value)}
                   </span>
                 </label>
@@ -222,7 +222,7 @@ export function BankPicker({
                   />
                   <DifficultyBars level={difficulty.value} />
                   <span className="min-w-0 flex-1 text-sm font-medium text-gray-900">{difficulty.label}</span>
-                  <span className="text-xs tabular-nums text-gray-500">
+                  <span className={choiceTileCountClass}>
                     {countWhere((row) => row.difficulty === difficulty.value)}
                   </span>
                 </label>
@@ -237,7 +237,7 @@ export function BankPicker({
                     className={checkboxClass}
                   />
                   <span className="min-w-0 flex-1 text-sm font-medium text-gray-900">Not sorted yet</span>
-                  <span className="text-xs tabular-nums text-gray-500">{unsortedCount}</span>
+                  <span className={choiceTileCountClass}>{unsortedCount}</span>
                 </label>
               )}
             </div>

@@ -6,7 +6,7 @@ import { ChevronRight, Library, Loader2, Search, SearchX, X } from 'lucide-react
 import 'katex/dist/katex.min.css';
 import type { BankCounts } from '@/app/admin/board/boardData';
 import type { BankFilter, BankRow } from '@/components/board/types';
-import { DifficultyBars, choiceTileClass } from '@/components/admin/bank/bankBadges';
+import { DifficultyBars, choiceTileClass, choiceTileCountClass } from '@/components/admin/bank/bankBadges';
 import { Badge } from '@/components/ui/Badge';
 import { Button, buttonClass, iconButtonClass } from '@/components/ui/Button';
 import { cardClass } from '@/components/ui/Card';
@@ -31,7 +31,7 @@ function formatCount(count: number) {
 /** A tile's count, once the bank's counts are known. */
 function TileCount({ value }: { value: number | undefined }) {
   if (value === undefined) return null;
-  return <span className="text-xs tabular-nums text-gray-500">{value}</span>;
+  return <span className={choiceTileCountClass}>{value}</span>;
 }
 
 /**

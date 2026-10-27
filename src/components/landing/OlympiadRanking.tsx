@@ -127,7 +127,7 @@ export default function OlympiadRanking() {
                 role="cell"
                 className={cn(
                   'text-right text-xs font-semibold tabular-nums transition-opacity duration-200',
-                  moved > 0 ? 'text-ink-700' : 'text-gray-500',
+                  moved > 0 ? 'text-green-700' : 'text-gray-500',
                   showRanked ? 'opacity-100' : 'opacity-0',
                 )}
               >
