@@ -32,6 +32,8 @@ export type CourseTestRow = {
   visible: boolean;
   questionSourceId: string | null;
   questionSource: { title: string; collectionCategory: string | null } | null;
+  /** The oldest copy, which takes the questions over if this original is deleted. */
+  questionCopies: { title: string }[];
   _count: { questionCopies: number };
   /** Questions it shows: its own, or its original's for a copy. */
   questionCount: number;
@@ -53,11 +55,14 @@ function describeDelete(test: CourseTestRow): ConfirmOptions {
   }
 
   const copies = test._count.questionCopies;
+  const heir = test.questionCopies[0]?.title;
+  const others = copies - 1;
   return {
     title: `Delete “${test.title}”?`,
-    description: copies > 0
-      ? `Its questions, images and results are deleted, and so ${copies === 1 ? 'is the copy that shows them' : `are the ${copies} copies that show them`}, `
-        + 'with their results. This cannot be undone.'
+    description: heir
+      ? `Its results are deleted. Its questions and images move to the copy “${heir}”`
+        + (others > 0 ? `, and the other ${others === 1 ? 'copy shows' : `${others} copies show`} them from there` : '')
+        + '. Every copy keeps its results. This cannot be undone.'
       : 'Its questions, images and results are deleted. This cannot be undone.',
     confirmLabel: 'Delete test',
     tone: 'danger',
@@ -165,7 +170,7 @@ function CopyTestDialog({
 
         <p className={hintClass}>
           The copy shows this test&apos;s questions and images without storing them again: editing a question
-          changes it in both, and deleting the original deletes the copy. It keeps its own results.
+          changes it in both. It keeps its own results, and keeps working if the original is deleted.
         </p>
 
         {result?.success && (

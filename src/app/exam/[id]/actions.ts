@@ -1,13 +1,15 @@
 'use server';
 
-import { refresh } from 'next/cache';
 import { auth } from '@/auth';
 import { submitTestAccessCode, type CodeAttemptResult } from '@/lib/testAccessCode';
 
 /**
  * Only decides whether the code is right. Every other gate - visibility, the
  * olympiad window, the attempt limit, the subscription - is still enforced by
- * the exam page itself when it re-renders after `refresh()`.
+ * the exam page itself, which `AccessCodeGate` fetches again on success.
+ *
+ * No `refresh()` here: it only refreshes the dynamic data, and the router
+ * keeps a page prefetched in full as it was, so the code screen came back.
  */
 export async function unlockTestWithCode(testId: string, code: string): Promise<CodeAttemptResult> {
   const session = await auth();
@@ -21,13 +23,7 @@ export async function unlockTestWithCode(testId: string, code: string): Promise<
   }
 
   try {
-    const result = await submitTestAccessCode(session.user.id, testId, code);
-
-    if (result.success) {
-      refresh();
-    }
-
-    return result;
+    return await submitTestAccessCode(session.user.id, testId, code);
   } catch (error: unknown) {
     console.error('Unlock Test Error:', error);
     return { success: false, error: 'Could not check the code. Please try again.' };

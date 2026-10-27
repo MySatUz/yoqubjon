@@ -10,6 +10,7 @@ import {
   type TestCollectionOption,
 } from '@/lib/testCatalog';
 import { getCollectionVisibilityRows } from '@/lib/testCollections';
+import { copyTakingOver } from '@/lib/questionSource';
 import {
   tashkentDateKey,
   utcDateKey,
@@ -210,6 +211,9 @@ const courseTestSelect = {
       _count: { select: { questions: true } },
     },
   },
+  // The copy that takes an original's questions over when it is deleted, for
+  // the delete dialog to name.
+  questionCopies: { select: { title: true }, orderBy: copyTakingOver, take: 1 },
   _count: { select: { questions: true, questionCopies: true } },
 } satisfies Prisma.TestSelect;
 

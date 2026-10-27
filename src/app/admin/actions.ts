@@ -24,6 +24,7 @@ import {
 import { normalizeTestMaxAttempts } from '@/lib/testAttempts';
 import { parseOlympiadMoment } from '@/lib/olympiad';
 import { normalizeAccessCode } from '@/lib/testAccessCode';
+import { copyTakingOver } from '@/lib/questionSource';
 import {
   MAX_MODULE_COUNT,
   MIN_MODULE_COUNT,
@@ -301,33 +302,44 @@ export async function uploadTest(formData: FormData) {
 }
 
 /**
- * Deletes a test, its results and its question rows. Bank questions stay:
- * the rows were copies, and `Question.bankQuestionId` is the only link.
+ * Deletes a test and its results. Its question rows go too, unless copies
+ * still show them: then the oldest copy takes them over and the other copies
+ * show them from there, so every copy keeps working with its own results.
+ * Bank questions always stay: `Question.bankQuestionId` is the only link.
  */
 export async function deleteTest(testId: string) {
   try {
     await requireAdmin();
 
     // A copy only borrows its questions, so deleting one leaves the original
-    // alone. Deleting an original takes its copies with it: they would have
-    // nothing left to show, and the database refuses to leave them behind.
+    // alone. An original's rows are moved rather than copied: a result stores
+    // its answers by question id, so the copies' results, and an attempt in
+    // progress on one, keep matching their questions. The moved rows keep
+    // their image URLs, and with them the files.
     const { copyIds, imageUrls } = await prisma.$transaction(async (tx) => {
       const copies = await tx.test.findMany({
         where: { questionSourceId: testId },
+        orderBy: copyTakingOver,
         select: { id: true },
       });
       const ids = copies.map((copy) => copy.id);
+      const heirId = ids[0];
+
+      if (heirId) {
+        // The heir stops being a copy before the others are pointed at it, so
+        // none of them ever points at a copy: one level to follow, as before.
+        await tx.question.updateMany({ where: { testId }, data: { testId: heirId } });
+        await tx.test.update({ where: { id: heirId }, data: { questionSourceId: null }, select: { id: true } });
+        await tx.test.updateMany({ where: { questionSourceId: testId }, data: { questionSourceId: heirId } });
+      }
+
       // A test built from the bank shows the bank's image files, which live
       // outside its own folder; they are checked once the rows are gone.
+      // Moved rows are not gone, so there is nothing to check.
       const images = await tx.question.findMany({
         where: { testId, imageUrl: { not: null } },
         select: { imageUrl: true },
       });
-
-      if (ids.length > 0) {
-        await tx.result.deleteMany({ where: { testId: { in: ids } } });
-        await tx.test.deleteMany({ where: { id: { in: ids } } });
-      }
 
       await tx.result.deleteMany({ where: { testId } });
       await tx.question.deleteMany({ where: { testId } });
@@ -340,10 +352,14 @@ export async function deleteTest(testId: string) {
     // the reverse order would leave a live test pointing at deleted files. A
     // copy has no images of its own, so for one this finds nothing. Files a
     // bank question or another test still shows are kept: an imported test's
-    // pictures are its bank questions' pictures too.
+    // pictures are its bank questions' pictures too, and an original's
+    // pictures stay in its folder for the copy that took its questions over.
     await removeFolderImages(testId);
     await removeUnreferencedImages(imageUrls);
 
+    // Each copy cached the questions under its own id. Their content is the
+    // same rows, but the entries are expired anyway: nothing cached about the
+    // deleted test should outlive it.
     for (const id of [testId, ...copyIds]) {
       revalidateTag(examQuestionsCacheTag(id), { expire: 0 });
     }

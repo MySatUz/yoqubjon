@@ -101,9 +101,10 @@ model Test {
   // Set on a copy: the test whose questions this one shows. A copy has a title,
   // section, settings and results of its own, but no questions - they and their
   // images are stored once, on the original. Always the original itself, never
-  // another copy, so there is one level to follow. Deleting the original
-  // deletes its copies first; the restrict below keeps anything else from
-  // leaving a copy with nothing to show.
+  // another copy, so there is one level to follow. Deleting the original moves
+  // its question rows to its oldest copy and points the other copies at that
+  // one first; the restrict below keeps anything else from leaving a copy with
+  // nothing to show.
   questionSourceId   String?
   createdAt          DateTime                  @default(now())
   updatedAt          DateTime                  @updatedAt

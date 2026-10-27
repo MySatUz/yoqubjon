@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useTransition } from 'react';
+import { useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import { unlockTestWithCode } from '@/app/exam/[id]/actions';
 import { ACCESS_CODE_LENGTH } from '@/lib/accessCodeFormat';
@@ -11,29 +12,39 @@ import { fieldFocusClass, labelClass } from '@/components/ui/Field';
 import { cn } from '@/components/ui/cn';
 
 export default function AccessCodeGate({ testId, title }: { testId: string; title: string }) {
+  const router = useRouter();
   const [code, setCode] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isChecking, setIsChecking] = useState(false);
+  const [isOpening, startOpening] = useTransition();
+  const isBusy = isChecking || isOpening;
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (code.length !== ACCESS_CODE_LENGTH || isChecking) return;
+    if (code.length !== ACCESS_CODE_LENGTH || isBusy) return;
 
     setIsChecking(true);
     setError(null);
 
     try {
-      // On success the action refreshes the route, and the exam replaces this
-      // screen; the spinner stays up until it does.
       const result = await unlockTestWithCode(testId, code);
 
       if (!result.success) {
         setError(result.error);
         setCode('');
-        setIsChecking(false);
+        return;
       }
+
+      // The page is fetched again from here, not refreshed by the action: a
+      // test opened from Practice was prefetched in full - this screen
+      // included - and an action's refresh() leaves that copy in the router,
+      // which then showed this screen again with the spinner on for good.
+      // router.refresh() drops the copy first. The spinner lasts as long as
+      // the transition, so it cannot outlive the page it is waiting for.
+      startOpening(() => router.refresh());
     } catch {
       setError('Could not check the code. Please try again.');
+    } finally {
       setIsChecking(false);
     }
   };
@@ -85,10 +96,10 @@ export default function AccessCodeGate({ testId, title }: { testId: string; titl
 
           <button
             type="submit"
-            disabled={code.length !== ACCESS_CODE_LENGTH || isChecking}
+            disabled={code.length !== ACCESS_CODE_LENGTH || isBusy}
             className={buttonClass({ size: 'lg', block: true, className: 'mt-5' })}
           >
-            {isChecking && <Loader2 className="h-4 w-4 animate-spin" />}
+            {isBusy && <Loader2 className="h-4 w-4 animate-spin" />}
             Start test
           </button>
         </form>
