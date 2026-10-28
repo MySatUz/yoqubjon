@@ -7,8 +7,8 @@ import { GiveAccessButton, type AccessCourse } from '@/components/admin/courses/
 import { segmentClass, segmentedClass } from '@/components/ui/Misc';
 
 const tabs: Array<{ tab?: CourseTab; label: string }> = [
-  { label: 'Students' },
   { tab: 'tests', label: 'Tests' },
+  { label: 'Students' },
   { tab: 'results', label: 'Results' },
   { tab: 'settings', label: 'Settings' },
 ];
