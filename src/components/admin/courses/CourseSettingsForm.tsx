@@ -321,7 +321,7 @@ export default function CourseSettingsForm({
             </div>
             {deleteBlocked ? (
               testCount > 0 && (
-                <Link href={courseHref(course.value, 'tests')} className={buttonClass({ variant: 'secondary', size: 'sm' })}>
+                <Link href={courseHref(course.value)} className={buttonClass({ variant: 'secondary', size: 'sm' })}>
                   Open tests
                 </Link>
               )

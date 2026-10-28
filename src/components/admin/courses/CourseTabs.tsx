@@ -7,8 +7,8 @@ import { GiveAccessButton, type AccessCourse } from '@/components/admin/courses/
 import { segmentClass, segmentedClass } from '@/components/ui/Misc';
 
 const tabs: Array<{ tab?: CourseTab; label: string }> = [
-  { tab: 'tests', label: 'Tests' },
-  { label: 'Students' },
+  { label: 'Tests' },
+  { tab: 'students', label: 'Students' },
   { tab: 'results', label: 'Results' },
   { tab: 'settings', label: 'Settings' },
 ];
@@ -58,7 +58,7 @@ export function CourseTabs({ courseId }: { courseId: string }) {
  */
 export function CourseHeaderActions({ courseId, courses }: { courseId: string; courses: AccessCourse[] }) {
   const current = useActiveTab();
-  if (current === undefined) return null;
+  if (current === 'students') return null;
 
   return <GiveAccessButton courses={courses} preset={{ courseId }} variant="secondary" />;
 }

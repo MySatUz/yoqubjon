@@ -220,7 +220,7 @@ export default function ResultsGrid({
         icon={<FileText />}
         title={hasAnyTest ? 'No visible tests in this course' : 'No tests in this course yet'}
         action={
-          <Link href={courseHref(courseId, 'tests')} className={buttonClass({ variant: 'secondary', size: 'sm' })}>
+          <Link href={courseHref(courseId)} className={buttonClass({ variant: 'secondary', size: 'sm' })}>
             Open tests
           </Link>
         }

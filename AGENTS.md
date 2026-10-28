@@ -300,8 +300,8 @@ in a bordered tile, each with its count; difficulty drawn as three bars, the
 `DifficultyBars` of `bankBadges.tsx`), words to find, and Search. Nothing is
 listed before that; results are a table with numbered pages. The Board's
 bank tab and the build page's question picker use the same search card
-(`choiceTileClass`, `DifficultyBars`) and list only after Search. A course page has the tabs Students
-(the default), Tests, Results and Settings; access is given from one Give
+(`choiceTileClass`, `DifficultyBars`) and list only after Search. A course page has the tabs Tests
+(the default, at the course's own URL), Students, Results and Settings; access is given from one Give
 access dialog (emails pasted or found by search, a course, 1, 2 or 3 months,
 a preview before anything is saved; access only ever extends). Payment
 requests are reviewed on the Subscription page. Tests are added to a course by

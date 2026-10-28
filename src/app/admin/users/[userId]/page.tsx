@@ -199,7 +199,7 @@ export default async function AdminUserResultsPage({
             {courseAccess.map((grant) => (
               <li key={grant.id} className={listRowClass}>
                 <div className="min-w-0 flex-1">
-                  <Link href={courseHref(grant.category)} prefetch={false} className={cn(linkClass, "block truncate")}>
+                  <Link href={courseHref(grant.category, "students")} prefetch={false} className={cn(linkClass, "block truncate")}>
                     {grant.label}
                   </Link>
                   {grant.note && <p className="mt-0.5 truncate text-xs text-gray-500">{grant.note}</p>}

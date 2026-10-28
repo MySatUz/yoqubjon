@@ -169,7 +169,7 @@ export default async function AdminCoursesPage() {
                     {/* The course is the title, so the narrow popover cuts the
                         sentence around it, never the course's name. */}
                     <Link
-                      href={`${courseHref(row.course.value)}?show=ending`}
+                      href={`${courseHref(row.course.value, 'students')}?show=ending`}
                       className={cn(linkClass, 'block truncate text-sm')}
                     >
                       {row.course.label}

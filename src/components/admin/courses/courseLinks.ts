@@ -1,7 +1,7 @@
-export type CourseTab = 'tests' | 'results' | 'settings';
+export type CourseTab = 'students' | 'results' | 'settings';
 
 /**
- * A course page: Students at the course's own URL, the other tabs under it.
+ * A course page: Tests at the course's own URL, the other tabs under it.
  * The id goes in as stored (upper case); `resolveCourse` also reads the
  * lower-case and dashed forms.
  */

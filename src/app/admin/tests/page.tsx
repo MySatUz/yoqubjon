@@ -17,5 +17,5 @@ export default async function AdminTestsPage({
   await requireAdminPage();
 
   const courseId = (Array.isArray(category) ? category[0] : category)?.trim();
-  redirect(courseId ? courseHref(courseId, 'tests') : '/admin/courses');
+  redirect(courseId ? courseHref(courseId) : '/admin/courses');
 }

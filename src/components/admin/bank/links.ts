@@ -1,9 +1,11 @@
+import { courseHref } from '@/components/admin/courses/courseLinks';
+
 /**
- * A course's Tests tab. The course id is its `TestCollectionVisibility.category`
- * as stored, URL-encoded (the course pages resolve it back).
+ * A course's Tests tab, the course's own URL. The course id is its
+ * `TestCollectionVisibility.category` as stored (the course pages resolve it back).
  */
 export function courseTestsHref(category: string) {
-  return `/admin/courses/${encodeURIComponent(category)}/tests`;
+  return courseHref(category);
 }
 
 /** Where to build a test from the bank into a course. */
