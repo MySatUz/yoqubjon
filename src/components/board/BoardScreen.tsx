@@ -25,9 +25,7 @@ import {
   GridInField,
   MultiSelectHint,
   QuestionDiagram,
-  QuestionNumberTile,
-  questionColumnClass,
-  questionHeadClass,
+  questionColumnLeftClass,
   questionScrollerClass,
   questionStemClass,
   questionSurfaceClass,
@@ -55,11 +53,10 @@ export type ShownQuestion = {
   imageSrc: string | null;
   /** A picture the optimizer cannot fetch: a chosen file's `blob:` URL. */
   imageUnoptimized: boolean;
-  /** The number in the tile: its place in the bank list, or 1 for a pasted one. */
+  /** Its place in the bank list, or 1 for a pasted one; read out when it comes up. */
   number: number;
+  /** In the top bar beside the logo; a pasted question has none. */
   tags: BankTags | null;
-  /** Under "Board" in the top bar: where the question came from. */
-  sourceLabel: string;
 };
 
 export type NextQuestion = {
@@ -153,6 +150,17 @@ function choicesReducer(state: Choices, { type, letter, isMultiSelect }: ChoiceA
 
 const NO_CHOICES: Choices = { selected: [], crossed: [] };
 
+/*
+ * The question stands at the left, under the tags beside the logo, and the
+ * right side stays free to write on (the owner's layout). The bars and the
+ * question share the surface's `px-4 md:px-8` gutter, so from `sm`, where the
+ * logo shows, the column steps in by the logo and its gap (40 + 12px).
+ */
+const BAR_GUTTER_CLASS = 'px-4 md:px-8';
+const BOARD_COLUMN_CLASS = cn(questionColumnLeftClass, 'sm:ml-13 focus:outline-hidden');
+/** Where the column's text starts on a wide screen: the md:px-8 gutter and the step in. */
+const BOARD_COLUMN_START = 32 + 52;
+
 /** A grid-in's key, or a key the choices cannot show, printed once "Show answer" is pressed. */
 function RevealedAnswer({ html }: { html: string }) {
   return (
@@ -167,10 +175,12 @@ function RevealedAnswer({ html }: { html: string }) {
 }
 
 /**
- * The question as the exam lays it out - the same column, tile, diagram,
- * stem and answer rows (`questionParts`) - with the answer kept here instead
- * of in the exam's store. Keyed by the showing, so a new question starts at
- * its top with nothing chosen, crossed out or drawn.
+ * The question as the exam lays it out - the same column, diagram, stem and
+ * answer rows (`questionParts`) - with the answer kept here instead of in the
+ * exam's store. No number row over it: on the board the question is alone,
+ * and its domain and difficulty sit in the top bar (the owner's layout).
+ * Keyed by the showing, so a new question starts at its top with nothing
+ * chosen, crossed out or drawn.
  */
 function BoardQuestionPane({
   shown,
@@ -193,7 +203,7 @@ function BoardQuestionPane({
   const [choices, dispatch] = useReducer(choicesReducer, NO_CHOICES);
   const [gridIn, setGridIn] = useState({ value: '', problem: null as string | null });
   // Where the open tool windows leave room for the question (see `examWindows`).
-  const columnOffset = useColumnOffset();
+  const columnOffset = useColumnOffset(BOARD_COLUMN_START);
   const sheetInset = useSheetInset();
 
   const correctLetters = useMemo(() => new Set(question.correctLetters ?? []), [question.correctLetters]);
@@ -218,13 +228,7 @@ function BoardQuestionPane({
         }}
         className={questionSurfaceClass}
       >
-        <div className={questionColumnClass}>
-          <div data-board-head tabIndex={-1} className={questionHeadClass}>
-            <QuestionNumberTile number={shown.number} />
-            {shown.tags?.domain && <Badge>{getDomainLabel(shown.tags.domain)}</Badge>}
-            {shown.tags?.difficulty && <Badge>{getDifficultyLabel(shown.tags.difficulty)}</Badge>}
-          </div>
-
+        <div data-board-question tabIndex={-1} className={BOARD_COLUMN_CLASS}>
           {shown.imageSrc && <QuestionDiagram src={shown.imageSrc} unoptimized={shown.imageUnoptimized} />}
 
           <div className={questionStemClass} dangerouslySetInnerHTML={{ __html: question.contentHtml }} />
@@ -334,7 +338,7 @@ export default function BoardScreen({
   // Coming up, the board takes the keyboard at the question; moving on with
   // Next leaves it on Next, as the exam does.
   useEffect(() => {
-    if (isVisible) layer?.querySelector<HTMLElement>('[data-board-head]')?.focus({ preventScroll: true });
+    if (isVisible) layer?.querySelector<HTMLElement>('[data-board-question]')?.focus({ preventScroll: true });
   }, [isVisible, layer]);
 
   const { question } = shown;
@@ -353,15 +357,20 @@ export default function BoardScreen({
       // z-50 with the shell's own top layer, and later in the page, so over it.
       className={cn('fixed inset-0 z-50 flex-col overflow-hidden bg-gray-100', isVisible ? 'flex' : 'hidden')}
     >
-      <header className="sticky top-0 z-50 flex h-14 shrink-0 items-center justify-between gap-2 border-b border-gray-200 bg-white px-2 sm:px-4 lg:px-6">
-        <div className="flex min-w-0 flex-1 items-center gap-3">
-          <span className="hidden lg:block">
-            <BrandMark size="sm" />
+      <header
+        className={cn(
+          'sticky top-0 z-50 flex h-14 shrink-0 items-center justify-between gap-2 border-b border-gray-200 bg-white',
+          BAR_GUTTER_CLASS,
+        )}
+      >
+        {/* The logo at its larger size and the question's tags: the bar says
+            nothing else, so a recording shows only the question. */}
+        <div className="flex min-w-0 flex-1 items-center gap-3 overflow-hidden">
+          <span className="hidden sm:block">
+            <BrandMark size="md" />
           </span>
-          <div className="min-w-0 leading-tight">
-            <h1 className="truncate text-sm font-semibold text-gray-900">Board</h1>
-            <p className="mt-0.5 truncate text-xs tabular-nums text-gray-500">{shown.sourceLabel}</p>
-          </div>
+          {shown.tags?.domain && <Badge>{getDomainLabel(shown.tags.domain)}</Badge>}
+          {shown.tags?.difficulty && <Badge>{getDifficultyLabel(shown.tags.difficulty)}</Badge>}
         </div>
 
         {/* The exam's strip, in the exam's order, with full screen at the end. */}
@@ -435,7 +444,12 @@ export default function BoardScreen({
       </div>
 
       {/* The exam's bottom bar and its upward shadow. */}
-      <footer className="sticky bottom-0 z-50 flex h-16 shrink-0 items-center gap-2 border-t border-gray-200 bg-white px-3 shadow-[0_-12px_30px_rgba(15,23,42,0.08)] sm:px-4 lg:px-6">
+      <footer
+        className={cn(
+          'sticky bottom-0 z-50 flex h-16 shrink-0 items-center gap-2 border-t border-gray-200 bg-white shadow-[0_-12px_30px_rgba(15,23,42,0.08)]',
+          BAR_GUTTER_CLASS,
+        )}
+      >
         <Button variant="secondary" size="lg" onClick={onNewQuestion} aria-label="New question" title="New question">
           <ArrowLeft className="h-4 w-4" />
           <span className="hidden sm:inline">New question</span>

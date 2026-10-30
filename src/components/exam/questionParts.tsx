@@ -51,7 +51,13 @@ export const questionSurfaceClass =
  * jumping out of it. Important, because KaTeX's stylesheet is unlayered and
  * beats any utility otherwise.
  */
-export const questionColumnClass = 'mx-auto flex w-full max-w-[680px] flex-1 flex-col [&_.katex]:text-[1.1em]!';
+const columnClass = 'flex w-full max-w-[680px] flex-1 flex-col [&_.katex]:text-[1.1em]!';
+
+/** The exam's column, centred as in Bluebook. */
+export const questionColumnClass = `mx-auto ${columnClass}`;
+
+/** The same column at the left edge: the Board's, which leaves the right side to write on. */
+export const questionColumnLeftClass = columnClass;
 
 /** The row over the question: its number and whatever acts on it. */
 export const questionHeadClass = 'mb-5 flex items-center gap-3 border-b border-gray-200 pb-3 focus:outline-hidden';

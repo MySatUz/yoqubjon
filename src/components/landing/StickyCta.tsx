@@ -10,9 +10,8 @@ import { FREE_OFFER_CTA, countCorrect, freeTestsPhrase } from '@/lib/landing/war
 
 /*
  * The phone's bottom bar. It appears once the warm-up card has scrolled up
- * out of view and steps aside wherever the page already has the same call to
- * action — the plans, the closing section, the footer — so there are never two
- * on screen. Mid warm-up it offers to go back instead of to sign up.
+ * out of view and steps aside at the footer, so it never covers the contacts
+ * and links there. Mid warm-up it offers to go back instead of to sign up.
  *
  * It never shows a score: three questions do not make one, and the empty
  * "— — — / 800" it used to carry read as a block that had failed to load.
@@ -21,7 +20,7 @@ import { FREE_OFFER_CTA, countCorrect, freeTestsPhrase } from '@/lib/landing/war
 
 const CARD_ID = 'warmup-card';
 const TITLE_ID = 'warmup-title';
-const QUIET_ZONES = ['parents-plans', 'closing', 'site-footer'];
+const QUIET_ZONES = ['site-footer'];
 
 /** `freeTests`: how many tests are free (countFreeTests), or null to leave the number out. */
 export default function StickyCta({ freeTests }: { freeTests: number | null }) {

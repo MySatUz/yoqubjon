@@ -45,6 +45,7 @@ export function BackLink({ href, children }: { href: string; children: React.Rea
 export function PageHeader({
   title,
   description,
+  info,
   actions,
   back,
   meta,
@@ -52,6 +53,8 @@ export function PageHeader({
 }: {
   title: React.ReactNode;
   description?: React.ReactNode;
+  /** An <InfoTip> beside the title, for a description most visits do not need. */
+  info?: React.ReactNode;
   actions?: React.ReactNode;
   /** A <BackLink> rendered above the title. */
   back?: React.ReactNode;
@@ -59,12 +62,20 @@ export function PageHeader({
   meta?: React.ReactNode;
   className?: string;
 }) {
+  const heading = <h1 className="break-words text-xl font-semibold tracking-tight text-gray-900 sm:text-2xl">{title}</h1>;
   return (
     <header className={cn('space-y-3', className)}>
       {back}
       <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
         <div className="min-w-0">
-          <h1 className="break-words text-xl font-semibold tracking-tight text-gray-900 sm:text-2xl">{title}</h1>
+          {info ? (
+            <div className="flex items-center gap-1">
+              {heading}
+              {info}
+            </div>
+          ) : (
+            heading
+          )}
           {description && <p className="mt-1 max-w-2xl text-sm text-gray-600">{description}</p>}
           {meta && <div className="mt-2 flex flex-wrap items-center gap-2">{meta}</div>}
         </div>

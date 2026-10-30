@@ -23,17 +23,6 @@ function useFinishedRun(): WarmupRun | null {
   return stored?.done ? stored : null;
 }
 
-/** The closing section's line: "Your warm-up: 2 of 3 in 3 min 41 s. The real thing is next." */
-export function WarmupEchoLine({ className }: { className?: string }) {
-  const run = useFinishedRun();
-  if (!run) return null;
-  return (
-    <p className={cn('font-medium text-gray-900', className)}>
-      Your warm-up: {countCorrect(run.answers)} of 3 in {formatDuration(run.totalMs / 1000)}. The real thing is next.
-    </p>
-  );
-}
-
 /** The sign-up screen's chip, with a still copy of the warm-up's rise path. */
 export function WarmupChip({ className }: { className?: string }) {
   const run = useFinishedRun();

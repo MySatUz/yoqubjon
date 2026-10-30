@@ -203,15 +203,6 @@ export function feedbackFor(question: WarmupQuestion, given: string | null, stat
   return question.traps[String(parseGridIn(given))] ?? question.otherwise;
 }
 
-/** A stored answer as the review prints it: "19/3", "−2", or a dash. */
-export function answerLabel(question: WarmupQuestion, given: string | null) {
-  if (given === null) return '—';
-  if (question.kind === 'choice') {
-    return question.options.find((option) => option.letter === given)?.plain ?? given;
-  }
-  return given.replace('-', MINUS);
-}
-
 /* ─────────────────────────────── runs ─────────────────────────────── */
 
 export interface WarmupAnswer {

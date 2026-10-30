@@ -93,32 +93,6 @@
   to { transform: scaleX(1); }
 }
 
-/* The closing section's line (SlopeToGoal with `animate`): drawn once up to
-   800 the first time it is seen, then its end dot arrives. */
-.drawOnView {
-  stroke-dasharray: 1;
-  stroke-dashoffset: 1;
-}
-.inView .drawOnView {
-  animation: draw-once 900ms cubic-bezier(0.22, 1, 0.36, 1) 120ms forwards;
-}
-@keyframes draw-once {
-  to { stroke-dashoffset: 0; }
-}
-
-.dotOnView {
-  opacity: 0;
-  transform-box: fill-box;
-  transform-origin: center;
-}
-.inView .dotOnView {
-  animation: dot-in 200ms cubic-bezier(0.34, 1.56, 0.64, 1) 900ms forwards;
-}
-@keyframes dot-in {
-  from { opacity: 0; transform: scale(0.4); }
-  to { opacity: 1; transform: scale(1); }
-}
-
 /* ── Hero backdrop: the slope line, looping ─────────────────────────── */
 
 .heroDraw {
@@ -154,61 +128,21 @@
   42%, 100% { transform: scale(1); }
 }
 
-/* ── The hard branch: Module 1 → fork → harder Module 2 → 800 ───────── */
-
-.branchUpper {
-  transform-box: fill-box;
-  transform-origin: 0 50%;
-  transform: scaleX(0);
-}
-.inView .branchUpper {
-  transform: scaleX(1);
-  transition: transform 600ms cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-/* CSS pixels on an SVG element are user units, so these follow the viewBox. */
-.runner {
-  transform: translate(32px, 108px);
-}
-.inView .runner {
-  animation: travel 4.2s cubic-bezier(0.65, 0, 0.35, 1) 300ms infinite;
-}
-@keyframes travel {
-  0% { transform: translate(32px, 108px); opacity: 0; }
-  6% { opacity: 1; }
-  22% { transform: translate(108px, 108px); }
-  58%, 84% { transform: translate(288px, 32px); opacity: 1; }
-  94%, 100% { transform: translate(288px, 32px); opacity: 0; }
-}
-
-.ring {
-  transform-box: fill-box;
-  transform-origin: center;
-}
-.inView .ring {
-  animation: ring 4.2s cubic-bezier(0.34, 1.56, 0.64, 1) 300ms infinite;
-}
-@keyframes ring {
-  0%, 56% { transform: scale(1); }
-  62% { transform: scale(1.35); }
-  70%, 100% { transform: scale(1); }
-}
-
-/* "800" turns ink blue the moment the first run arrives, and stays so.
-   The palette's own variables: Tailwind emits both, as the app uses them. */
-.goal {
-  fill: var(--color-gray-500);
-  transition: fill 1ms 1.7s;
-}
-.inView .goal {
-  fill: var(--color-ink-600);
-  font-weight: 600;
-}
-
 /* Loops stop while their element is off screen. */
 .paused,
 .paused * {
   animation-play-state: paused !important;
+}
+
+/* ── The header (SiteNav) ───────────────────────────────────────────── */
+/* It slides up out of the way while the page scrolls down and back the
+   moment it scrolls up. */
+
+.headerBar {
+  transition: transform 240ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.headerBarTucked {
+  transform: translateY(-100%);
 }
 
 /* ── The header's phone menu (SiteNav) ──────────────────────────────── */
@@ -263,6 +197,8 @@
 /* ── Reduced motion: everything in its final place, nothing looping ──── */
 
 @media (prefers-reduced-motion: reduce) {
+  /* The header still steps aside, without the slide. */
+  .headerBar,
   .navBar,
   .menu,
   .menuOpen,
@@ -296,43 +232,13 @@
     transform: none;
   }
 
-  .drawOnView,
-  .inView .drawOnView,
   .heroDraw {
     animation: none;
     stroke-dashoffset: 0;
   }
 
-  .dotOnView,
-  .inView .dotOnView {
-    animation: none;
-    opacity: 1;
-  }
-
   .heroGoal {
     animation: none;
     opacity: 1;
-  }
-
-  .branchUpper,
-  .inView .branchUpper {
-    transform: none;
-    transition: none;
-  }
-
-  .runner,
-  .inView .runner {
-    animation: none;
-    transform: translate(288px, 32px);
-  }
-
-  .inView .ring {
-    animation: none;
-  }
-
-  .goal {
-    fill: var(--color-ink-600);
-    font-weight: 600;
-    transition: none;
   }
 }

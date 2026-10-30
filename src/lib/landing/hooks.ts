@@ -27,29 +27,6 @@ export function useReducedMotion() {
   );
 }
 
-/** True once the element has been seen, and stays true: entrances play once. */
-export function useInViewOnce<T extends Element>(threshold = 0.4) {
-  const ref = useRef<T>(null);
-  const [inView, setInView] = useState(false);
-
-  useEffect(() => {
-    const element = ref.current;
-    if (!element) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (!entry.isIntersecting) return;
-        setInView(true);
-        observer.disconnect();
-      },
-      { threshold },
-    );
-    observer.observe(element);
-    return () => observer.disconnect();
-  }, [threshold]);
-
-  return [ref, inView] as const;
-}
-
 /** Whether any of the element is on screen, for pausing loops that are not. */
 export function useOnScreen<T extends Element>() {
   const ref = useRef<T>(null);

@@ -18,7 +18,8 @@ system. Reaching outside them is drift — if a design genuinely needs a sixth
 colour or another radius, change this file in the same commit.
 
 **Build screens from `src/components/ui/`, not from raw class strings.**
-`Page` / `PageHeader` / `BackLink` / `SectionHeading` (Page.tsx), `Card` /
+`Page` / `PageHeader` / `BackLink` / `SectionHeading` (Page.tsx), `InfoTip`
+for an "i" beside a title in place of its description line (InfoTip.tsx), `Card` /
 `CardHeader` / `CardBody` / `CardFooter` / `cardClass` / `insetClass`
 (Card.tsx), `Button` / `IconButton` / `buttonClass()` for links that look like
 buttons / `linkClass` for links in text (Button.tsx),
@@ -191,14 +192,17 @@ real button. Never a paragraph, sample numbers or a page of centred grey text.
 items) and status badges · `rounded-lg` buttons, inputs, icon buttons ·
 `rounded-xl` inner elements (inset panels, alerts, answer rows) · `rounded-2xl`
 cards, panels, popovers and modals · `rounded-full` avatars, filter chips,
-progress bars, the sidebar's active tab and the landing's floating header with
+progress bars, the sidebar's active tab and the landing header's pill with
 its links and buttons (`buttonClass({ pill: true })`). No `rounded-3xl`, no bare
 `rounded`, no arbitrary `rounded-[2rem]`.
 
 **Elevation — three steps, one light source, never tinted.** `border-gray-200`
 alone for a card (the default — cards are flat) · `shadow-lg` for dropdowns,
-popovers and the landing's header (`SiteNav`: a white pill that stays at the top
-while the page scrolls, plain white with no blur) · `shadow-2xl` for modals. On controls only the key edges above:
+popovers and the landing header's pill (`SiteNav`: the logo at the top left
+and a white pill of links on the right, both on the page's own container,
+plain white with no blur; the pill has its shadow only at the very top of the
+page, and lower down both sit on a white bar with a `gray-200` bottom edge, so
+the logo never lies over a section's text) · `shadow-2xl` for modals. On controls only the key edges above:
 `shadow-xs` under a secondary button and the primary's inset bottom edge
 (Button.tsx), plus `shadow-sm` on the selected segment of a segmented control.
 Coloured shadows (`shadow-ink-200`, `shadow-green-100`, …) are out — the
@@ -232,9 +236,11 @@ entrance animations on page content. The one exception is the public landing
 (`src/components/landing/`), where the motion *is* the demo: it lives in
 `landing.module.css`, animates only transform, opacity and stroke offset,
 pauses off screen and has a `prefers-reduced-motion` version. Keep it there.
-The landing's phone menu (`SiteNav`) is the one piece of chrome that moves: its
-panel fades in, its items rise 16px 60ms apart, and its toggle's two drawn bars
-turn into a cross; the rules and their reduced-motion answer sit in the same file.
+The landing's header (`SiteNav`) is the one piece of chrome that moves: it
+slides up out of the way while the page scrolls down and comes back the moment
+it scrolls up (always shown near the top); its phone menu's panel fades in, its
+items rise 16px 60ms apart, and its toggle's two drawn bars turn into a cross;
+the rules and their reduced-motion answer sit in the same file.
 
 **Not in this codebase:** gradients, `backdrop-filter`, noise or grain overlays,
 blurred colour "orbs" or decorative blobs, glassmorphism, dark "hero" banners,
@@ -300,7 +306,10 @@ in a bordered tile, each with its count; difficulty drawn as three bars, the
 `DifficultyBars` of `bankBadges.tsx`), words to find, and Search. Nothing is
 listed before that; results are a table with numbered pages. The Board's
 bank tab and the build page's question picker use the same search card
-(`choiceTileClass`, `DifficultyBars`) and list only after Search. A course page has the tabs Tests
+(`choiceTileClass`, `DifficultyBars`) and list only after Search. On the
+Board a question stands at the left, under its domain and difficulty tags
+beside the logo, with no number tile, so the right side stays free to write
+on: the exam's column is centred, the Board's is not (the owner's layout). A course page has the tabs Tests
 (the default, at the course's own URL), Students, Results and Settings; access is given from one Give
 access dialog (emails pasted or found by search, a course, 1, 2 or 3 months,
 a preview before anything is saved; access only ever extends). Payment

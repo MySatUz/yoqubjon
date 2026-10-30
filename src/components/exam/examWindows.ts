@@ -146,11 +146,39 @@ function columnOffset(viewportWidth: number) {
   return Math.round(Math.min(reach, Math.max(-reach, offset)));
 }
 
-/** A number, so the column only re-renders when where it goes really changes. */
-export function useColumnOffset() {
+/**
+ * The same for a column held at the left edge (the Board's), whose text
+ * starts `start` px in: a window on the left half pushes it right until it is
+ * a gutter clear of the window; one on the right half lies over the free side
+ * and leaves it where it is. It never moves so far that it would leave the
+ * screen.
+ */
+function leftColumnOffset(viewportWidth: number, start: number) {
+  if (viewportWidth < COLUMN_SHIFT_MIN_VIEWPORT) return 0;
+
+  let left = 0;
+  for (const footprint of Object.values(footprints)) {
+    if (footprint?.kind !== 'window') continue;
+    if ((footprint.left + footprint.right) / 2 < viewportWidth / 2) left = Math.max(left, footprint.right);
+  }
+  if (left === 0) return 0;
+
+  const gutter = (COLUMN_FOOTPRINT - 680) / 2;
+  const reach = Math.max(0, viewportWidth - start - COLUMN_FOOTPRINT + gutter);
+  return Math.round(Math.min(reach, Math.max(0, left + gutter - start)));
+}
+
+/**
+ * A number, so the column only re-renders when where it goes really changes.
+ * `leftStart`: for a column held at the left edge, where its text starts.
+ */
+export function useColumnOffset(leftStart?: number) {
   return useSyncExternalStore(
     subscribeToLayout,
-    () => columnOffset(window.innerWidth),
+    () =>
+      leftStart === undefined
+        ? columnOffset(window.innerWidth)
+        : leftColumnOffset(window.innerWidth, leftStart),
     () => 0
   );
 }
