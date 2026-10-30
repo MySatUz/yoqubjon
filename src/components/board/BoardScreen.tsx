@@ -369,8 +369,8 @@ export default function BoardScreen({
           <span className="hidden sm:block">
             <BrandMark size="md" />
           </span>
-          {shown.tags?.domain && <Badge>{getDomainLabel(shown.tags.domain)}</Badge>}
-          {shown.tags?.difficulty && <Badge>{getDifficultyLabel(shown.tags.difficulty)}</Badge>}
+          {shown.tags?.domain && <Badge size="md">{getDomainLabel(shown.tags.domain)}</Badge>}
+          {shown.tags?.difficulty && <Badge size="md">{getDifficultyLabel(shown.tags.difficulty)}</Badge>}
         </div>
 
         {/* The exam's strip, in the exam's order, with full screen at the end. */}
