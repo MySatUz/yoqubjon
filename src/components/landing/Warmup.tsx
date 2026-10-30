@@ -370,7 +370,7 @@ export default function Warmup({ freeTests }: { freeTests: number | null }) {
   } else headerClock = <Odometer value={formatClock(shown)} animate={!reduce} />;
 
   return (
-    <div className="relative mx-auto grid max-w-6xl grid-cols-[minmax(0,1fr)] gap-6 px-4 pb-12 pt-6 sm:px-6 lg:grid-cols-[minmax(0,1fr)_460px] lg:items-start lg:gap-14 lg:px-8 lg:pb-24 lg:pt-16">
+    <div className="relative mx-auto grid max-w-6xl grid-cols-[minmax(0,1fr)] gap-6 px-4 pb-10 pt-6 sm:px-6 lg:grid-cols-[minmax(0,1fr)_460px] lg:items-start lg:gap-14 lg:px-8 lg:pb-16 lg:pt-10">
       <div>
         <h1
           id="warmup-heading"
@@ -393,7 +393,7 @@ export default function Warmup({ freeTests }: { freeTests: number | null }) {
 
         {/* The demo's own line, with the card's clock in it. It never
             reflows: only the digits change, and they are tabular. */}
-        <div className="mt-8 border-t border-gray-200 pt-6 lg:mt-12">
+        <div className="mt-8 border-t border-gray-200 pt-6 lg:mt-10">
           <p className="text-lg font-semibold tracking-tight text-gray-900">
             Or try three questions first. Each one harder. You have{' '}
             <span className={cn('inline-flex tabular-nums', hurry && 'text-amber-700')}>

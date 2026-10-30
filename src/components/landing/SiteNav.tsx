@@ -9,23 +9,25 @@ import { FREE_OFFER_CTA, SITE_MENU_EVENT } from '@/lib/landing/warmup';
 import styles from './landing.module.css';
 
 /*
- * The landing's header: a white pill that floats at the top and stays there
- * while the page scrolls. On a wide screen it lists the sections and marks
+ * The landing's header: the logo in the top-left corner and a white pill of
+ * links on the right. Both slide away while the page scrolls down and come
+ * back the moment it scrolls up. At the very top they sit on the page itself; anywhere lower
+ * a white bar with a bottom edge comes with them, so the logo never lies over
+ * a section's text. On a wide screen the pill lists the sections and marks
  * the one in view. Below lg the sections move into a full-height menu, and
  * the sign-up button is left to the phone's bottom bar (StickyCta), so the two
  * are never on screen together. Plain white, no blur: AGENTS.md keeps
  * backdrop-filter out of the codebase.
  */
 
-const SECTIONS = [
-  { id: 'review', label: 'Review' },
-  { id: 'test-screen', label: 'Test screen' },
-  { id: 'olympiads', label: 'Olympiads' },
-  { id: 'parents', label: 'For parents' },
-  { id: 'faq', label: 'FAQ' },
-];
+const SECTIONS = [{ id: 'test-screen', label: 'Test screen' }];
 // Every section is watched, so one without a link clears the mark.
-const WATCHED = ['warmup', 'review', 'module-2', 'test-screen', 'olympiads', 'parents', 'faq', 'closing'];
+const WATCHED = ['warmup', 'test-screen'];
+
+// Above this the header always shows: the hero's top is still on screen.
+const ALWAYS_SHOWN_ABOVE = 80;
+// A smaller move is not a change of direction: a trackpad jitters by a pixel or two.
+const SCROLL_SLOP = 4;
 
 // Ghost is right here: the pill around them already says "controls". The
 // section in view is marked in the accent's subtle ground.
@@ -39,9 +41,32 @@ const sectionLinkClass = buttonClass({
 export default function SiteNav() {
   const [current, setCurrent] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
+  const [atTop, setAtTop] = useState(true);
+  const [tucked, setTucked] = useState(false);
   const headerRef = useRef<HTMLElement>(null);
   const toggleRef = useRef<HTMLButtonElement>(null);
   const firstLinkRef = useRef<HTMLAnchorElement>(null);
+
+  // A browser sends at most one scroll event a frame, so the handler runs as it comes.
+  useEffect(() => {
+    let lastY = Math.max(window.scrollY, 0);
+    const onScroll = () => {
+      // Safari reports a negative offset while the page bounces past the top.
+      const y = Math.max(window.scrollY, 0);
+      setAtTop(y < 1);
+      if (y < ALWAYS_SHOWN_ABOVE) {
+        setTucked(false);
+        lastY = y;
+        return;
+      }
+      if (Math.abs(y - lastY) < SCROLL_SLOP) return;
+      setTucked(y > lastY);
+      lastY = y;
+    };
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -67,7 +92,7 @@ export default function SiteNav() {
     firstLinkRef.current?.focus({ preventScroll: true });
 
     // The page under the panel is out of reach while it is open: <main> and
-    // the footer go inert, and Tab cycles through the pill and the menu.
+    // the footer go inert, and Tab cycles through the header and the menu.
     const header = headerRef.current;
     const behind = [...(header?.parentElement?.children ?? [])].filter(
       (element): element is HTMLElement => element instanceof HTMLElement && ['MAIN', 'FOOTER'].includes(element.tagName),
@@ -117,50 +142,74 @@ export default function SiteNav() {
   };
 
   return (
-    <header ref={headerRef} className="pointer-events-none sticky top-0 z-50 px-4 pt-3">
-      <nav
-        aria-label="Main"
-        className="pointer-events-auto relative z-10 mx-auto flex w-fit max-w-full items-center gap-1 rounded-full border border-gray-200 bg-white p-1 shadow-lg"
+    // Focus coming back to a tucked header (Shift+Tab from the page) brings it down.
+    <header ref={headerRef} onFocus={() => setTucked(false)} className="pointer-events-none sticky top-0 z-50">
+      {/* The bar slides, not the header: a transform would make the header
+          the box the fixed menu below is laid out in. Its row is the page's
+          own container, so the logo stands over the headline's edge and the
+          pill over the warm-up card's. */}
+      <div
+        className={cn(
+          'relative z-10 border-b',
+          atTop ? 'border-transparent' : 'pointer-events-auto border-gray-200 bg-white',
+          styles.headerBar,
+          tucked && !open && styles.headerBarTucked,
+        )}
       >
-        <Link href="/" aria-label="MYSATuz home" className={cn('flex items-center gap-2 rounded-full pr-3', focusRingClass)}>
-          <BrandMark size="sm" />
-          <span className="text-base font-semibold tracking-tight text-gray-900">MYSATuz</span>
-        </Link>
-
-        <div className="hidden items-center gap-0.5 lg:flex">
-          {SECTIONS.map((section) => (
-            <a key={section.id} href={`#${section.id}`} aria-current={currentOf(section.id)} className={sectionLinkClass}>
-              {section.label}
-            </a>
-          ))}
-        </div>
-
-        {/* Quiet, not ghost: beside the primary (and alone on a phone) it has
-            to look like a button, not like a line of grey text. */}
-        <Link href="/login" className={buttonClass({ variant: 'quiet', size: 'sm', pill: true })}>
-          Sign in
-        </Link>
-        <div className="hidden lg:block">
-          <Link href="/register?from=nav" className={buttonClass({ size: 'sm', pill: true })}>
-            {FREE_OFFER_CTA}
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3 sm:px-6 lg:px-8">
+          <Link
+            href="/"
+            aria-label="MYSATuz home"
+            className={cn('pointer-events-auto flex items-center gap-2.5 rounded-full pr-1', focusRingClass)}
+          >
+            <BrandMark size="md" />
+            <span className="text-lg font-semibold tracking-tight text-gray-900">MYSATuz</span>
           </Link>
+
+          {/* The pill floats with its shadow only on the page itself; on the bar it is drawn by its edge. */}
+          <nav
+            aria-label="Main"
+            className={cn(
+              'pointer-events-auto flex items-center gap-1 rounded-full border border-gray-200 bg-white p-1',
+              atTop && 'shadow-lg',
+            )}
+          >
+            <div className="hidden items-center gap-0.5 lg:flex">
+              {SECTIONS.map((section) => (
+                <a key={section.id} href={`#${section.id}`} aria-current={currentOf(section.id)} className={sectionLinkClass}>
+                  {section.label}
+                </a>
+              ))}
+            </div>
+
+            {/* Quiet, not ghost: beside the primary (and alone on a phone) it has
+                to look like a button, not like a line of grey text. */}
+            <Link href="/login" className={buttonClass({ variant: 'quiet', size: 'sm', pill: true })}>
+              Sign in
+            </Link>
+            <div className="hidden lg:block">
+              <Link href="/register?from=nav" className={buttonClass({ size: 'sm', pill: true })}>
+                {FREE_OFFER_CTA}
+              </Link>
+            </div>
+
+            <button
+              ref={toggleRef}
+              type="button"
+              aria-expanded={open}
+              aria-controls="site-menu"
+              aria-label={open ? 'Close menu' : 'Open menu'}
+              onClick={() => setOpen((value) => !value)}
+              className={iconButtonClass({ size: 'sm', pill: true, className: 'relative lg:hidden' })}
+            >
+              <span aria-hidden className={cn(styles.navBar, styles.navBarTop, open && styles.navBarOpen)} />
+              <span aria-hidden className={cn(styles.navBar, styles.navBarBottom, open && styles.navBarOpen)} />
+            </button>
+          </nav>
         </div>
+      </div>
 
-        <button
-          ref={toggleRef}
-          type="button"
-          aria-expanded={open}
-          aria-controls="site-menu"
-          aria-label={open ? 'Close menu' : 'Open menu'}
-          onClick={() => setOpen((value) => !value)}
-          className={iconButtonClass({ size: 'sm', pill: true, className: 'relative lg:hidden' })}
-        >
-          <span aria-hidden className={cn(styles.navBar, styles.navBarTop, open && styles.navBarOpen)} />
-          <span aria-hidden className={cn(styles.navBar, styles.navBarBottom, open && styles.navBarOpen)} />
-        </button>
-      </nav>
-
-      {/* Inside the header, so it shares its layer: the pill stays on top
+      {/* Inside the header, so it shares its layer: the bar stays on top
           of the panel, and both sit above the phone's bottom bar. */}
       <div
         id="site-menu"

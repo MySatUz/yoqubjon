@@ -8,6 +8,7 @@ import TexInput, { type ChosenImage } from '@/components/board/TexInput';
 import { useBankList } from '@/components/board/useBankList';
 import type { BoardBankPage } from '@/app/admin/board/boardData';
 import type { BankRow } from '@/components/board/types';
+import { InfoTip } from '@/components/ui/InfoTip';
 import { Page, PageHeader } from '@/components/ui/Page';
 import { segmentClass, segmentedClass } from '@/components/ui/Misc';
 
@@ -152,7 +153,6 @@ export default function BoardApp({
         imageUnoptimized: imageSrc !== null && !canOptimize(imageSrc),
         number: 1,
         tags: null,
-        sourceLabel: 'Pasted question',
       });
     });
   };
@@ -179,7 +179,6 @@ export default function BoardApp({
       imageUnoptimized: question.imageUrl !== null && !canOptimize(question.imageUrl),
       number: index + 1,
       tags,
-      sourceLabel: `Question bank · ${index + 1} of ${Math.max(bank.total, rows.length)}`,
     });
     return null;
   };
@@ -226,19 +225,27 @@ export default function BoardApp({
   return (
     <>
       <Page>
+        {/* The explanation behind an "i" and the way in level with the title
+            (the owner's call): the question's fields start right under it. */}
         <PageHeader
           title="Board"
-          description="One question as on the test, with the calculator, the reference sheet and the whiteboard, for solving it in class or on video. No timer, and nothing is saved."
+          info={
+            <InfoTip label="About the Board">
+              One question as on the test, with the calculator, the reference sheet and the whiteboard, for solving it
+              in class or on video. No timer, and nothing is saved.
+            </InfoTip>
+          }
+          actions={
+            <div className={segmentedClass}>
+              <button type="button" aria-pressed={way === 'tex'} onClick={() => setWay('tex')} className={segmentClass(way === 'tex')}>
+                Paste .tex
+              </button>
+              <button type="button" aria-pressed={way === 'bank'} onClick={() => setWay('bank')} className={segmentClass(way === 'bank')}>
+                Question bank
+              </button>
+            </div>
+          }
         />
-
-        <div className={segmentedClass}>
-          <button type="button" aria-pressed={way === 'tex'} onClick={() => setWay('tex')} className={segmentClass(way === 'tex')}>
-            Paste .tex
-          </button>
-          <button type="button" aria-pressed={way === 'bank'} onClick={() => setWay('bank')} className={segmentClass(way === 'bank')}>
-            Question bank
-          </button>
-        </div>
 
         {way === 'tex' ? (
           <TexInput
