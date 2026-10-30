@@ -27,13 +27,24 @@ const statusIcons: Partial<Record<Tone, React.ReactNode>> = {
   danger: <CircleX />,
 };
 
+/*
+ * `sm` everywhere a badge sits in a row or a card; `md` where it is the only
+ * text in a bar and is read from across a room: the Board's question tags.
+ */
+const sizes = {
+  sm: 'h-5 gap-1 px-1.5 text-xs [&_svg]:h-3.5 [&_svg]:w-3.5',
+  md: 'h-7 gap-1.5 px-2.5 text-sm [&_svg]:h-4 [&_svg]:w-4',
+};
+
 export function badgeClass({
   tone = 'neutral',
   onCanvas = false,
+  size = 'sm',
   className,
-}: { tone?: Tone; onCanvas?: boolean; className?: string } = {}) {
+}: { tone?: Tone; onCanvas?: boolean; size?: keyof typeof sizes; className?: string } = {}) {
   return cn(
-    'inline-flex h-5 shrink-0 items-center gap-1 whitespace-nowrap rounded-md px-1.5 text-xs font-medium [&_svg]:h-3.5 [&_svg]:w-3.5',
+    'inline-flex shrink-0 items-center whitespace-nowrap rounded-md font-medium',
+    sizes[size],
     tone === 'neutral' && onCanvas ? neutralOnCanvas : tones[tone],
     className,
   );
@@ -53,6 +64,7 @@ export function badgeClass({
 export function Badge({
   tone = 'neutral',
   onCanvas,
+  size,
   icon = true,
   className,
   children,
@@ -60,6 +72,7 @@ export function Badge({
 }: {
   tone?: Tone;
   onCanvas?: boolean;
+  size?: 'sm' | 'md';
   icon?: boolean | React.ReactNode;
   className?: string;
   children: React.ReactNode;
@@ -69,7 +82,7 @@ export function Badge({
   const leading = icon === true ? (hasOwnIcon ? null : statusIcons[tone]) : icon || null;
 
   return (
-    <span className={badgeClass({ tone, onCanvas, className })} title={title}>
+    <span className={badgeClass({ tone, onCanvas, size, className })} title={title}>
       {leading}
       {children}
     </span>

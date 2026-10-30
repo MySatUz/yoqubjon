@@ -156,14 +156,15 @@ export default function SiteNav() {
           tucked && !open && styles.headerBarTucked,
         )}
       >
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3 sm:px-6 lg:px-8">
+        {/* The logo at its largest, nearly the bar's full height (the owner's call). */}
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-2 sm:px-6 lg:px-8">
           <Link
             href="/"
             aria-label="MYSATuz home"
-            className={cn('pointer-events-auto flex items-center gap-2.5 rounded-full pr-1', focusRingClass)}
+            className={cn('pointer-events-auto flex items-center gap-3 rounded-full pr-1', focusRingClass)}
           >
-            <BrandMark size="md" />
-            <span className="text-lg font-semibold tracking-tight text-gray-900">MYSATuz</span>
+            <BrandMark size="lg" />
+            <span className="text-2xl font-semibold tracking-tight text-gray-900">MYSATuz</span>
           </Link>
 
           {/* The pill floats with its shadow only on the page itself; on the bar it is drawn by its edge. */}

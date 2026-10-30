@@ -86,7 +86,9 @@ surface colour.
 in a white disc with an ink-blue ring, from their site kit of 2026-10-27. It is
 a picture, not a drawing, and its colours are its own — the snake's green and
 the crown's brown belong to the mark and are not palette colours to reuse.
-`BrandMark` shows it at 32 or 40px from `public/brand/mark-96.webp`, with
+`BrandMark` shows it at 32 or 40px from `public/brand/mark-96.webp`, and at
+56px (`lg`, the landing header) from `mark-128.webp`, both cut from the kit's
+`mark.png`, with
 "MYSATuz" set beside it in Fira Sans; the white disc reads on light pages and
 on the navy sidebar alike. The tab icon (`src/app/favicon.ico`, `icon.png`),
 `apple-icon.png`, the manifest icons (`public/icons/`, `manifest.ts`) and the
@@ -198,8 +200,9 @@ its links and buttons (`buttonClass({ pill: true })`). No `rounded-3xl`, no bare
 
 **Elevation — three steps, one light source, never tinted.** `border-gray-200`
 alone for a card (the default — cards are flat) · `shadow-lg` for dropdowns,
-popovers and the landing header's pill (`SiteNav`: the logo at the top left
-and a white pill of links on the right, both on the page's own container,
+popovers and the landing header's pill (`SiteNav`: the logo at the top left,
+at 56px nearly the bar's full height, and a white pill of links on the right,
+both on the page's own container,
 plain white with no blur; the pill has its shadow only at the very top of the
 page, and lower down both sit on a white bar with a `gray-200` bottom edge, so
 the logo never lies over a section's text) · `shadow-2xl` for modals. On controls only the key edges above:
@@ -308,7 +311,8 @@ listed before that; results are a table with numbered pages. The Board's
 bank tab and the build page's question picker use the same search card
 (`choiceTileClass`, `DifficultyBars`) and list only after Search. On the
 Board a question stands at the left, under its domain and difficulty tags
-beside the logo, with no number tile, so the right side stays free to write
+beside the logo (`Badge size="md"`, the one place badges are larger: they are
+read from across a room), with no number tile, so the right side stays free to write
 on: the exam's column is centred, the Board's is not (the owner's layout). A course page has the tabs Tests
 (the default, at the course's own URL), Students, Results and Settings; access is given from one Give
 access dialog (emails pasted or found by search, a course, 1, 2 or 3 months,
