@@ -5,6 +5,7 @@ import Link from 'next/link';
 import BrandMark from '@/components/layout/BrandMark';
 import { buttonClass, focusRingClass, iconButtonClass, linkClass } from '@/components/ui/Button';
 import { cn } from '@/components/ui/cn';
+import { usePageScrollLock } from '@/components/ui/usePageScrollLock';
 import { FREE_OFFER_CTA, SITE_MENU_EVENT } from '@/lib/landing/warmup';
 import styles from './landing.module.css';
 
@@ -83,12 +84,12 @@ export default function SiteNav() {
     return () => observer.disconnect();
   }, []);
 
+  // The page under the open menu holds still.
+  usePageScrollLock(open);
+
   useEffect(() => {
     window.dispatchEvent(new CustomEvent(SITE_MENU_EVENT, { detail: open }));
     if (!open) return;
-    const root = document.documentElement;
-    const overflow = root.style.overflow;
-    root.style.overflow = 'hidden';
     firstLinkRef.current?.focus({ preventScroll: true });
 
     // The page under the panel is out of reach while it is open: <main> and
@@ -127,7 +128,6 @@ export default function SiteNav() {
     window.addEventListener('keydown', onKey);
     wide.addEventListener('change', onWide);
     return () => {
-      root.style.overflow = overflow;
       behind.forEach((element, index) => (element.inert = wasInert[index]));
       window.removeEventListener('keydown', onKey);
       wide.removeEventListener('change', onWide);

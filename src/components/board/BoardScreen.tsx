@@ -43,6 +43,7 @@ import BrandMark from '@/components/layout/BrandMark';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { cn } from '@/components/ui/cn';
+import { usePageScrollLock } from '@/components/ui/usePageScrollLock';
 import { getDifficultyLabel, getDomainLabel } from '@/lib/questionBank';
 
 /** A question on the board, as `BoardApp` hands it over. */
@@ -334,6 +335,9 @@ export default function BoardScreen({
   }
 
   useInertBehind(layer, isVisible);
+  // The admin page under the board holds still: its scrollbar showed at the
+  // board's right edge, over a question with nothing to scroll.
+  usePageScrollLock(isVisible);
 
   // Coming up, the board takes the keyboard at the question; moving on with
   // Next leaves it on Next, as the exam does.

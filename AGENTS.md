@@ -31,7 +31,10 @@ map), `StatGroup` + `Stat` (Stat.tsx), `List` + `RowText` +
 `iconCircleClass` / `segmentedClass` + `segmentClass()` /
 `chipGroupClass` + `chipClass()` + `ChipCheck` / `KeyValue` / `Progress` (Misc.tsx),
 `ConfirmDialog` / `useConfirm` for a question, `Dialog` for a form or a
-task (Dialog.tsx) — never `window.confirm()` or `alert()`. A caller's `className`
+task (Dialog.tsx) — never `window.confirm()` or `alert()`. Any other layer
+over the whole window (the Board, the landing's phone menu) calls
+`usePageScrollLock` (usePageScrollLock.ts), as the dialogs do, so the page
+under it holds still and its scrollbar does not show beside the layer. A caller's `className`
 adds layout only (margin, width, grid placement) — there is no tailwind-merge,
 so a second colour or padding would fight the primitive's own. Dates go through
 `formatDate` / `formatDateTime` (`src/lib/formatDate.ts`): English, Tashkent

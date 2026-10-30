@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Loader2, X } from 'lucide-react';
 import { buttonClass, iconButtonClass } from '@/components/ui/Button';
+import { usePageScrollLock } from '@/components/ui/usePageScrollLock';
 
 export interface ConfirmOptions {
   title: React.ReactNode;
@@ -77,6 +78,9 @@ export function ConfirmDialog({
     busyRef.current = busy;
     focusTargetRef.current = initialFocus ?? (tone === 'danger' ? 'cancel' : 'confirm');
   }, [busy, initialFocus, onCancel, tone]);
+
+  // The page under the scrim holds still, and its scrollbar goes with it.
+  usePageScrollLock(open);
 
   useEffect(() => {
     if (!open) return;
@@ -248,6 +252,9 @@ export function Dialog({
     onCloseRef.current = onClose;
     busyRef.current = busy;
   }, [busy, onClose]);
+
+  // As in ConfirmDialog: the page under the scrim holds still.
+  usePageScrollLock(open);
 
   useEffect(() => {
     if (!open) return;
