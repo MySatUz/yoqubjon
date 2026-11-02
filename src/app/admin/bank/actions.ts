@@ -11,7 +11,10 @@ import {
   BANK_PICKER_PAGE_SIZE,
   isBankDifficulty,
   isBankDomain,
+  isBankId,
+  isOfficialBank,
   normalizeBankFilters,
+  readBankId,
   type BankDifficulty,
   type BankFilters,
   type BankPickRow,
@@ -100,15 +103,16 @@ export async function checkTexFile(formData: FormData): Promise<TexCheckResult> 
 }
 
 /**
- * Adds a `.tex` file's questions to the bank without making a test. Its
- * images were uploaded first into a `bank/<id>` folder of their own; if the
- * save fails they are removed again.
+ * Adds a `.tex` file's questions to one bank - ours or the official SAT one -
+ * without making a test. Its images were uploaded first into a `bank/<id>`
+ * folder of their own; if the save fails they are removed again.
  */
 export async function uploadBankQuestions(formData: FormData) {
   let folder: string | null = null;
 
   try {
     const session = await requireAdmin();
+    const bank = readBankId(formData.get('bank'));
 
     const requestedFolder = formData.get('folder');
     if (typeof requestedFolder === 'string' && BANK_FOLDER_PATTERN.test(requestedFolder)) {
@@ -136,12 +140,13 @@ export async function uploadBankQuestions(formData: FormData) {
       imageMap,
       source: tex.name,
       createdById: session?.user?.id ?? null,
+      official: isOfficialBank(bank),
     });
 
     await prisma.bankQuestion.createMany({ data: rows });
 
     refresh();
-    return { success: true as const, count: rows.length, fileName: tex.name };
+    return { success: true as const, count: rows.length, fileName: tex.name, bank };
   } catch (error: unknown) {
     console.error('Bank upload error:', error);
     // Nothing points at these files: the rows were never written.
@@ -151,8 +156,9 @@ export async function uploadBankQuestions(formData: FormData) {
 }
 
 /**
- * Saves a bank question from its page - tags, text, options, answer, image -
- * and writes the shared fields through to every test showing it.
+ * Saves a bank question from its page - its bank, tags, text, options,
+ * answer, image - and writes the shared fields through to every test showing
+ * it. A form that names no bank leaves the question where it is.
  */
 export async function updateBankQuestion(questionId: string, formData: FormData) {
   try {
@@ -164,13 +170,17 @@ export async function updateBankQuestion(questionId: string, formData: FormData)
 
     const fields = readSharedQuestionFields(formData);
     const tags = readBankTags(formData);
+    const bank = formData.get('bank');
     const existing = await prisma.bankQuestion.findUnique({ where: { id: questionId }, select: { id: true } });
 
     if (!existing) {
       throw new Error('This question is no longer in the bank');
     }
 
-    await writeBankQuestionThrough(questionId, fields, tags);
+    await writeBankQuestionThrough(questionId, fields, {
+      ...tags,
+      ...(isBankId(bank) ? { official: isOfficialBank(bank) } : {}),
+    });
     refresh();
     return { success: true as const };
   } catch (error: unknown) {
@@ -185,6 +195,9 @@ export async function updateBankQuestion(questionId: string, formData: FormData)
  * picture goes only when no test shows it either.
  */
 export async function deleteBankQuestion(questionId: string) {
+  // Back to the bank it was in.
+  let official = false;
+
   try {
     await requireAdmin();
 
@@ -194,8 +207,9 @@ export async function deleteBankQuestion(questionId: string) {
 
     const existing = await prisma.bankQuestion.findUnique({
       where: { id: questionId },
-      select: { imageUrl: true },
+      select: { imageUrl: true, official: true },
     });
+    official = existing?.official ?? false;
 
     if (existing) {
       await prisma.bankQuestion.delete({ where: { id: questionId }, select: { id: true } });
@@ -208,7 +222,7 @@ export async function deleteBankQuestion(questionId: string) {
 
   // The bank list and the test editors' bank badges are other pages.
   revalidatePath('/admin', 'layout');
-  redirect('/admin/bank');
+  redirect(official ? '/admin/bank?bank=official' : '/admin/bank');
 }
 
 /** One page of the build page's question browser. */
@@ -244,12 +258,14 @@ export async function searchBankQuestions(input: { filters: Partial<BankFilters>
 
 /**
  * A random set for one module of the build page: so many of each difficulty,
- * from some domains or all, never a question another module already has.
+ * from one bank, from some domains or all, never a question another module
+ * already has.
  */
 export async function pickBankQuestions(input: {
   counts: Partial<Record<BankDifficulty, number>>;
   domains: string[];
   excludeIds: string[];
+  bank: string;
 }) {
   try {
     await requireAdmin();
@@ -274,6 +290,7 @@ export async function pickBankQuestions(input: {
       counts,
       domains: (Array.isArray(input?.domains) ? input.domains : []).filter(isBankDomain),
       excludeIds,
+      bank: readBankId(input?.bank),
     });
 
     return { success: true as const, ...result };

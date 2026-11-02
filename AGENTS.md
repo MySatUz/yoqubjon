@@ -98,6 +98,12 @@ on the navy sidebar alike. The tab icon (`src/app/favicon.ico`, `icon.png`),
 link preview (`public/brand/social-card.png`, `SITE_OG_IMAGE`) are the kit's
 files as delivered; replace them from a new kit, never redraw them.
 
+The Board's top bar also names the owner's Telegram channel, t.me/sat_800,
+beside the question's tags (`TelegramChannel.tsx`), so a lesson recording
+carries it. Telegram's mark keeps its own blue disc and white plane, like the
+logo's colours; the address beside it is `ink-700`, since Telegram's blue is
+about 3:1 on white.
+
 The auth pages (sign-in, sign-up, email confirmation, password reset) share
 `AuthShell`: the landing's header line over one narrow column held to the top —
 not centred vertically, so an error never moves the form.
@@ -299,6 +305,13 @@ beside an olympiad window, the rule under a ranking.
 - **A test has one or more modules.** Many are two modules, each with its own
   timer; some are one block (30 questions, one timer). Every screen — catalog,
   start, exam, Check your work, result, admin — must read right for both.
+- **Premium Pro is sold one course at a time** (2026-10-31). The student picks
+  one course on the Subscription page, pays, and an approved payment gives 30
+  days of that course as course access (`SectionAccess`, run on from its
+  current end), the same entry the Give access dialog writes
+  (`src/lib/coursePurchase.ts`, `approveManualPayment` in
+  `src/lib/manual-payments.ts`). Premium bought before then (a `Subscription`
+  row, or a request with no course) still opens every course until it ends.
 
 # Admin
 
@@ -324,6 +337,14 @@ requests are reviewed on the Subscription page. Tests are added to a course by
 importing a `.tex` file or by building one from the question bank; both put
 the questions in the bank (`BankQuestion`), tagged by domain and difficulty
 (`src/lib/questionBank.ts`).
+
+There are two banks, read one at a time: our own questions, and the official
+SAT ones an admin takes from the College Board's open question bank
+(`BankQuestion.official`, `BankFilters.bank`, `?bank=official`). A course's
+`.tex` import goes into ours; the bank's own Upload asks which bank. The bank
+page, the Board's bank tab and the build page's picker and random pick each
+open with a segmented switch between the two, which keeps the choices and
+searches the other bank; a question's page can move it across.
 
 A test keeps its own `Question` rows: a bank-backed row is a copy of the bank
 text with `bankQuestionId`, so the exam, grading, review and stats read

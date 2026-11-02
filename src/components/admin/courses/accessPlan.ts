@@ -198,10 +198,30 @@ export function planAccess(
   todayKey: string,
   months: number,
 ): { change: AccessChange; afterKey: string | null } {
-  if (!current) return { change: 'new', afterKey: addMonthsToKey(todayKey, months) };
+  return planAccessBy(current, todayKey, (key) => addMonthsToKey(key, months));
+}
+
+/**
+ * The same rule for a span of days: an approved payment buys 30 days of one
+ * course (MANUAL_PAYMENT_DAYS), run on from the current end like a month.
+ */
+export function planAccessDays(
+  current: { endKey: string | null } | null,
+  todayKey: string,
+  days: number,
+): { change: AccessChange; afterKey: string | null } {
+  return planAccessBy(current, todayKey, (key) => addDaysToKey(key, days));
+}
+
+function planAccessBy(
+  current: { endKey: string | null } | null,
+  todayKey: string,
+  step: (key: string) => string,
+): { change: AccessChange; afterKey: string | null } {
+  if (!current) return { change: 'new', afterKey: step(todayKey) };
   if (current.endKey === null) return { change: 'unchanged', afterKey: null };
-  if (current.endKey < todayKey) return { change: 'renewed', afterKey: addMonthsToKey(todayKey, months) };
-  return { change: 'extended', afterKey: addMonthsToKey(current.endKey, months) };
+  if (current.endKey < todayKey) return { change: 'renewed', afterKey: step(todayKey) };
+  return { change: 'extended', afterKey: step(current.endKey) };
 }
 
 const DATE_KEY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;

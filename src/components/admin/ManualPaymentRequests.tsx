@@ -23,6 +23,8 @@ type DateValue = Date | string;
 
 type ManualPaymentRequestItem = {
   id: string;
+  /** The course it buys, by its name; null for a request sent before courses were sold one at a time (Premium, every course). */
+  courseLabel: string | null;
   amount: number;
   currency: string;
   status: string;
@@ -43,9 +45,14 @@ type ManualPaymentRequestItem = {
 
 type ManualPaymentRequestsProps = {
   requests: ManualPaymentRequestItem[];
-  /** How long an approval opens Premium for, said in its confirmation. */
+  /** How long an approval opens the course for, said in its confirmation. */
   accessDays: number;
 };
+
+/** What a request buys, as the rows and the details name it. */
+function purchaseLabel(request: ManualPaymentRequestItem) {
+  return request.courseLabel ?? 'Premium, every course';
+}
 
 type Decision = 'approve' | 'reject';
 
@@ -147,9 +154,15 @@ function PaymentDecision({
       decision === 'approve'
         ? {
             title: `Approve ${amount} from ${name}?`,
-            description: (
+            description: request.courseLabel ? (
               <>
-                <p>Premium opens for {request.user.email} for {accessDays} days, starting now.</p>
+                <p>{request.courseLabel} opens for {request.user.email} for {accessDays} days.</p>
+                <p>If they already have this course, the {accessDays} days are added to its end date.</p>
+              </>
+            ) : (
+              // Sent before courses were sold one at a time: it bought them all.
+              <>
+                <p>Premium opens every course for {request.user.email} for {accessDays} days, starting now.</p>
                 <p>A subscription they already have is replaced by this one, not extended.</p>
               </>
             ),
@@ -158,8 +171,8 @@ function PaymentDecision({
         : {
             title: `Reject ${amount} from ${name}?`,
             description: hasNote
-              ? 'No subscription is activated. They see your reason on their Subscription page.'
-              : 'No subscription is activated, and the reason field is empty, so they will not see why.',
+              ? 'No course is opened. They see your reason on their Subscription page.'
+              : 'No course is opened, and the reason field is empty, so they will not see why.',
             confirmLabel: 'Reject payment',
             tone: 'danger',
           }
@@ -362,7 +375,9 @@ export default function ManualPaymentRequests({ requests, accessDays }: ManualPa
                     <p className="truncate text-sm font-medium text-gray-900">
                       {request.user.name || request.payerName || 'No name'} · {formatAmount(request.amount, request.currency)}
                     </p>
-                    <p className={cn('mt-0.5 truncate text-xs', isSelected ? 'text-gray-600' : 'text-gray-500')}>{request.user.email}</p>
+                    <p className={cn('mt-0.5 truncate text-xs', isSelected ? 'text-gray-600' : 'text-gray-500')}>
+                      {purchaseLabel(request)} · {request.user.email}
+                    </p>
                   </div>
                   <div className="flex shrink-0 flex-col items-end gap-1">
                     <PaymentStatusBadge status={request.status} />
@@ -396,6 +411,7 @@ export default function ManualPaymentRequests({ requests, accessDays }: ManualPa
 
               <CardBody className="space-y-4">
                 <dl className={cn(insetClass, 'grid grid-cols-1 gap-4 p-4 sm:grid-cols-2')}>
+                  <Detail label="Course">{purchaseLabel(selectedRequest)}</Detail>
                   <Detail label="Contact">{selectedRequest.contact || 'Not provided'}</Detail>
                   <Detail label="Payment note">{selectedRequest.paymentReference || 'Not provided'}</Detail>
                   {selectedRequest.message && (

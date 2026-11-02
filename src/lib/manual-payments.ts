@@ -1,6 +1,10 @@
+import type { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { PREMIUM_MONTHLY_AMOUNT_UZS, PREMIUM_PLAN_ID } from '@/lib/plans';
+import { accessEndsAt, normalizeAccessEmail } from '@/lib/sectionAccess';
+import { normalizeCategoryId } from '@/lib/testCatalog';
+import { planAccessDays, tashkentDateKey, utcDateKey } from '@/components/admin/courses/accessPlan';
 
 export const MANUAL_PAYMENT_BUCKET = 'mysat-payment-receipts';
 export const MANUAL_PAYMENT_PROVIDER = 'MANUAL_TRANSFER';
@@ -147,6 +151,8 @@ export async function notifyManualPaymentTelegram(input: {
   requestId: string;
   userEmail: string;
   userName?: string | null;
+  /** The course the payment buys, by its name. */
+  courseLabel: string;
   amount: number;
   receiptUrl?: string | null;
   contact?: string | null;
@@ -173,6 +179,7 @@ export async function notifyManualPaymentTelegram(input: {
     `<b>Receiver:</b> ${escapeTelegramHtml(input.transfer.cardHolder)}`,
     `<b>Card:</b> ${escapeTelegramHtml(input.transfer.cardType)} ${escapeTelegramHtml(input.transfer.cardNumber)}`,
     `<b>Amount:</b> ${escapeTelegramHtml(formatManualPaymentAmount(input.amount))}`,
+    `<b>Course:</b> ${escapeTelegramHtml(input.courseLabel)}`,
     `<b>Access:</b> ${MANUAL_PAYMENT_DAYS} days`,
     '',
     `<b>User:</b> ${escapeTelegramHtml(input.userName || 'User')}`,
@@ -220,30 +227,87 @@ export async function notifyManualPaymentTelegram(input: {
   return { ok: true, skipped: false };
 }
 
-export async function activateManualSubscription(input: {
+/** Written on the access entry a payment creates, so the course's Students tab says where it came from. */
+const PAID_ACCESS_NOTE = 'Paid by card transfer';
+
+/**
+ * Gives the course a payment bought: 30 days, run on from the end of the
+ * access the student has now (by account or by email, whichever lasts
+ * longer), from today when there is none or it has ended - the Give access
+ * rule (`planAccessDays`). Access with no end date is left as it is. The entry
+ * is the student's own email's; an existing one keeps its note.
+ */
+async function giveCourseForPayment(
+  tx: Prisma.TransactionClient,
+  input: { userId: string; email: string; category: string; grantedById: string },
+) {
+  const email = normalizeAccessEmail(input.email);
+  const category = normalizeCategoryId(input.category);
+  const course = await tx.testCollectionVisibility.findUnique({ where: { category }, select: { category: true } });
+  if (!course) {
+    throw new Error('The course this payment is for no longer exists, so nothing was opened. Reject it and tell the student.');
+  }
+
+  const now = new Date();
+  const rows = await tx.sectionAccess.findMany({
+    where: { category, OR: [{ userId: input.userId }, { email }] },
+    select: { expiresAt: true },
+  });
+  const live = rows.filter((row) => row.expiresAt === null || row.expiresAt > now);
+  const lastEnd = Math.max(...live.map((row) => row.expiresAt?.getTime() ?? Number.POSITIVE_INFINITY));
+  const current = live.length === 0
+    ? null
+    : { endKey: Number.isFinite(lastEnd) ? utcDateKey(new Date(lastEnd)) : null };
+
+  const plan = planAccessDays(current, tashkentDateKey(now), MANUAL_PAYMENT_DAYS);
+  if (!plan.afterKey) return { expiresAt: null };
+
+  const expiresAt = accessEndsAt(plan.afterKey);
+  await tx.sectionAccess.upsert({
+    where: { email_category: { email, category } },
+    update: { userId: input.userId, expiresAt, grantedById: input.grantedById },
+    create: { email, userId: input.userId, category, expiresAt, note: PAID_ACCESS_NOTE, grantedById: input.grantedById },
+  });
+  return { expiresAt };
+}
+
+/**
+ * Approves a pending payment request: the request is marked approved, a
+ * completed Payment is written, and the student gets what it bought - its
+ * course for 30 days (`giveCourseForPayment`), or, for a request sent before
+ * courses were sold one at a time (no course), Premium for every course,
+ * replacing any they had. One transaction: a request reviewed a moment
+ * earlier (another admin, the Telegram bot) is refused and nothing changes.
+ *
+ * `expiresAt` is when the access now ends; null for course access that had
+ * no end date and still has none.
+ */
+export async function approveManualPayment(input: {
   requestId: string;
   adminUserId: string;
   adminNote?: string | null;
 }) {
-  const endDate = new Date();
-  endDate.setDate(endDate.getDate() + MANUAL_PAYMENT_DAYS);
-
   return prisma.$transaction(async (tx) => {
     const request = await tx.manualPaymentRequest.findUnique({
       where: { id: input.requestId },
-      select: { id: true, userId: true, amount: true, currency: true, status: true },
+      select: {
+        id: true,
+        userId: true,
+        amount: true,
+        currency: true,
+        status: true,
+        category: true,
+        user: { select: { email: true } },
+      },
     });
 
     if (!request) {
       throw new Error('Payment request not found');
     }
 
-    if (request.status !== 'PENDING') {
-      throw new Error('Payment request has already been reviewed');
-    }
-
-    await tx.manualPaymentRequest.update({
-      where: { id: request.id },
+    // Conditional, so two approvals racing for one request cannot both pass.
+    const reviewed = await tx.manualPaymentRequest.updateMany({
+      where: { id: request.id, status: 'PENDING' },
       data: {
         status: 'APPROVED',
         adminNote: input.adminNote,
@@ -251,6 +315,10 @@ export async function activateManualSubscription(input: {
         reviewedAt: new Date(),
       },
     });
+
+    if (reviewed.count !== 1) {
+      throw new Error('Payment request has already been reviewed');
+    }
 
     await tx.payment.create({
       data: {
@@ -262,6 +330,19 @@ export async function activateManualSubscription(input: {
         status: 'COMPLETED',
       },
     });
+
+    if (request.category) {
+      const { expiresAt } = await giveCourseForPayment(tx, {
+        userId: request.userId,
+        email: request.user.email,
+        category: request.category,
+        grantedById: input.adminUserId,
+      });
+      return { success: true as const, category: request.category, expiresAt };
+    }
+
+    const endDate = new Date();
+    endDate.setDate(endDate.getDate() + MANUAL_PAYMENT_DAYS);
 
     await tx.subscription.updateMany({
       where: {
@@ -282,7 +363,7 @@ export async function activateManualSubscription(input: {
       },
     });
 
-    return { success: true, expiresAt: endDate };
+    return { success: true as const, category: null, expiresAt: endDate };
   });
 }
 

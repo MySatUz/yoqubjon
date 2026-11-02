@@ -17,14 +17,14 @@ export const metadata: Metadata = {
 };
 
 /*
- * Written from what the code does on 26 Oct 2026, not from a template: each
+ * Written from what the code does on 31 Oct 2026, not from a template: each
  * line names something the app really stores, shows or sends, so change the
  * page when that changes (sign-up fields, the payment form, the Telegram
  * payment chat, cookies). Not settled in code, and so not promised here: who
  * runs the service, how long data is kept, and how deletion requests are
  * handled. Those are the owner's to add.
  */
-const UPDATED = new Date('2026-10-26T12:00:00+05:00');
+const UPDATED = new Date('2026-10-31T12:00:00+05:00');
 
 function TelegramLink() {
   return (
@@ -51,8 +51,9 @@ export default function PrivacyPage() {
           <li>At sign-up: your name, your email and a password. We ask for nothing else: no phone, birth date or school.</li>
           <li>Your name appears on olympiad rankings. You can change it in your profile.</li>
           <li>
-            If you pay for {PREMIUM_PLAN.name}: the name and the Telegram or phone contact you type, a payment note, an optional
-            message and a photo or PDF of your receipt. We never ask for your card number or bank details.
+            If you pay for {PREMIUM_PLAN.name}: the course you choose, the name and the Telegram or phone contact you type, a
+            payment note, an optional message and a photo or PDF of your receipt. We never ask for your card number or
+            bank details.
           </li>
         </ul>
       </LegalSection>
@@ -61,7 +62,7 @@ export default function PrivacyPage() {
         <ul>
           <li>Each test you finish: your answers, which of them were correct, your score estimate, your total time and the date.</li>
           <li>Course access an admin gives you: your email, the course, the end date and an optional note.</li>
-          <li>Your {PREMIUM_PLAN.name} periods and your payment requests, with their amount and status.</li>
+          <li>Your {PREMIUM_PLAN.name} periods and your payment requests, with their course, amount and status.</li>
           <li>
             Sign-in, sign-up, code and password reset requests, with the network address they came from and, for a
             sign-in, the email typed, to slow down password guessing. Records older than 1 day no longer count and are

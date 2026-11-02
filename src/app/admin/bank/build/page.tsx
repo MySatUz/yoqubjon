@@ -47,10 +47,10 @@ export default async function BuildFromBankPage({
   const [params, collectionRows, availability] = await Promise.all([
     searchParams,
     getCollectionVisibilityRows(),
-    // Per domain and difficulty, so the random pick can say "only 4 match"
-    // before it is asked.
+    // Per bank, domain and difficulty, so the random pick can say "only 4
+    // match" before it is asked.
     prisma.bankQuestion.groupBy({
-      by: ['domain', 'difficulty'],
+      by: ['official', 'domain', 'difficulty'],
       _count: { _all: true },
     }),
   ]);
@@ -96,6 +96,7 @@ export default async function BuildFromBankPage({
           }))}
           defaultCourse={course}
           availability={availability.map((row) => ({
+            official: row.official,
             domain: row.domain,
             difficulty: row.difficulty,
             count: row._count._all,

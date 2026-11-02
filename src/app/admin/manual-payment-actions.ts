@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { requireAdmin } from '@/lib/admin';
 import {
-  activateManualSubscription,
+  approveManualPayment,
   rejectManualPaymentRequestById,
 } from '@/lib/manual-payments';
 
@@ -48,7 +48,7 @@ export async function approveManualPaymentRequest(formData: FormData): Promise<P
     const requestId = getRequestId(formData);
     const adminNote = getAdminNote(formData);
 
-    await activateManualSubscription({
+    await approveManualPayment({
       requestId,
       adminUserId,
       adminNote,

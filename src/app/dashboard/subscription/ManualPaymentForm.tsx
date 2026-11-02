@@ -3,11 +3,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Check, Copy, Loader2, Receipt, Send } from 'lucide-react';
-import { formatDateTime } from '@/lib/formatDate';
+import { formatDate, formatDateTime } from '@/lib/formatDate';
 import { TELEGRAM_URL } from '@/lib/landing/warmup';
+import type { PurchasableCourse } from '@/lib/coursePurchase';
+import { formatDateKey } from '@/components/admin/courses/accessPlan';
 import { Card, CardBody, CardHeader } from '@/components/ui/Card';
 import { Button, focusRingClass, linkClass } from '@/components/ui/Button';
-import { Field, Input, Textarea } from '@/components/ui/Field';
+import { Field, Input, Textarea, checkboxClass, hintClass, labelClass } from '@/components/ui/Field';
 import { Alert, EmptyState } from '@/components/ui/Feedback';
 import { KeyValue } from '@/components/ui/Misc';
 import { List, RowText, listRowClass } from '@/components/ui/List';
@@ -22,6 +24,8 @@ type ManualRequestStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | string;
 type ManualRequest = {
   id: string;
   status: ManualRequestStatus;
+  /** The course it buys, by its name ("Premium Pro, every course" for an old request). */
+  courseLabel: string;
   receiptFileName: string | null;
   adminNote: string | null;
   createdAt: string;
@@ -31,7 +35,15 @@ type ManualRequest = {
 type ManualPaymentFormProps = {
   userName: string;
   userEmail: string;
-  isPremium: boolean;
+  /** Today's Tashkent date, for the "yours until" dates on the courses. */
+  todayKey: string;
+  /** The courses on sale to this student; the payment buys one of them. */
+  courses: PurchasableCourse[];
+  /** The chosen course, kept by the page so it survives going back to the plans. */
+  course: string | null;
+  onCourseChange: (course: string) => void;
+  /** When Premium for every course ends, for a student who still has it from before courses were sold one at a time. */
+  premiumUntil: string | null;
   requests: ManualRequest[];
   transfer: {
     cardHolder: string;
@@ -68,6 +80,17 @@ const fileInputClass =
 const RECEIPT_MAX_BYTES = 4 * 1024 * 1024;
 const RECEIPT_MAX_LABEL = '4 MB';
 
+/**
+ * A course to pay for: a radio in a bordered tile, like the bank's choice
+ * tiles (bankBadges.tsx), one line taller for the course's facts. Chosen, it
+ * takes the ink edge and ground of a selected item. A minimum height, not a
+ * fixed one: on a phone a long course name wraps rather than being cut, since
+ * two groups of one course can differ only in their last words.
+ */
+const courseTileClass =
+  'group flex min-h-14 cursor-pointer items-center gap-3 rounded-xl border border-gray-300 bg-white px-3.5 py-2 transition-colors ' +
+  'hover:border-gray-400 hover:bg-gray-50 has-checked:border-ink-600 has-checked:bg-ink-50 pointer-coarse:min-h-16';
+
 /** What the student reads when a request did not go through. */
 type SubmitError = {
   text: string;
@@ -80,7 +103,11 @@ const GENERIC_ERROR: SubmitError = { text: 'We could not send your request. Try 
 export function ManualPaymentForm({
   userName,
   userEmail,
-  isPremium,
+  todayKey,
+  courses,
+  course,
+  onCourseChange,
+  premiumUntil,
   requests,
   transfer,
 }: ManualPaymentFormProps) {
@@ -119,6 +146,14 @@ export function ManualPaymentForm({
     setSuccess(null);
 
     const formData = new FormData(event.currentTarget);
+    // The radios are required, so the browser asks first; this covers a
+    // course that left the list while the page was open.
+    if (!course || !courses.some((item) => item.value === course)) {
+      setError({ text: 'Choose the course you are paying for.', support: false });
+      return;
+    }
+    formData.set('category', course);
+
     const receipt = formData.get('receipt');
     if (receipt instanceof File && receipt.size > RECEIPT_MAX_BYTES) {
       setError({ text: `The receipt file must be ${RECEIPT_MAX_LABEL} or smaller. Try a screenshot or a PDF.`, support: false });
@@ -142,7 +177,7 @@ export function ManualPaymentForm({
         // from the host, before the route runs, so it has no sentence of its own.
         setError(
           response.status === 503
-            ? { text: 'New Premium subscriptions were paused while this page was open, so the request was not sent.', support: false }
+            ? { text: `New ${PREMIUM_PLAN.name} subscriptions were paused while this page was open, so the request was not sent.`, support: false }
             : response.status === 413
               ? { text: 'The receipt file is too large to upload. Try a smaller photo or a PDF.', support: false }
               : response.status < 500 && data?.error
@@ -156,7 +191,8 @@ export function ManualPaymentForm({
       // the request is saved and shows under Recent requests either way, and
       // how the server notifies the admin is not the student's concern.
       formRef.current?.reset();
-      setSuccess('Request sent. An admin will check your receipt and switch Premium on.');
+      const chosen = courses.find((item) => item.value === course);
+      setSuccess(`Request sent. An admin will check your receipt and open ${chosen?.label ?? 'the course'} for you.`);
       router.refresh();
     } catch {
       // The fetch itself failed (offline, a dropped connection): its message
@@ -175,7 +211,7 @@ export function ManualPaymentForm({
       <Card className="lg:col-start-1 lg:row-start-1">
         <CardHeader
           title="Pay by card transfer"
-          description="Transfer the monthly subscription amount, upload the receipt, and wait for admin approval."
+          description="Transfer the amount below for 30 days of one course, upload the receipt, and wait for admin approval."
         />
         <dl className="grid grid-cols-2 gap-4 p-5">
           <div className="col-span-2 min-w-0">
@@ -220,20 +256,51 @@ export function ManualPaymentForm({
           description="An admin reviews every receipt. Its status appears under Recent requests."
         />
         <CardBody>
-          {isPremium ? (
-            <Alert tone="success" title="Subscription active">
-              You already have {PREMIUM_PLAN.name}.
-            </Alert>
-          ) : success ? (
+          {success ? (
             <div ref={sentRef} tabIndex={-1} className="focus:outline-hidden">
               <Alert tone="success">{success}</Alert>
             </div>
           ) : pendingRequest ? (
             <Alert title="Your request is waiting for review">
-              Sent {formatDateTime(pendingRequest.createdAt)}. You can send another one once an admin has checked it.
+              {pendingRequest.courseLabel}, sent {formatDateTime(pendingRequest.createdAt)}. You can send another one once
+              an admin has checked it.
             </Alert>
           ) : (
             <form ref={formRef} onSubmit={submitRequest} className="space-y-4">
+              {/* The one course this payment buys: Premium Pro is sold a
+                  course at a time (the owner's rule). */}
+              <fieldset className="space-y-2">
+                <legend className={labelClass}>Course</legend>
+                <div className="grid grid-cols-1 gap-2">
+                  {courses.map((item) => (
+                    <label key={item.value} className={courseTileClass}>
+                      <input
+                        type="radio"
+                        name="category"
+                        value={item.value}
+                        checked={course === item.value}
+                        onChange={() => onCourseChange(item.value)}
+                        required
+                        className={checkboxClass}
+                      />
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-sm font-medium text-gray-900">{item.label}</span>
+                        <span className="mt-0.5 block truncate text-xs text-gray-500 group-has-checked:text-gray-600">
+                          {item.paidTests} {item.paidTests === 1 ? 'test' : 'tests'}
+                          {item.accessEndKey && ` · yours until ${formatDateKey(item.accessEndKey, todayKey)}`}
+                        </span>
+                      </span>
+                    </label>
+                  ))}
+                </div>
+                <p className={hintClass}>
+                  {courses.some((item) => item.accessEndKey)
+                    ? 'A course you already have gets 30 days added to its end date.'
+                    : 'Every test in the course opens for 30 days.'}
+                  {premiumUntil && ` ${PREMIUM_PLAN.name} opens every course for you until ${formatDate(premiumUntil)}; a course bought now starts today.`}
+                </p>
+              </fieldset>
+
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <Field label="Name" htmlFor="manual-payment-name">
                   <Input id="manual-payment-name" name="payerName" defaultValue={userName} />
@@ -312,7 +379,7 @@ export function ManualPaymentForm({
                 <div className="min-w-0 flex-1">
                   <RowText
                     title={<span className="tabular-nums">{formatDateTime(request.createdAt)}</span>}
-                    meta={request.receiptFileName ? `Receipt: ${request.receiptFileName}` : undefined}
+                    meta={request.receiptFileName ? `${request.courseLabel} · Receipt: ${request.receiptFileName}` : request.courseLabel}
                   />
                   {request.adminNote && (
                     <p className="mt-1.5 text-xs text-gray-600">Admin note: {request.adminNote}</p>

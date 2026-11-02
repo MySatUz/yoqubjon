@@ -5,7 +5,7 @@ import { cn } from '@/components/ui/cn';
 
 /**
  * Mirrors page.tsx: a PageHeader, then the plans view of SubscriptionCheckout
- * (current-plan card, two plan cards, billing history). The part below the
+ * (your-courses card, two plan cards, billing history). The part below the
  * header is the same markup as the page's own CheckoutFallback.
  */
 export default function Loading() {
@@ -22,13 +22,11 @@ export default function Loading() {
           <Skeleton className="h-5 w-28" />
           <Skeleton className="mt-1.5 h-4 w-56 max-w-full" />
         </div>
-        <div className="grid grid-cols-2 gap-4 p-5 sm:grid-cols-4">
-          {Array.from({ length: 4 }, (_, i) => (
-            <div key={i} className="space-y-1.5">
-              <Skeleton className="h-3 w-14" />
-              <Skeleton className="h-4 w-24" />
-            </div>
-          ))}
+        <div className="flex items-center gap-4 px-4 py-3 sm:px-5">
+          <div className="flex-1 space-y-1.5 py-0.5">
+            <Skeleton className="h-4 w-40 max-w-full" />
+            <Skeleton className="h-3 w-48 max-w-full" />
+          </div>
         </div>
       </div>
 

@@ -421,11 +421,13 @@ export default function PracticeCatalog({
                   ) : (
                     <>
                       {salesOpen ? (
+                        // Premium Pro is sold a course at a time: the page
+                        // opens on paying for this test's course.
                         <Link
-                          href="/dashboard/subscription"
+                          href={category ? `/dashboard/subscription?course=${encodeURIComponent(category)}` : '/dashboard/subscription'}
                           className={buttonClass({ variant: 'secondary' })}
                         >
-                          Unlock with {PREMIUM_PLAN.name}
+                          Buy this course
                         </Link>
                       ) : (
                         // Paused by an admin: a calm fact beside the lock above,

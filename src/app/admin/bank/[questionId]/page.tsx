@@ -15,6 +15,8 @@ import { isMultiSelectKey, parseAnswerLetters } from '@/lib/resultAnswers';
 import { getCategoryLabel, getTestCategory, getTestCollections } from '@/lib/testCatalog';
 import { getCollectionVisibilityRows } from '@/lib/testCollections';
 import {
+  bankOfQuestion,
+  getBankLabel,
   getDifficultyLabel,
   getDomainLabel,
   isBankDifficulty,
@@ -51,6 +53,7 @@ const readBankQuestion = cache((questionId: string) => (
           domain: true,
           difficulty: true,
           source: true,
+          official: true,
           createdAt: true,
           questions: {
             orderBy: { createdAt: 'asc' },
@@ -133,7 +136,10 @@ export default async function BankQuestionPage({
     })),
   ]).filter((test, index, all) => all.findIndex((other) => other.id === test.id) === index);
 
+  const bank = bankOfQuestion(question.official);
   const facts = [
+    // Only the official bank is named: ours is the default everywhere.
+    question.official ? getBankLabel(bank) : null,
     isBankDomain(question.domain) ? getDomainLabel(question.domain) : null,
     isBankDifficulty(question.difficulty) ? getDifficultyLabel(question.difficulty) : null,
     question.source ? `from ${question.source}` : null,
@@ -143,7 +149,7 @@ export default async function BankQuestionPage({
   return (
     <Page>
       <PageHeader
-        back={<BackLink href="/admin/bank">Back to question bank</BackLink>}
+        back={<BackLink href={question.official ? '/admin/bank?bank=official' : '/admin/bank'}>Back to question bank</BackLink>}
         title="Bank question"
         description={facts}
         meta={(!isBankDomain(question.domain) || !isBankDifficulty(question.difficulty)) && (
@@ -236,6 +242,7 @@ export default async function BankQuestionPage({
               imageUrl: question.imageUrl,
               domain: isBankDomain(question.domain) ? question.domain : null,
               difficulty: isBankDifficulty(question.difficulty) ? question.difficulty : null,
+              bank,
             }}
             usedIn={usedIn.length}
           />

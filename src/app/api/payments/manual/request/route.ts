@@ -11,6 +11,7 @@ import {
   uploadManualReceipt,
 } from '@/lib/manual-payments';
 import { getSubscriptionSettings } from '@/lib/subscription-settings';
+import { findPurchasableCourse } from '@/lib/coursePurchase';
 
 export const runtime = 'nodejs';
 // `after()` work runs within the route's max duration, so it has to be set here.
@@ -33,20 +34,14 @@ export async function POST(req: Request) {
 
     const userId = session.user.id;
 
-    // None of these four reads depends on another, so they run in one round-trip
+    // None of these three reads depends on another, so they run in one round-trip
     // batch. The checks below stay in the original order so the HTTP status codes
-    // (503 -> 400 -> 409 -> 429) are unchanged.
-    const [subscriptionSettings, activeSubscription, pendingRequest, recentRequestCount] =
+    // (503 -> 409 -> 429) are unchanged. An active subscription no longer
+    // refuses a request: a payment buys one course, and buying another, or the
+    // same one again for 30 more days, is what a student with access does.
+    const [subscriptionSettings, pendingRequest, recentRequestCount] =
       await Promise.all([
         getSubscriptionSettings(),
-        prisma.subscription.findFirst({
-          where: {
-            userId,
-            isActive: true,
-            expiresAt: { gt: new Date() },
-          },
-          select: { id: true },
-        }),
         prisma.manualPaymentRequest.findFirst({
           where: {
             userId,
@@ -71,13 +66,6 @@ export async function POST(req: Request) {
       );
     }
 
-    if (activeSubscription) {
-      return NextResponse.json(
-        { error: 'Your subscription is already active.' },
-        { status: 400 }
-      );
-    }
-
     if (pendingRequest) {
       return NextResponse.json(
         { error: 'A payment request is already waiting for review.' },
@@ -94,6 +82,25 @@ export async function POST(req: Request) {
 
     const formData = await req.formData();
     const receipt = formData.get('receipt');
+
+    // The one course this payment buys, checked against what this student
+    // can buy now: a course hidden or emptied since the page loaded, or one
+    // they hold with no end date, is refused before the receipt is stored.
+    const requestedCourse = formData.get('category');
+    if (typeof requestedCourse !== 'string' || !requestedCourse.trim()) {
+      return NextResponse.json(
+        { error: 'Choose the course you are paying for.' },
+        { status: 400 }
+      );
+    }
+
+    const course = await findPurchasableCourse(userId, session.user.email, requestedCourse);
+    if (!course) {
+      return NextResponse.json(
+        { error: 'This course cannot be bought right now. Reload the page and choose a course again.' },
+        { status: 400 }
+      );
+    }
 
     if (!(receipt instanceof File) || receipt.size <= 0) {
       return NextResponse.json(
@@ -132,6 +139,7 @@ export async function POST(req: Request) {
       data: {
         id: requestId,
         userId,
+        category: course.value,
         amount: subscriptionSettings.amount,
         currency: 'UZS',
         payerName: fields.payerName,
@@ -164,6 +172,7 @@ export async function POST(req: Request) {
         requestId: manualRequest.id,
         userEmail,
         userName,
+        courseLabel: course.label,
         amount: manualRequest.amount,
         receiptUrl,
         contact: manualRequest.contact,

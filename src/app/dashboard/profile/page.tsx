@@ -9,11 +9,12 @@ import { formatDuration } from "@/lib/olympiad";
 import { MIN_QUESTIONS_FOR_SCORE, hasScoreEstimate } from "@/lib/scoreDisplay";
 import { buildCollectionProgress } from "@/lib/courseProgress";
 import { getCollectionVisibilityRows } from "@/lib/testCollections";
-import { getActiveSectionAccessCategories } from "@/lib/sectionAccess";
+import { getActiveSectionAccessCategories, getActiveSectionAccessGrants } from "@/lib/sectionAccess";
 import { getViewerAccess } from "@/lib/studentView";
 import { FREE_PLAN, PREMIUM_PLAN, PREMIUM_PLAN_ID } from "@/lib/plans";
 import { readSalesOpen } from "@/app/dashboard/salesOpen";
-import { getCategoryQueryValue, getTestCategory, getTestCollections } from "@/lib/testCatalog";
+import { getCategoryLabel, getCategoryQueryValue, getTestCategory, getTestCollections } from "@/lib/testCatalog";
+import { formatDateKey, tashkentDateKey, utcDateKey } from "@/components/admin/courses/accessPlan";
 import { Page, PageHeader } from "@/components/ui/Page";
 import { Card, CardHeader, cardClass } from "@/components/ui/Card";
 import { Stat, StatGroup } from "@/components/ui/Stat";
@@ -193,12 +194,29 @@ async function ProfileCard({
   sessionName?: string | null;
   email?: string | null;
 }) {
-  const [subscription, name, salesOpen] = await Promise.all([
+  const [subscription, name, salesOpen, grants, collectionRows] = await Promise.all([
     getActiveSubscription(userId),
     getUserName(userId),
     readSalesOpen("Profile"),
+    getActiveSectionAccessGrants(userId, email),
+    getCollectionVisibilityRows(),
   ]);
+  // Premium from before courses were sold one at a time opens every course;
+  // since then a student's plan is the courses they hold, bought or given.
   const isPremium = subscription?.planId === PREMIUM_PLAN_ID;
+  const hasCourses = grants.length > 0;
+  const planLabel = isPremium ? PREMIUM_PLAN.name : hasCourses ? "Course access" : FREE_PLAN.name;
+  const todayKey = tashkentDateKey(new Date());
+  const onlyCourse = grants.length === 1 ? grants[0] : null;
+  const accessLine = isPremium && subscription
+    ? `Every course until ${formatDate(subscription.expiresAt)}`
+    : onlyCourse
+      ? `${getCategoryLabel(onlyCourse.category, getTestCollections(collectionRows))} ${
+          onlyCourse.expiresAt ? `until ${formatDateKey(utcDateKey(onlyCourse.expiresAt), todayKey)}` : "with no end date"
+        }`
+      : hasCourses
+        ? `${grants.length} courses open`
+        : null;
   // "MYSAT Student" was neither the brand (MYSATuz) nor a name.
   const displayName = name || sessionName || "Student";
 
@@ -209,23 +227,22 @@ async function ProfileCard({
         <div className="min-w-0">
           <div className="flex min-w-0 items-center gap-2">
             <h2 className="truncate text-base font-semibold text-gray-900">{displayName}</h2>
-            <Badge tone={isPremium ? "success" : "neutral"}>{isPremium ? PREMIUM_PLAN.name : FREE_PLAN.name}</Badge>
+            <Badge tone={isPremium || hasCourses ? "success" : "neutral"}>{planLabel}</Badge>
           </div>
           <p className="mt-0.5 truncate text-sm text-gray-500">{email}</p>
         </div>
       </div>
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 sm:justify-end">
         <p className="text-sm text-gray-500">
-          {isPremium && subscription
-            ? `Active until ${formatDate(subscription.expiresAt)}`
-            : salesOpen
-              ? "Upgrade when you are ready for full access."
+          {accessLine
+            ?? (salesOpen
+              ? "Buy a course when you are ready for its tests."
               : // Paused by an admin: no nudge towards a plan nobody can buy.
-                "The tests marked Free are open to you."}
+                "The tests marked Free are open to you.")}
         </p>
         {/* A free account has no subscription to manage: it looks at plans. */}
         <Link href="/dashboard/subscription" className={buttonClass({ variant: "secondary", size: "sm" })}>
-          {isPremium ? "Manage subscription" : "See plans"}
+          {isPremium || hasCourses ? "Manage subscription" : "See plans"}
         </Link>
       </div>
     </Card>

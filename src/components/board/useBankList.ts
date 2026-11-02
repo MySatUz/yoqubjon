@@ -4,6 +4,7 @@ import { useCallback, useRef, useState } from 'react';
 import { searchBoardBank } from '@/app/admin/board/actions';
 import type { BankCounts, BoardBankPage } from '@/app/admin/board/boardData';
 import { EMPTY_FILTER, type BankFilter, type BankPage, type BankRow } from '@/components/board/types';
+import type { BankId } from '@/lib/questionBank';
 
 const LOAD_ERROR = 'The question bank could not be loaded. Check the connection and try again.';
 const NO_RESULTS: BankPage = { rows: [], total: 0, asOf: '' };
@@ -23,7 +24,8 @@ function isEmptyFilter(filter: BankFilter) {
  * choice or some words. The rows loaded so far and the total they match
  * belong to that search; changing a tile afterwards leaves them, and "Next
  * question", alone until the next Search. A reply that comes back after a
- * newer search is dropped.
+ * newer search is dropped. Switching between our bank and the official one
+ * runs a search already made again in the other bank, as the bank page does.
  */
 export function useBankList(initial: BoardBankPage | null) {
   const [filter, setFilter] = useState<BankFilter>(EMPTY_FILTER);
@@ -32,9 +34,10 @@ export function useBankList(initial: BoardBankPage | null) {
   const [hasSearched, setHasSearched] = useState(false);
   // Search was pressed with nothing chosen: the card says what it needs.
   const [needsChoice, setNeedsChoice] = useState(false);
-  // The whole bank, read with the page (the read with no choices); null while unknown.
-  const [bankTotal, setBankTotal] = useState<number | null>(initial ? initial.total : null);
-  const [counts, setCounts] = useState<BankCounts | null>(initial?.counts ?? null);
+  // Both banks' sizes and tile counts, read with the page (the read with no
+  // choices); null while unknown.
+  const [counts, setCounts] = useState<Record<BankId, BankCounts> | null>(initial?.counts ?? null);
+  const bankTotal = counts ? counts[filter.bank].total : null;
   const [isSearching, setIsSearching] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(initial ? null : LOAD_ERROR);
@@ -57,10 +60,7 @@ export function useBankList(initial: BoardBankPage | null) {
     try {
       const page = await searchBoardBank(next ?? EMPTY_FILTER, 0);
       if (id !== requestRef.current) return;
-      if (page.counts) {
-        setCounts(page.counts);
-        setBankTotal(page.total);
-      }
+      if (page.counts) setCounts(page.counts);
       if (next) {
         rowsRef.current = page.rows;
         loadedFilterRef.current = next;
@@ -103,7 +103,7 @@ export function useBankList(initial: BoardBankPage | null) {
     setFilter(EMPTY_FILTER);
     setNeedsChoice(false);
     // A failed search is gone with it; a bank that could not be read is not.
-    setError(bankTotal === null ? LOAD_ERROR : null);
+    setError(counts === null ? LOAD_ERROR : null);
   };
 
   /** [Search]: the draft as it stands; with nothing chosen it lists nothing, as on the bank page. */
@@ -120,6 +120,17 @@ export function useBankList(initial: BoardBankPage | null) {
   };
 
   const retry = () => void search(requestedRef.current);
+
+  /** The other bank: the choices stay, and a search already made runs there at once. */
+  const setBank = (bank: BankId) => {
+    if (bank === filter.bank) return;
+    const next = { ...filter, bank };
+    editFilter(next);
+    if (!hasSearched) return;
+    const trimmed = { ...next, query: next.query.trim() };
+    if (isEmptyFilter(trimmed)) clearResults();
+    else void search(trimmed);
+  };
 
   /** The next page appended; the whole list after it, or null when it failed or a search replaced it. */
   const loadMore = useCallback(async (): Promise<BankRow[] | null> => {
@@ -155,6 +166,7 @@ export function useBankList(initial: BoardBankPage | null) {
     setQuery,
     toggleDomain,
     toggleDifficulty,
+    setBank,
     clearFilter,
     submit,
     retry,

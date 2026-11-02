@@ -9,6 +9,7 @@ import { createTestFromBank } from '@/app/admin/actions';
 import { pickBankQuestions } from '@/app/admin/bank/actions';
 import { BankPicker, useBankPicker } from '@/components/admin/bank/BankPicker';
 import { BankTagBadges, KindBadge, choiceTileClass } from '@/components/admin/bank/bankBadges';
+import { Badge } from '@/components/ui/Badge';
 import { Button, IconButton } from '@/components/ui/Button';
 import { CardBody, CardFooter, CardHeader, cardClass } from '@/components/ui/Card';
 import { Alert, EmptyState } from '@/components/ui/Feedback';
@@ -22,25 +23,30 @@ import {
 } from '@/lib/examModules';
 import { MAX_TEST_MAX_ATTEMPTS, MIN_TEST_MAX_ATTEMPTS } from '@/lib/testAttempts';
 import {
+  BANKS,
   BANK_DIFFICULTIES,
   BANK_DOMAINS,
   getDifficultyLabel,
+  isOfficialBank,
   toggleValue,
   type BankDifficulty,
   type BankDomain,
+  type BankId,
   type BankPickRow,
 } from '@/lib/questionBank';
 
 export type BuildCourse = { value: string; label: string; maxAttempts: number };
 
-/** How many bank questions there are per domain and difficulty (a groupBy). */
-export type BankAvailability = { domain: string | null; difficulty: number | null; count: number }[];
+/** How many bank questions there are per bank, domain and difficulty (a groupBy). */
+export type BankAvailability = { official: boolean; domain: string | null; difficulty: number | null; count: number }[];
 
 type Method = 'manual' | 'random';
 type Shortage = { difficulty: BankDifficulty; requested: number; available: number };
 
 /** Counts are strings while typed, so clearing a field does not turn into `NaN`. */
 type RandomDraft = {
+  /** Which bank the pick draws from. */
+  bank: BankId;
   counts: Record<BankDifficulty, string>;
   domains: BankDomain[];
   /** Null until the first pick. */
@@ -70,7 +76,7 @@ function newModule(): ModuleDraft {
     minutes: DEFAULT_MODULE_MINUTES,
     method: 'manual',
     manual: [],
-    random: { counts: { 1: '', 2: '', 3: '' }, domains: [], picked: null, shortages: [] },
+    random: { bank: 'own', counts: { 1: '', 2: '', 3: '' }, domains: [], picked: null, shortages: [] },
   };
 }
 
@@ -175,14 +181,15 @@ export default function BuildTestForm({
   };
 
   /** What a random pick can draw from: the bank's matching questions less the other modules'. */
-  const available = (difficulty: BankDifficulty, domains: BankDomain[], skip: number) => {
-    const inBank = availability
-      .filter((row) => row.difficulty === difficulty && matchesDomains(row.domain, domains))
-      .reduce((total, row) => total + row.count, 0);
+  const available = (difficulty: BankDifficulty, domains: BankDomain[], bank: BankId, skip: number) => {
+    const official = isOfficialBank(bank);
+    const matches = (row: { official: boolean; domain: string | null; difficulty: number | null }) =>
+      row.official === official && row.difficulty === difficulty && matchesDomains(row.domain, domains);
+    const inBank = availability.filter(matches).reduce((total, row) => total + row.count, 0);
     const taken = active
       .filter((_, index) => index !== skip)
       .flatMap(chosenOf)
-      .filter((row) => row.difficulty === difficulty && matchesDomains(row.domain, domains)).length;
+      .filter(matches).length;
     return Math.max(0, inBank - taken);
   };
 
@@ -208,6 +215,7 @@ export default function BuildTestForm({
         },
         domains: draft.random.domains,
         excludeIds: [...usedElsewhere(index).keys()],
+        bank: draft.random.bank,
       });
     } catch {
       response = { success: false, error: 'No questions were picked. Check your connection and try again.' };
@@ -446,7 +454,7 @@ export default function BuildTestForm({
           module={module}
           conflicts={conflicts}
           usedIn={usedElsewhere(index)}
-          available={(difficulty) => available(difficulty, module.random.domains, index)}
+          available={(difficulty) => available(difficulty, module.random.domains, module.random.bank, index)}
           picking={pickingKey === module.key}
           pickError={pickErrors[module.key] ?? null}
           onMethod={(method) => updateModule(module.key, (current) => ({ ...current, method }))}
@@ -574,6 +582,24 @@ function ModuleCard({
 
       {module.method === 'random' && (
         <CardBody className="space-y-4">
+          <div className="space-y-1.5">
+            <p id={`${fieldId}-bank`} className={labelClass}>Bank</p>
+            <div role="radiogroup" aria-labelledby={`${fieldId}-bank`} className={segmentedClass}>
+              {BANKS.map((bank) => (
+                <button
+                  key={bank.value}
+                  type="button"
+                  role="radio"
+                  aria-checked={module.random.bank === bank.value}
+                  onClick={() => onRandom({ bank: bank.value })}
+                  className={segmentClass(module.random.bank === bank.value)}
+                >
+                  {bank.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
           <fieldset>
             <legend className={cn(labelClass, 'mb-1.5')}>How many of each difficulty</legend>
             <div className="flex flex-wrap gap-3">
@@ -673,6 +699,8 @@ function ModuleCard({
                   {elsewhere && <span className="block text-xs text-red-600">Also in {elsewhere}</span>}
                 </span>
                 <span className="hidden shrink-0 items-center gap-1 sm:flex">
+                  {/* A module can mix the two banks; ours goes unmarked. */}
+                  {row.official && <Badge>Official</Badge>}
                   <BankTagBadges domain={row.domain} difficulty={row.difficulty} />
                   <KindBadge kind={row.kind} />
                 </span>

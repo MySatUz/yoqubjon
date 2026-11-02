@@ -275,6 +275,10 @@ export default function BoardApp({
             onQueryChange={bank.setQuery}
             onToggleDomain={bank.toggleDomain}
             onToggleDifficulty={bank.toggleDifficulty}
+            onBankChange={(value) => {
+              setPickError(null);
+              bank.setBank(value);
+            }}
             onClearFilter={bank.clearFilter}
             onSearch={() => {
               setPickError(null);

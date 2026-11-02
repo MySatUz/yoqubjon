@@ -9,9 +9,11 @@ import type { ParsedQuestion } from '@/lib/texParser';
 import {
   isBankDifficulty,
   isBankDomain,
+  isOfficialBank,
   type BankDifficulty,
   type BankDomain,
   type BankFilters,
+  type BankId,
   type BankPickRow,
 } from '@/lib/questionBank';
 
@@ -151,12 +153,12 @@ export function readBankTags(formData: FormData) {
 /**
  * Saves a bank question and copies the shared fields into every test row
  * that shows it, in one transaction, then expires those tests' cached
- * questions. The tags live on the bank only.
+ * questions. The tags, and which bank it is in, live on the bank only.
  */
 export async function writeBankQuestionThrough(
   bankQuestionId: string,
   fields: SharedQuestionFields,
-  tags: { domain: BankDomain | null; difficulty: BankDifficulty | null },
+  tags: { domain: BankDomain | null; difficulty: BankDifficulty | null; official?: boolean },
 ) {
   await prisma.$transaction([
     prisma.bankQuestion.update({
@@ -232,7 +234,8 @@ export function bankQuestionWhere(
   filters: BankFilters,
   excludeIds: readonly string[] = [],
 ): Prisma.BankQuestionWhereInput {
-  const conditions: Prisma.BankQuestionWhereInput[] = [];
+  // Always one bank: our own questions and the official ones never mix in a list.
+  const conditions: Prisma.BankQuestionWhereInput[] = [{ official: isOfficialBank(filters.bank) }];
 
   if (filters.domains.length > 0) conditions.push({ domain: { in: filters.domains } });
   if (filters.difficulties.length > 0) conditions.push({ difficulty: { in: filters.difficulties } });
@@ -247,7 +250,7 @@ export function bankQuestionWhere(
   }
   if (excludeIds.length > 0) conditions.push({ id: { notIn: [...excludeIds] } });
 
-  return conditions.length > 0 ? { AND: conditions } : {};
+  return { AND: conditions };
 }
 
 export const bankRowSelect = {
@@ -258,6 +261,7 @@ export const bankRowSelect = {
   imageUrl: true,
   domain: true,
   difficulty: true,
+  official: true,
 } as const;
 
 type BankRowSource = Prisma.BankQuestionGetPayload<{ select: typeof bankRowSelect }>;
@@ -279,6 +283,7 @@ export function toBankPickRow(row: BankRowSource): BankPickRow {
     difficulty: isBankDifficulty(row.difficulty) ? row.difficulty : null,
     kind: options.length === 0 ? 'grid-in' : isMultiSelectKey(row.correctAnswer) ? 'multi-select' : 'choice',
     hasImage: Boolean(row.imageUrl),
+    official: row.official,
   };
 }
 
@@ -324,16 +329,17 @@ function shuffle<T>(items: T[]) {
 }
 
 /**
- * Random bank questions for the build page: `counts[d]` of difficulty d,
- * optionally from some domains only, never one of `excludeIds` (the other
- * modules' questions). Ids are drawn in memory: the bank is thousands of
- * rows at most, and an id list is small. Returned easy first, then medium,
+ * Random bank questions for the build page: `counts[d]` of difficulty d from
+ * one bank, optionally from some domains only, never one of `excludeIds` (the
+ * other modules' questions). Ids are drawn in memory: the bank is thousands
+ * of rows at most, and an id list is small. Returned easy first, then medium,
  * then hard - the way a module runs on the test.
  */
 export async function pickRandomBankQuestions(input: {
   counts: Partial<Record<BankDifficulty, number>>;
   domains: BankDomain[];
   excludeIds: string[];
+  bank: BankId;
 }) {
   const picked: string[] = [];
   const shortages: { difficulty: BankDifficulty; requested: number; available: number }[] = [];
@@ -344,6 +350,7 @@ export async function pickRandomBankQuestions(input: {
 
     const candidates = await prisma.bankQuestion.findMany({
       where: {
+        official: isOfficialBank(input.bank),
         difficulty,
         ...(input.domains.length > 0 ? { domain: { in: input.domains } } : {}),
         ...(input.excludeIds.length > 0 ? { id: { notIn: input.excludeIds } } : {}),
@@ -434,6 +441,8 @@ export function buildBankRows(input: {
   imageMap: Record<string, string>;
   source: string;
   createdById: string | null;
+  /** Into the official SAT bank; a test's own import goes into ours. */
+  official?: boolean;
 }): Prisma.BankQuestionCreateManyInput[] {
   const importedAt = Date.now();
 
@@ -447,6 +456,7 @@ export function buildBankRows(input: {
     domain: input.tags[index].domain,
     difficulty: input.tags[index].difficulty,
     source: input.source.slice(0, 200),
+    official: input.official ?? false,
     createdById: input.createdById,
   }));
 }

@@ -9,12 +9,17 @@ import {
 import { getSubscriptionSettings } from '@/lib/subscription-settings';
 import { isOwnerSessionUser } from '@/lib/admin';
 import { getViewerAccess } from '@/lib/studentView';
+import { getPurchasableCourses } from '@/lib/coursePurchase';
+import { getActiveSectionAccessGrants } from '@/lib/sectionAccess';
+import { getCachedTestCollections } from '@/lib/testCollections';
+import { getCategoryLabel, isTestCategory, normalizeCategoryId } from '@/lib/testCatalog';
+import { daysBetweenKeys, tashkentDateKey, utcDateKey } from '@/components/admin/courses/accessPlan';
 import SubscriptionAvailabilityControl from '@/components/admin/SubscriptionAvailabilityControl';
 import { Page, PageHeader } from '@/components/ui/Page';
 import { Skeleton } from '@/components/ui/Feedback';
 import { cardClass } from '@/components/ui/Card';
 import { cn } from '@/components/ui/cn';
-import { PREMIUM_PLAN_ID } from '@/lib/plans';
+import { PREMIUM_PLAN, PREMIUM_PLAN_ID } from '@/lib/plans';
 import { SubscriptionCheckout } from './SubscriptionCheckout';
 import PaymentRequestsSection from './PaymentRequestsSection';
 
@@ -47,7 +52,9 @@ const getActiveSubscription = cache((userId: string) =>
  * Premium still needs their plan, its expiry and their payments. Only the way
  * to buy closes, with a calm note in its place (see SubscriptionCheckout).
  */
-export default async function SubscriptionPage() {
+export default async function SubscriptionPage(props: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
   const session = await auth();
 
   if (!session?.user?.id) {
@@ -57,10 +64,15 @@ export default async function SubscriptionPage() {
   const userId = session.user.id;
   // `getViewerAccess` is false for an admin in student view, so the page then
   // looks exactly as a student sees it.
-  const [subscriptionSettings, viewer] = await Promise.all([
+  const [subscriptionSettings, viewer, searchParams] = await Promise.all([
     getSubscriptionSettings(),
     getViewerAccess(userId),
+    props.searchParams,
   ]);
+  // `?course=` from a locked test on Practice: the page opens on paying for that course.
+  const requestedCourse = typeof searchParams.course === 'string' && isTestCategory(searchParams.course)
+    ? normalizeCategoryId(searchParams.course)
+    : null;
 
   // Opening and closing sales lives here, on the page it controls, rather than
   // on the admin hub. It shows whether sales are open or not: an admin who
@@ -90,8 +102,8 @@ export default async function SubscriptionPage() {
         title="Subscription"
         description={
           salesOpen
-            ? 'Premium opens every test for 30 days. Pay by card transfer; an admin switches it on once your receipt is checked.'
-            : 'Your plan and your payments. New Premium subscriptions are paused for now.'
+            ? `${PREMIUM_PLAN.name} opens every test in the one course you choose, for 30 days. Pay by card transfer; an admin opens the course once your receipt is checked.`
+            : `Your courses and your payments. New ${PREMIUM_PLAN.name} subscriptions are paused for now.`
         }
       />
 
@@ -109,6 +121,7 @@ export default async function SubscriptionPage() {
           userEmail={session.user.email || ''}
           settings={subscriptionSettings}
           salesOpen={salesOpen}
+          requestedCourse={requestedCourse}
         />
       </Suspense>
     </Page>
@@ -122,20 +135,25 @@ function daysUntil(date: Date) {
   return Math.max(0, Math.ceil((date.getTime() - Date.now()) / DAY_MS));
 }
 
+/** What a request without a course bought: Premium for every course, before courses were sold one at a time. */
+const EVERY_COURSE_LABEL = `${PREMIUM_PLAN.name}, every course`;
+
 async function CheckoutSection({
   userId,
   userName,
   userEmail,
   settings,
   salesOpen,
+  requestedCourse,
 }: {
   userId: string;
   userName: string;
   userEmail: string;
   settings: Awaited<ReturnType<typeof getSubscriptionSettings>>;
   salesOpen: boolean;
+  requestedCourse: string | null;
 }) {
-  const [subscription, manualRequests, payments] = await Promise.all([
+  const [subscription, manualRequests, payments, courses, grants, collections] = await Promise.all([
     getActiveSubscription(userId),
     prisma.manualPaymentRequest.findMany({
       where: { userId },
@@ -146,6 +164,7 @@ async function CheckoutSection({
       select: {
         id: true,
         status: true,
+        category: true,
         receiptFileName: true,
         adminNote: true,
         createdAt: true,
@@ -163,11 +182,15 @@ async function CheckoutSection({
         createdAt: true,
       },
     }),
+    getPurchasableCourses(userId, userEmail),
+    getActiveSectionAccessGrants(userId, userEmail),
+    getCachedTestCollections(),
   ]);
 
-  const isPremium = subscription?.planId === PREMIUM_PLAN_ID;
+  const todayKey = tashkentDateKey(new Date());
   const serializedRequests = manualRequests.map((request) => ({
     ...request,
+    courseLabel: request.category ? getCategoryLabel(request.category, collections) : EVERY_COURSE_LABEL,
     createdAt: request.createdAt.toISOString(),
     reviewedAt: request.reviewedAt?.toISOString() || null,
   }));
@@ -175,28 +198,40 @@ async function CheckoutSection({
     ...payment,
     createdAt: payment.createdAt.toISOString(),
   }));
-  const serializedSubscription = subscription
+  // Premium bought before courses were sold one at a time: every course until it ends.
+  const premium = subscription?.planId === PREMIUM_PLAN_ID
     ? {
-        id: subscription.id,
-        planId: subscription.planId,
-        isActive: subscription.isActive,
         expiresAt: subscription.expiresAt.toISOString(),
         provider: subscription.provider,
-        providerStatus: subscription.providerStatus,
-        createdAt: subscription.createdAt.toISOString(),
         daysLeft: daysUntil(subscription.expiresAt),
       }
     : null;
+  // Every course the student holds, bought or given by an admin, soonest end
+  // first: the one to renew next is on top, and a course with no end last.
+  const ownedCourses = grants
+    .map((grant) => {
+      const endKey = grant.expiresAt ? utcDateKey(grant.expiresAt) : null;
+      return {
+        value: grant.category,
+        label: getCategoryLabel(grant.category, collections),
+        endKey,
+        daysLeft: endKey ? Math.max(0, daysBetweenKeys(todayKey, endKey)) : null,
+      };
+    })
+    .sort((a, b) => (a.endKey ?? '9999').localeCompare(b.endKey ?? '9999') || a.label.localeCompare(b.label));
 
   return (
     <SubscriptionCheckout
       userName={userName}
       userEmail={userEmail}
-      isPremium={isPremium}
       salesOpen={salesOpen}
+      todayKey={todayKey}
+      courses={courses}
+      ownedCourses={ownedCourses}
+      premium={premium}
+      initialCourse={courses.some((course) => course.value === requestedCourse) ? requestedCourse : null}
       requests={serializedRequests}
       payments={serializedPayments}
-      subscription={serializedSubscription}
       // While sales are paused nothing here sells, so the card details - and
       // the price, which only the payment details show - stay out of the
       // payload, as they did when a pause replaced the whole page.
@@ -215,7 +250,7 @@ async function CheckoutSection({
 }
 
 /**
- * Mirrors the plans view of SubscriptionCheckout: the current-plan card, the
+ * Mirrors the plans view of SubscriptionCheckout: the your-courses card, the
  * two plan cards and the billing history list. loading.tsx draws the same
  * blocks under its header skeleton.
  */
@@ -227,13 +262,11 @@ function CheckoutFallback() {
           <Skeleton className="h-5 w-28" />
           <Skeleton className="mt-1.5 h-4 w-56 max-w-full" />
         </div>
-        <div className="grid grid-cols-2 gap-4 p-5 sm:grid-cols-4">
-          {Array.from({ length: 4 }, (_, i) => (
-            <div key={i} className="space-y-1.5">
-              <Skeleton className="h-3 w-14" />
-              <Skeleton className="h-4 w-24" />
-            </div>
-          ))}
+        <div className="flex items-center gap-4 px-4 py-3 sm:px-5">
+          <div className="flex-1 space-y-1.5 py-0.5">
+            <Skeleton className="h-4 w-40 max-w-full" />
+            <Skeleton className="h-3 w-48 max-w-full" />
+          </div>
         </div>
       </div>
 

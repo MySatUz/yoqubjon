@@ -11,20 +11,24 @@ import { findMissingImages, useTexCheck } from '@/components/admin/bank/useTexCh
 import { Button, buttonClass } from '@/components/ui/Button';
 import { CardBody, CardFooter, CardHeader, cardClass } from '@/components/ui/Card';
 import { Alert } from '@/components/ui/Feedback';
-import { bankListHref, EMPTY_BANK_FILTERS } from '@/lib/questionBank';
+import { hintClass, labelClass } from '@/components/ui/Field';
+import { segmentClass, segmentedClass } from '@/components/ui/Misc';
+import { BANKS, bankListHref, emptyBankFilters, getBankLabel, type BankId } from '@/lib/questionBank';
 
 /**
- * Adds a `.tex` file's questions to the bank alone, with no test: the same
- * check-and-tag preview as a course's test upload, then one save. The images
- * go into a `bank/<id>` folder of their own.
+ * Adds a `.tex` file's questions to one bank alone, with no test: the same
+ * check-and-tag preview as a course's test upload, then one save. First the
+ * bank - our own questions, or the official SAT ones taken from the College
+ * Board's open bank. The images go into a `bank/<id>` folder of their own.
  */
-export default function BankUploadForm() {
+export default function BankUploadForm({ defaultBank }: { defaultBank: BankId }) {
+  const [bank, setBank] = useState<BankId>(defaultBank);
   const [texFile, setTexFile] = useState<File | null>(null);
   const [images, setImages] = useState<File[]>([]);
   const [saving, setSaving] = useState(false);
   const [statusText, setStatusText] = useState('Adding questions…');
   const [result, setResult] = useState<
-    { success: true; count: number; fileName: string } | { success: false; error: string } | null
+    { success: true; count: number; fileName: string; bank: BankId } | { success: false; error: string } | null
   >(null);
   // Remounts the file inputs empty after a save: a file input cannot be
   // cleared by state.
@@ -49,6 +53,7 @@ export default function BankUploadForm() {
       const wanted = new Set(texCheck.questions?.map((question) => question.image).filter(Boolean));
       const files = images.filter((file) => wanted.has(file.name));
       const formData = new FormData();
+      formData.set('bank', bank);
       formData.set('texFile', texFile);
       formData.set('questionTags', JSON.stringify(texCheck.tags));
 
@@ -89,6 +94,30 @@ export default function BankUploadForm() {
       />
 
       <CardBody className="grid grid-cols-1 gap-x-4 gap-y-5 sm:grid-cols-2">
+        <div className="space-y-1.5 sm:col-span-2">
+          <p id={`${fieldId}-bank`} className={labelClass}>Bank</p>
+          <div role="radiogroup" aria-labelledby={`${fieldId}-bank`} className={segmentedClass}>
+            {BANKS.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                role="radio"
+                aria-checked={bank === option.value}
+                disabled={saving}
+                onClick={() => setBank(option.value)}
+                className={segmentClass(bank === option.value)}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+          <p className={hintClass}>
+            {bank === 'official'
+              ? 'Questions taken from the College Board SAT question bank, kept apart from ours.'
+              : 'Questions we write ourselves.'}
+          </p>
+        </div>
+
         <FilePickBox
           key={`tex-${resetKey}`}
           id={`${fieldId}-tex`}
@@ -141,7 +170,7 @@ export default function BankUploadForm() {
             className="sm:col-span-2"
             action={
               <Link
-                href={bankListHref({ ...EMPTY_BANK_FILTERS, q: result.fileName })}
+                href={bankListHref({ ...emptyBankFilters(result.bank), q: result.fileName })}
                 prefetch={false}
                 className={buttonClass({ variant: 'secondary', size: 'sm' })}
               >
@@ -151,7 +180,7 @@ export default function BankUploadForm() {
             }
           >
             {result.count === 1 ? '1 question' : `${result.count} questions`} from {result.fileName}
-            {result.count === 1 ? ' is' : ' are'} in the bank.
+            {result.count === 1 ? ' is' : ' are'} in {result.bank === 'official' ? 'the official bank' : 'the bank'}.
             {' '}The form is ready for the next file.
           </Alert>
         )}
@@ -175,7 +204,9 @@ export default function BankUploadForm() {
           ) : (
             <>
               <Upload className="h-4 w-4" />
-              {count > 0 ? `Add ${count} ${count === 1 ? 'question' : 'questions'} to the bank` : 'Add to the bank'}
+              {count > 0
+                ? `Add ${count} ${count === 1 ? 'question' : 'questions'} to ${bank === 'official' ? getBankLabel(bank) : 'the bank'}`
+                : `Add to ${bank === 'official' ? getBankLabel(bank) : 'the bank'}`}
             </>
           )}
         </Button>

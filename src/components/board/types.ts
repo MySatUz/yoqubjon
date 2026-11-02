@@ -1,3 +1,5 @@
+import type { BankId } from '@/lib/questionBank';
+
 /**
  * What crosses from the server to the Board: one question with its maths
  * already rendered, and the question bank's rows. The HTML strings come from
@@ -43,6 +45,8 @@ export type BankRow = BankTags & {
 };
 
 export type BankFilter = {
+  /** Which bank is searched, ours or the official SAT one: it scopes the choices below, and is not one itself. */
+  bank: BankId;
   query: string;
   domains: string[];
   difficulties: number[];
@@ -59,7 +63,7 @@ export type BankPage = {
   asOf: string;
 };
 
-export const EMPTY_FILTER: BankFilter = { query: '', domains: [], difficulties: [] };
+export const EMPTY_FILTER: BankFilter = { bank: 'own', query: '', domains: [], difficulties: [] };
 
 export type BankQuestionResult =
   | { ok: true; question: BoardQuestion; tags: BankTags }

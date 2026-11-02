@@ -9,7 +9,11 @@ export const PREMIUM_MONTHLY_AMOUNT_UZS = 119000;
  *
  * Every line is something the code does today; check it before adding one.
  * A test marked Free (`Test.isFree`) is open to every account, and every other
- * test opens with an active subscription (or a course an admin gives access to). The
+ * test opens with access to its course. Premium Pro is sold one course at a
+ * time (the owner's rule, 2026-10-31): an approved payment gives 30 days of
+ * the course the student chose (coursePurchase.ts), the same access an admin
+ * gives. Premium bought before then opened every course and still does until
+ * it ends (a `Subscription` row). The
  * review comes with every finished attempt, on any plan; the score estimate
  * with every attempt at a test of 10+ questions (MIN_QUESTIONS_FOR_SCORE in
  * scoreDisplay.ts), since a shorter check reports "2 of 3 correct" instead.
@@ -40,11 +44,11 @@ export const FREE_PLAN: PlanSummary = {
 export const PREMIUM_PLAN: PlanSummary = {
   id: PREMIUM_PLAN_ID,
   name: 'Premium Pro',
-  summary: 'Every test in every course.',
+  summary: 'Every test in the one course you choose.',
   features: [
     'Everything in Free Starter',
-    'Every test in every Practice course',
-    '30 days of access for each payment',
+    'Every test in the Practice course you choose',
+    '30 days of that course for each payment',
     'Paid by card transfer, never charged automatically',
   ],
 };

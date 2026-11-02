@@ -2,6 +2,8 @@ import { Suspense } from 'react';
 import ManualPaymentRequests from '@/components/admin/ManualPaymentRequests';
 import { MANUAL_PAYMENT_DAYS } from '@/lib/manual-payments';
 import { prisma } from '@/lib/prisma';
+import { getCategoryLabel } from '@/lib/testCatalog';
+import { getCachedTestCollections } from '@/lib/testCollections';
 import { SectionHeading } from '@/components/ui/Page';
 import { Badge } from '@/components/ui/Badge';
 import { cardClass } from '@/components/ui/Card';
@@ -24,7 +26,7 @@ const requestInclude = {
 
 const SECTION_ID = 'payments';
 const HEADING_ID = 'payments-heading';
-const DESCRIPTION = 'Students pay by card transfer and send the receipt. Check each one, then approve or reject it.';
+const DESCRIPTION = 'Students pay by card transfer for one course and send the receipt. Check each one, then approve or reject it.';
 
 /**
  * The admin's payment queue, on the page it pays for: the separate Payments
@@ -56,7 +58,7 @@ export default function PaymentRequestsSection() {
  * the [status, createdAt DESC] index's own shape.
  */
 async function PaymentRequestQueue() {
-  const [pendingRequests, reviewedRequests] = await Promise.all([
+  const [pendingRequests, reviewedRequests, collections] = await Promise.all([
     prisma.manualPaymentRequest.findMany({
       where: { status: 'PENDING' },
       orderBy: { createdAt: 'desc' },
@@ -69,12 +71,16 @@ async function PaymentRequestQueue() {
       take: REVIEWED_REQUEST_LIMIT,
       include: requestInclude,
     }),
+    getCachedTestCollections(),
   ]);
 
   // Receipts are signed lazily by /api/admin/payments/[id]/receipt when the
   // admin actually opens one, so the storage path never reaches the client.
+  // The course by its name; null for a request from before courses were sold
+  // one at a time, which bought Premium for every course.
   const requests = [...pendingRequests, ...reviewedRequests].map(({ receiptPath, ...request }) => ({
     ...request,
+    courseLabel: request.category ? getCategoryLabel(request.category, collections) : null,
     hasReceipt: Boolean(receiptPath),
   }));
   const waiting = pendingRequests.length;

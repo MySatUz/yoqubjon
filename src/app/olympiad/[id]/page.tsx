@@ -200,14 +200,18 @@ export default async function OlympiadPage({ params }: { params: Promise<{ id: s
             <>
               <h2 className="text-base font-semibold text-gray-900">The olympiad is live</h2>
               <p className="mt-1 text-sm text-gray-600">
-                It is open to students with {PREMIUM_PLAN.name} or with access to its course. The ranking appears
-                here once the olympiad is over.
+                It is open to students with access to its course. The ranking appears here once the olympiad is
+                over.
               </p>
-              {/* As on the catalog's locked card: never a link to a page
-                  with nothing to buy while an admin has paused sales. */}
+              {/* As on the catalog's locked card: the page opens on paying
+                  for this course, and never a link to a page with nothing to
+                  buy while an admin has paused sales. */}
               {salesOpen ? (
-                <Link href="/dashboard/subscription" className={buttonClass({ variant: 'secondary', className: 'mt-4' })}>
-                  Unlock with {PREMIUM_PLAN.name}
+                <Link
+                  href={category ? `/dashboard/subscription?course=${encodeURIComponent(category)}` : '/dashboard/subscription'}
+                  className={buttonClass({ variant: 'secondary', className: 'mt-4' })}
+                >
+                  Buy this course
                 </Link>
               ) : (
                 <p className="mt-2 text-sm text-gray-600">{PREMIUM_PLAN.name} is paused for now.</p>

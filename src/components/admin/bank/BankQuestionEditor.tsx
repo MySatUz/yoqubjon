@@ -10,8 +10,8 @@ import { Button } from '@/components/ui/Button';
 import { CardBody, CardFooter, CardHeader, cardClass } from '@/components/ui/Card';
 import { ConfirmDialog } from '@/components/ui/Dialog';
 import { Field, Input, Textarea, labelClass } from '@/components/ui/Field';
-import { ChipCheck, chipClass, chipGroupClass } from '@/components/ui/Misc';
-import { BANK_DOMAINS, type BankDifficulty, type BankDomain } from '@/lib/questionBank';
+import { ChipCheck, chipClass, chipGroupClass, segmentClass, segmentedClass } from '@/components/ui/Misc';
+import { BANKS, BANK_DOMAINS, type BankDifficulty, type BankDomain, type BankId } from '@/lib/questionBank';
 
 export type EditableBankQuestion = {
   id: string;
@@ -21,6 +21,8 @@ export type EditableBankQuestion = {
   imageUrl: string | null;
   domain: BankDomain | null;
   difficulty: BankDifficulty | null;
+  /** Which bank holds it: ours or the official SAT one. */
+  bank: BankId;
 };
 
 function testCount(count: number) {
@@ -28,9 +30,11 @@ function testCount(count: number) {
 }
 
 /**
- * Edits a bank question: its tags, then its text, options, answer and image,
- * in LaTeX as the test editor takes them. Saving writes the shared fields
- * through to every test that shows the question (`updateBankQuestion`).
+ * Edits a bank question: its bank and tags, then its text, options, answer
+ * and image, in LaTeX as the test editor takes them. Saving writes the shared
+ * fields through to every test that shows the question (`updateBankQuestion`);
+ * the bank and the tags stay on the bank question. A question uploaded into
+ * the wrong bank is moved here.
  */
 export function BankQuestionEditor({
   question,
@@ -40,6 +44,7 @@ export function BankQuestionEditor({
   /** Tests showing it, copies included. */
   usedIn: number;
 }) {
+  const [bank, setBank] = useState<BankId>(question.bank);
   const [domain, setDomain] = useState<BankDomain | null>(question.domain);
   const [difficulty, setDifficulty] = useState<BankDifficulty | null>(question.difficulty);
   const [saving, setSaving] = useState(false);
@@ -73,8 +78,27 @@ export function BankQuestionEditor({
       />
 
       <CardBody className="space-y-5">
+        <input type="hidden" name="bank" value={bank} />
         <input type="hidden" name="domain" value={domain ?? ''} />
         <input type="hidden" name="difficulty" value={difficulty ?? ''} />
+
+        <div className="space-y-1.5">
+          <p id={`${fieldId}-bank`} className={labelClass}>Bank</p>
+          <div role="radiogroup" aria-labelledby={`${fieldId}-bank`} className={segmentedClass}>
+            {BANKS.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                role="radio"
+                aria-checked={bank === option.value}
+                onClick={() => setBank(option.value)}
+                className={segmentClass(bank === option.value)}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+        </div>
 
         <div className="space-y-1.5">
           <p id={`${fieldId}-domain`} className={labelClass}>Domain</p>

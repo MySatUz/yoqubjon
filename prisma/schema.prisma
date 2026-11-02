@@ -223,13 +223,18 @@ model BankQuestion {
   difficulty    Int?     // 1 easy, 2 medium, 3 hard
   // Where it came from, for the admin: the .tex file name or the test title.
   source        String?
+  // Which of the two banks holds it: false for the questions we write
+  // ourselves, true for questions an admin took from the College Board's open
+  // SAT question bank. Every list, search and random pick reads one bank at a
+  // time (BankFilters.bank in src/lib/questionBank.ts).
+  official      Boolean  @default(false)
   createdById   String?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
   questions     Question[]
 
-  @@index([domain, difficulty])
+  @@index([official, domain, difficulty])
   @@index([createdAt])
 }
 
@@ -325,6 +330,12 @@ model Payment {
 model ManualPaymentRequest {
   id               String   @id @default(uuid())
   userId           String
+  // The one course this payment buys (TestCollectionVisibility.category):
+  // approving it gives the student 30 days of access to that course. Null on
+  // requests sent before courses were sold one at a time; those bought
+  // Premium for every course, and are approved that way. A plain string, not
+  // a relation: a deleted course must not take the payment record with it.
+  category         String?
   amount           Int
   currency         String   @default("UZS")
   status           String   @default("PENDING")

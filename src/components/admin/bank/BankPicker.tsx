@@ -10,8 +10,10 @@ import { Button } from '@/components/ui/Button';
 import { Dialog } from '@/components/ui/Dialog';
 import { Alert, EmptyState } from '@/components/ui/Feedback';
 import { checkboxClass, hintClass, inputClass, labelClass } from '@/components/ui/Field';
+import { segmentClass, segmentedClass } from '@/components/ui/Misc';
 import { cn } from '@/components/ui/cn';
 import {
+  BANKS,
   BANK_DIFFICULTIES,
   BANK_DOMAINS,
   EMPTY_BANK_FILTERS,
@@ -21,9 +23,11 @@ import {
   hasBankFilters,
   isBankDifficulty,
   isBankDomain,
+  isOfficialBank,
   normalizeBankFilters,
   toggleValue,
   type BankFilters,
+  type BankId,
   type BankPickRow,
 } from '@/lib/questionBank';
 
@@ -94,13 +98,28 @@ export function useBankPicker() {
   const clear = () => {
     // An answer still on its way belongs to the search being cleared.
     requestRef.current += 1;
-    setFilters(EMPTY_BANK_FILTERS);
+    setFilters((current) => ({ ...EMPTY_BANK_FILTERS, bank: current.bank }));
     setListing(null);
     setLoadingPage(null);
     setError(null);
   };
 
-  return { filters, setFilters, listing, loadingPage, error, search, showMore, clear };
+  /**
+   * The other bank, with the same choices. As on the bank page, where the
+   * switch keeps the search: a search already run runs again there, so the
+   * list never shows one bank under the other's name.
+   */
+  const setBank = (bank: BankId) => {
+    const next = { ...filters, bank };
+    setFilters(next);
+    if (listing) {
+      const normalized = normalizeBankFilters(next);
+      if (hasBankFilters(normalized)) void load(normalized, 1);
+      else setListing(null);
+    }
+  };
+
+  return { filters, setFilters, setBank, listing, loadingPage, error, search, showMore, clear };
 }
 
 function questionCount(count: number) {
@@ -139,14 +158,22 @@ export function BankPicker({
 }) {
   const fieldId = useId();
   const textRef = useRef<HTMLInputElement>(null);
-  const { filters, setFilters, listing, loadingPage, error, search, showMore, clear } = picker;
+  const { filters, setFilters, setBank, listing, loadingPage, error, search, showMore, clear } = picker;
   const chosenIds = new Set(chosen.map((row) => row.id));
   const canSearch = hasBankFilters(normalizeBankFilters(filters));
   const canClear = listing !== null || hasBankFilters(filters);
+  const official = isOfficialBank(filters.bank);
 
-  // From the build page's own count of the bank: no query per tick.
+  // From the build page's own count of the bank: no query per tick. Every
+  // count is of the bank being searched.
   const countWhere = (match: (row: BankAvailability[number]) => boolean) =>
-    availability.filter(match).reduce((total, row) => total + row.count, 0);
+    availability
+      .filter((row) => row.official === official && match(row))
+      .reduce((total, row) => total + row.count, 0);
+  const bankCount = (bank: BankId) =>
+    availability
+      .filter((row) => row.official === isOfficialBank(bank))
+      .reduce((total, row) => total + row.count, 0);
   const unsortedCount = countWhere((row) => row.domain === null || row.difficulty === null);
   const showUnsorted = unsortedCount > 0 || filters.unsorted;
 
@@ -183,6 +210,26 @@ export function BankPicker({
           }}
           className="space-y-4"
         >
+          <div className="space-y-2">
+            <p id={`${fieldId}-bank`} className={labelClass}>Bank</p>
+            <div role="radiogroup" aria-labelledby={`${fieldId}-bank`} className={segmentedClass}>
+              {BANKS.map((bank) => (
+                <button
+                  key={bank.value}
+                  type="button"
+                  role="radio"
+                  aria-checked={filters.bank === bank.value}
+                  onClick={() => setBank(bank.value)}
+                  className={segmentClass(filters.bank === bank.value)}
+                >
+                  {bank.label}
+                  {/* gray-600: the idle segment sits on the track's gray-100. */}
+                  <span className="text-xs tabular-nums text-gray-600">{bankCount(bank.value)}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
           <fieldset className="space-y-2">
             <legend className={labelClass}>Domain</legend>
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">

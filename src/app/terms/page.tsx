@@ -18,14 +18,14 @@ export const metadata: Metadata = {
 };
 
 /*
- * The rules as the code applies them on 26 Oct 2026: plans from plans.ts,
+ * The rules as the code applies them on 31 Oct 2026: plans from plans.ts,
  * Premium from manual-payments.ts and the payment request route, course access
  * from accessPlan.ts, attempts and scores from the exam and scoreDisplay.ts,
  * olympiads from olympiad.ts. Change the page with the rule. Not settled in
  * code, and so not stated: who runs the service, refunds, governing law.
  * No price on this page (the owner's rule); the amount lives in the payment form.
  */
-const UPDATED = new Date('2026-10-26T12:00:00+05:00');
+const UPDATED = new Date('2026-10-31T12:00:00+05:00');
 
 function TelegramLink() {
   return (
@@ -66,22 +66,23 @@ export default function TermsPage() {
       <LegalSection title={PREMIUM_PLAN.name}>
         <ul>
           <li>
-            {PREMIUM_PLAN.name} opens every test in every Practice course. Some tests also need a test code, and an
-            olympiad opens only during its window.
+            {PREMIUM_PLAN.name} is bought for one Practice course at a time, the one you choose before you pay. It opens
+            every test in that course. Some tests also need a test code, and an olympiad opens only during its window.
           </li>
           <li>
             You pay by card transfer to the card shown in your account, then upload a photo or PDF of the receipt. An
-            admin checks it and switches {PREMIUM_PLAN.name} on. The amount is shown only at that step.
+            admin checks it and opens the course for you. The amount is shown only at that step.
           </li>
-          <li>{PREMIUM_PLAN.name} lasts 30 days from the moment it is switched on. Nothing is ever charged automatically.</li>
           <li>
-            You can have 1 payment request waiting at a time. While {PREMIUM_PLAN.name} is active you can’t send a new
-            one, so a new period starts after the current one ends.
+            Each payment gives 30 days of its course, from the day it is approved, or from the end date of access you
+            already have to that course. Nothing is ever charged automatically.
           </li>
-          <li>We may pause new subscriptions. Premium that is already on keeps working.</li>
+          <li>You can have 1 payment request waiting at a time.</li>
+          <li>We may pause new subscriptions. Courses that are already open keep working.</li>
           <li>
-            If you cancel, access to Premium tests stops right away, even with days left. Refunds are not handled in the
-            app; write to us in Telegram, <TelegramLink />.
+            {PREMIUM_PLAN.name} bought before it was sold one course at a time opens every course until it ends. If you
+            cancel it, that access stops right away, even with days left. Refunds are not handled in the app; write to
+            us in Telegram, <TelegramLink />.
           </li>
         </ul>
       </LegalSection>
@@ -120,8 +121,8 @@ export default function TermsPage() {
         <ul>
           <li>An olympiad opens and closes at set times, in Tashkent time.</li>
           <li>
-            You can enter with {PREMIUM_PLAN.name}, with access to its course, or freely when the olympiad is marked
-            Free. A new attempt can start until one full test length before it closes.
+            You can enter with access to its course, or freely when the olympiad is marked Free. A new attempt can
+            start until one full test length before it closes.
           </li>
           <li>
             Only attempts submitted inside the window count, and only your best one. More questions solved ranks higher;

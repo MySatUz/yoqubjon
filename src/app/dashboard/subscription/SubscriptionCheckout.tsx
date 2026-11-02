@@ -5,13 +5,14 @@ import { ArrowLeft, Check, Loader2, Receipt } from 'lucide-react';
 import { formatDate, formatDateTime } from '@/lib/formatDate';
 import { TELEGRAM_URL } from '@/lib/landing/warmup';
 import { FREE_PLAN, PREMIUM_PLAN, type PlanSummary } from '@/lib/plans';
+import type { PurchasableCourse } from '@/lib/coursePurchase';
+import { ENDS_SOON_DAYS, formatDateKey } from '@/components/admin/courses/accessPlan';
 import { Card, CardHeader, insetClass } from '@/components/ui/Card';
 import { Button, linkClass } from '@/components/ui/Button';
 import { Badge, type Tone } from '@/components/ui/Badge';
 import { useConfirm } from '@/components/ui/Dialog';
 import { PaymentStatusBadge } from '@/components/ui/PaymentStatusBadge';
 import { Alert, EmptyState } from '@/components/ui/Feedback';
-import { KeyValue } from '@/components/ui/Misc';
 import { List, RowText, listRowClass } from '@/components/ui/List';
 import { SectionHeading, backLinkClass } from '@/components/ui/Page';
 import { cn } from '@/components/ui/cn';
@@ -25,18 +26,48 @@ import { cancelActiveSubscription } from './actions';
 type ManualRequest = {
   id: string;
   status: string;
+  /** The course it buys; null for a request from before courses were sold one at a time. */
+  category: string | null;
+  /** That course by its name, or "Premium Pro, every course" for an old request. */
+  courseLabel: string;
   receiptFileName: string | null;
   adminNote: string | null;
   createdAt: string;
   reviewedAt: string | null;
 };
 
+/** A course the student holds now, bought or given by an admin. */
+type OwnedCourse = {
+  value: string;
+  label: string;
+  /** The access end as a `YYYY-MM-DD` UTC key (accessPlan.ts); null for access with no end date. */
+  endKey: string | null;
+  /** Whole days left, worked out on the server; null with no end date. */
+  daysLeft: number | null;
+};
+
 type SubscriptionCheckoutProps = {
   userName: string;
   userEmail: string;
-  isPremium: boolean;
   /** False while an admin has paused sales: nothing on this page sells. */
   salesOpen: boolean;
+  /** Today's Tashkent date, the key the course dates are counted from. */
+  todayKey: string;
+  /** The courses this student can pay for, in the catalog's order. */
+  courses: PurchasableCourse[];
+  ownedCourses: OwnedCourse[];
+  /**
+   * Premium bought before courses were sold one at a time: every course
+   * until it ends. Null for everyone else.
+   */
+  premium: {
+    expiresAt: string;
+    provider: string;
+    /** Whole days until it ends, worked out on the server. */
+    daysLeft: number;
+  } | null;
+  /** A course `?course=` names that is on sale: the page opens on paying for it. */
+  initialCourse: string | null;
   requests: ManualRequest[];
   payments: {
     id: string;
@@ -44,17 +75,6 @@ type SubscriptionCheckoutProps = {
     status: string;
     createdAt: string;
   }[];
-  subscription: {
-    id: string;
-    planId: string;
-    isActive: boolean;
-    expiresAt: string;
-    provider: string;
-    providerStatus: string | null;
-    createdAt: string;
-    /** Whole days until it ends, worked out on the server. */
-    daysLeft: number;
-  } | null;
   /** The card to pay to and the price; null while sales are paused, so neither is sent at all. */
   transfer: {
     cardHolder: string;
@@ -111,39 +131,57 @@ function PlanFeatures({ plan }: { plan: PlanSummary }) {
 
 const CANCEL_ERROR = 'The subscription could not be cancelled. Try again in a minute.';
 
-/** For the current-plan header: when to renew, without counting from a date. */
+/** When to renew, without counting from a date. */
 function daysLeftLabel(days: number) {
   if (days <= 0) return 'Ends today';
   return days === 1 ? '1 day left' : `${days} days left`;
 }
 
 export function SubscriptionCheckout(props: SubscriptionCheckoutProps) {
-  const [mode, setMode] = useState<'plans' | 'manual'>('plans');
+  const canBuy = props.salesOpen && props.transfer !== null && props.courses.length > 0;
+  // A locked test on Practice links here with its course: the page opens on
+  // paying for it, one press from the test.
+  const [mode, setMode] = useState<'plans' | 'manual'>(() =>
+    canBuy && props.initialCourse ? 'manual' : 'plans'
+  );
+  const [course, setCourse] = useState<string | null>(() =>
+    props.initialCourse ?? (props.courses.length === 1 ? props.courses[0].value : null)
+  );
   const [isCanceling, startCancelTransition] = useTransition();
   const [cancelError, setCancelError] = useState<string | null>(null);
   const { confirm, dialog } = useConfirm();
   const latestRequest = props.requests[0];
+  const purchasable = new Set(props.courses.map((item) => item.value));
 
   // The button that switches views goes away with its view, which would drop
   // keyboard focus on the page body (and leave the screen scrolled to where
   // the Premium card was). Focus moves to the top of the transfer step, and
-  // back to the button that opened it.
+  // back to the button that opened it. Not on the first render: a page that
+  // opens on the transfer step leaves the focus where the browser puts it.
   const backRef = useRef<HTMLButtonElement>(null);
-  const payRef = useRef<HTMLButtonElement>(null);
-  const detailsRef = useRef<HTMLButtonElement>(null);
-  const openedFrom = useRef<'pay' | 'details' | null>(null);
+  const openerRef = useRef<HTMLButtonElement | null>(null);
+  const hasSwitched = useRef(false);
   useEffect(() => {
+    if (!hasSwitched.current) return;
     if (mode === 'manual') {
       backRef.current?.focus();
-    } else if (openedFrom.current) {
-      (openedFrom.current === 'pay' ? payRef : detailsRef).current?.focus();
-      openedFrom.current = null;
+    } else if (openerRef.current?.isConnected) {
+      openerRef.current.focus();
+      openerRef.current = null;
     }
   }, [mode]);
 
-  const openDetails = (from: 'pay' | 'details') => {
-    openedFrom.current = from;
+  /** Opens the transfer step, on `withCourse` when that one is on sale. */
+  const openDetails = (event: React.MouseEvent<HTMLButtonElement>, withCourse?: string | null) => {
+    openerRef.current = event.currentTarget;
+    hasSwitched.current = true;
+    if (withCourse && purchasable.has(withCourse)) setCourse(withCourse);
     setMode('manual');
+  };
+
+  const backToPlans = () => {
+    hasSwitched.current = true;
+    setMode('plans');
   };
 
   const cancelSubscription = async () => {
@@ -151,7 +189,7 @@ export function SubscriptionCheckout(props: SubscriptionCheckoutProps) {
     // a plain "Cancel" reads as the same answer.
     const ok = await confirm({
       title: `Cancel ${PREMIUM_PLAN.name}?`,
-      description: 'Access to every Premium test stops right away, even with days left on it.',
+      description: 'Access to every course it opens stops right away, even with days left on it. Courses you bought one at a time stay open.',
       confirmLabel: 'Cancel subscription',
       cancelLabel: `Keep ${PREMIUM_PLAN.name}`,
       tone: 'danger',
@@ -180,54 +218,78 @@ export function SubscriptionCheckout(props: SubscriptionCheckoutProps) {
   if (mode === 'manual' && props.salesOpen && props.transfer) {
     return (
       <div className="space-y-4">
-        <button ref={backRef} type="button" onClick={() => setMode('plans')} className={backLinkClass}>
+        <button ref={backRef} type="button" onClick={backToPlans} className={backLinkClass}>
           <ArrowLeft className="h-4 w-4" />
           Back to plans
         </button>
 
-        <ManualPaymentForm {...props} transfer={props.transfer} />
+        <ManualPaymentForm
+          userName={props.userName}
+          userEmail={props.userEmail}
+          todayKey={props.todayKey}
+          courses={props.courses}
+          course={course}
+          onCourseChange={setCourse}
+          premiumUntil={props.premium?.expiresAt ?? null}
+          requests={props.requests}
+          transfer={props.transfer}
+        />
       </div>
     );
   }
+
+  const hasAccess = props.ownedCourses.length > 0 || props.premium !== null;
 
   return (
     <>
       {dialog}
       <Card>
         <CardHeader
-          title="Current plan"
+          title="Your courses"
           description={
-            props.subscription
-              ? `${daysLeftLabel(props.subscription.daysLeft)} · ${providerLabel(props.subscription.provider)}`
-              : 'No active paid subscription yet.'
-          }
-          actions={
-            // Outlined, red only on hover: a ghost red label read as text,
-            // and a solid red button is too loud for the page's header.
-            props.isPremium ? (
-              <Button variant="danger-secondary" size="sm" onClick={cancelSubscription} disabled={isCanceling}>
-                {isCanceling && <Loader2 className="h-4 w-4 animate-spin" />}
-                Cancel subscription
-              </Button>
-            ) : null
+            hasAccess
+              ? 'Every test in these courses is open to you until the date beside it.'
+              : 'No course yet. The tests marked Free are open to you.'
           }
         />
 
-        {/* Only facts that exist: a free account has no start or end date, so
-            it no longer shows two cells of "—". */}
-        <dl className="grid grid-cols-2 gap-4 p-5 sm:grid-cols-4">
-          <KeyValue label="Plan" value={props.isPremium ? PREMIUM_PLAN.name : FREE_PLAN.name} />
-          <KeyValue
-            label="Status"
-            value={props.isPremium ? <Badge tone="success">Active</Badge> : <Badge>Free</Badge>}
-          />
-          {props.subscription && (
-            <>
-              <KeyValue label="Started" value={formatDate(props.subscription.createdAt)} />
-              <KeyValue label="Ends" value={formatDate(props.subscription.expiresAt)} />
-            </>
-          )}
-        </dl>
+        {hasAccess && (
+          <ul className="divide-y divide-gray-100 border-t border-gray-100">
+            {props.premium && (
+              <li className={listRowClass}>
+                <RowText
+                  title={`${PREMIUM_PLAN.name} · every course`}
+                  meta={`Until ${formatDate(props.premium.expiresAt)} · ${daysLeftLabel(props.premium.daysLeft)} · ${providerLabel(props.premium.provider)}`}
+                />
+                {/* Outlined, red only on hover: a ghost red label read as
+                    text, and a solid red button is too loud for a row. */}
+                <Button variant="danger-secondary" size="sm" onClick={cancelSubscription} disabled={isCanceling}>
+                  {isCanceling && <Loader2 className="h-4 w-4 animate-spin" />}
+                  Cancel subscription
+                </Button>
+              </li>
+            )}
+            {props.ownedCourses.map((owned) => (
+              <li key={owned.value} className={listRowClass}>
+                <RowText
+                  title={owned.label}
+                  meta={
+                    owned.endKey && owned.daysLeft !== null
+                      ? `Until ${formatDateKey(owned.endKey, props.todayKey)} · ${daysLeftLabel(owned.daysLeft)}`
+                      : 'No end date'
+                  }
+                />
+                {owned.daysLeft !== null && owned.daysLeft <= ENDS_SOON_DAYS && <Badge tone="warning">Ends soon</Badge>}
+                {/* Renewing adds 30 days to the end above, so it can be paid early. */}
+                {canBuy && purchasable.has(owned.value) && (
+                  <Button variant="quiet" size="sm" onClick={(event) => openDetails(event, owned.value)}>
+                    Add 30 days
+                  </Button>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
 
         {cancelError && (
           <div className="px-5 pb-5">
@@ -235,23 +297,23 @@ export function SubscriptionCheckout(props: SubscriptionCheckoutProps) {
           </div>
         )}
 
-        {latestRequest && !props.isPremium && (
+        {latestRequest && (
           <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-gray-100 px-5 py-3">
-            {/* The date, not the amount: a price is shown only in the
-                payment details while sales are open (the owner's rule). */}
+            {/* The course and the date, not the amount: a price is shown only
+                in the payment details while sales are open (the owner's rule). */}
             <p className="min-w-0 flex-1 text-sm text-gray-600">
-              Latest payment request <span className="text-gray-500">· {formatDate(latestRequest.createdAt)}</span>
+              Latest payment request <span className="text-gray-500">· {latestRequest.courseLabel} · {formatDate(latestRequest.createdAt)}</span>
             </p>
             <PaymentStatusBadge status={latestRequest.status} pendingLabel="Pending review" />
             {/* The details page sends a new request, which a pause refuses. */}
-            {props.salesOpen && (
-              <Button ref={detailsRef} variant="secondary" size="sm" onClick={() => openDetails('details')}>
+            {canBuy && (
+              <Button variant="secondary" size="sm" onClick={(event) => openDetails(event, latestRequest.category)}>
                 Open payment details
               </Button>
             )}
             {/* Without the details page, the admin's reason for a declined
                 receipt would have nowhere to show while sales are paused. */}
-            {!props.salesOpen && latestRequest.adminNote && (
+            {!canBuy && latestRequest.adminNote && (
               <p className="w-full text-xs text-gray-600">Admin note: {latestRequest.adminNote}</p>
             )}
           </div>
@@ -269,34 +331,31 @@ export function SubscriptionCheckout(props: SubscriptionCheckoutProps) {
             <p className="mt-0.5 text-sm text-gray-500">{FREE_PLAN.summary}</p>
             <PlanFeatures plan={FREE_PLAN} />
             <Button variant="secondary" block disabled className="mt-5">
-              {props.isPremium ? 'Included in Premium' : 'Current plan'}
+              {hasAccess ? 'Always included' : 'Current plan'}
             </Button>
           </Card>
 
-          {/* The one highlighted card: a board edge instead of a dark surface.
-              Not while sales are paused — there is nothing to recommend. */}
+          {/* The one highlighted card: an ink edge instead of a dark surface.
+              Not while nothing can be bought, or for a student who already
+              has a course: there is nothing to recommend. */}
           <div
             className={cn(
               'flex flex-col rounded-2xl border bg-white p-5',
-              props.salesOpen && !props.isPremium ? 'border-ink-600 ring-1 ring-ink-600' : 'border-gray-200',
+              canBuy && !hasAccess ? 'border-ink-600 ring-1 ring-ink-600' : 'border-gray-200',
             )}
           >
             <div className="flex items-center justify-between gap-2">
               <h3 className="text-base font-semibold text-gray-900">{PREMIUM_PLAN.name}</h3>
-              {!props.isPremium && props.salesOpen && <Badge tone="accent">Recommended</Badge>}
+              {canBuy && !hasAccess && <Badge tone="accent">Recommended</Badge>}
             </div>
             <p className="mt-0.5 text-sm text-gray-500">{PREMIUM_PLAN.summary}</p>
             <PlanFeatures plan={PREMIUM_PLAN} />
 
-            {props.isPremium ? (
-              <Button variant="secondary" block disabled className="mt-5">
-                Subscription active
+            {canBuy ? (
+              <Button block className="mt-5" onClick={(event) => openDetails(event, course)}>
+                Buy a course
               </Button>
-            ) : props.salesOpen ? (
-              <Button ref={payRef} block className="mt-5" onClick={() => openDetails('pay')}>
-                Pay by transfer
-              </Button>
-            ) : (
+            ) : !props.salesOpen ? (
               // Paused by an admin (SubscriptionAvailabilityControl): a calm
               // note where the button was, never a button into a dead end.
               <p className={cn(insetClass, 'mt-5 px-4 py-3 text-sm text-gray-600')}>
@@ -304,7 +363,13 @@ export function SubscriptionCheckout(props: SubscriptionCheckoutProps) {
                 <a href={TELEGRAM_URL} target="_blank" rel="noopener noreferrer" className={linkClass}>
                   Ask in Telegram
                 </a>{' '}
-                when Premium reopens.
+                when {PREMIUM_PLAN.name} reopens.
+              </p>
+            ) : (
+              // Open, but no course has a test to buy, or every one the
+              // student has is theirs with no end date.
+              <p className={cn(insetClass, 'mt-5 px-4 py-3 text-sm text-gray-600')}>
+                No course is on sale right now. Your free tests stay open.
               </p>
             )}
           </div>

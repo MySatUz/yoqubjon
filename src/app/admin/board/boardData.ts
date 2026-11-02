@@ -4,7 +4,14 @@ import { renderMathHtml } from '@/lib/renderMathHtml';
 import { tokenizeMathText } from '@/lib/mathTokens';
 import { isMultiSelectKey, parseAnswerLetters } from '@/lib/resultAnswers';
 import { parseTexFile } from '@/lib/texParser';
-import { isBankDifficulty, isBankDomain } from '@/lib/questionBank';
+import {
+  bankOfQuestion,
+  isBankDifficulty,
+  isBankDomain,
+  isOfficialBank,
+  readBankId,
+  type BankId,
+} from '@/lib/questionBank';
 import { optionAsMath } from '@/components/exam/optionMath';
 import type {
   BankFilter,
@@ -278,17 +285,22 @@ function previewSource(content: string) {
   return out.trim();
 }
 
-/** How many questions the whole bank holds per domain and per difficulty, for the search tiles. */
+/** How many questions one bank holds in all, per domain and per difficulty, for the search tiles. */
 export type BankCounts = {
+  total: number;
   domains: Record<string, number>;
   difficulties: Record<number, number>;
 };
 
-/** A page of the Board's bank search; the read with no choices carries the tile counts instead of rows. */
-export type BoardBankPage = BankPage & { counts?: BankCounts };
+/**
+ * A page of the Board's bank search; the read with no choices carries both
+ * banks' tile counts instead of rows, so switching banks needs no read.
+ */
+export type BoardBankPage = BankPage & { counts?: Record<BankId, BankCounts> };
 
 function cleanFilter(filter: BankFilter): BankFilter {
   return {
+    bank: readBankId(filter?.bank),
     query: typeof filter?.query === 'string' ? filter.query.trim().slice(0, 200) : '',
     domains: Array.isArray(filter?.domains) ? filter.domains.filter(isBankDomain) : [],
     difficulties: Array.isArray(filter?.difficulties) ? filter.difficulties.filter(isBankDifficulty) : [],
@@ -300,8 +312,9 @@ function isEmptyFilter(filter: BankFilter) {
 }
 
 function bankWhere(filter: BankFilter): Prisma.BankQuestionWhereInput {
-  const { query, domains, difficulties } = cleanFilter(filter);
+  const { bank, query, domains, difficulties } = cleanFilter(filter);
   return {
+    official: isOfficialBank(bank),
     ...(domains.length > 0 ? { domain: { in: domains } } : {}),
     ...(difficulties.length > 0 ? { difficulty: { in: difficulties } } : {}),
     ...(query
@@ -330,27 +343,36 @@ function readAsOf(asOf: unknown) {
  * those, and the list could never grow again.
  *
  * As on the bank page, nothing is listed before a choice: with no domain, no
- * difficulty and no words the read returns no rows, only the bank's size and
- * its count per tile - what the Board's search card opens on.
+ * difficulty and no words the read returns no rows, only each bank's size and
+ * its count per tile - what the Board's search card opens on. Every read is of
+ * one bank, ours or the official SAT one (`filter.bank`).
  */
 export async function searchBank(filter: BankFilter, offset: number, asOf?: string): Promise<BoardBankPage> {
   const listedAt = readAsOf(asOf);
   const clean = cleanFilter(filter);
 
   if (isEmptyFilter(clean)) {
-    const [total, byDomain, byDifficulty] = await Promise.all([
-      prisma.bankQuestion.count(),
-      prisma.bankQuestion.groupBy({ by: ['domain'], _count: { _all: true } }),
-      prisma.bankQuestion.groupBy({ by: ['difficulty'], _count: { _all: true } }),
+    const [byBank, byDomain, byDifficulty] = await Promise.all([
+      prisma.bankQuestion.groupBy({ by: ['official'], _count: { _all: true } }),
+      prisma.bankQuestion.groupBy({ by: ['official', 'domain'], _count: { _all: true } }),
+      prisma.bankQuestion.groupBy({ by: ['official', 'difficulty'], _count: { _all: true } }),
     ]);
-    const counts: BankCounts = { domains: {}, difficulties: {} };
+    const counts: Record<BankId, BankCounts> = {
+      own: { total: 0, domains: {}, difficulties: {} },
+      official: { total: 0, domains: {}, difficulties: {} },
+    };
+    for (const group of byBank) {
+      counts[bankOfQuestion(group.official)].total = group._count._all;
+    }
     for (const group of byDomain) {
-      if (isBankDomain(group.domain)) counts.domains[group.domain] = group._count._all;
+      if (isBankDomain(group.domain)) counts[bankOfQuestion(group.official)].domains[group.domain] = group._count._all;
     }
     for (const group of byDifficulty) {
-      if (isBankDifficulty(group.difficulty)) counts.difficulties[group.difficulty] = group._count._all;
+      if (isBankDifficulty(group.difficulty)) {
+        counts[bankOfQuestion(group.official)].difficulties[group.difficulty] = group._count._all;
+      }
     }
-    return { rows: [], total, asOf: listedAt.toISOString(), counts };
+    return { rows: [], total: counts[clean.bank].total, asOf: listedAt.toISOString(), counts };
   }
 
   const where: Prisma.BankQuestionWhereInput = { AND: [bankWhere(clean), { createdAt: { lte: listedAt } }] };

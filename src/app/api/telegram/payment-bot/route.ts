@@ -1,8 +1,10 @@
 import { createHash } from 'node:crypto';
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { getCategoryLabel } from '@/lib/testCatalog';
+import { getCachedTestCollections } from '@/lib/testCollections';
 import {
-  activateManualSubscription,
+  approveManualPayment,
   formatManualPaymentAmount,
   getTelegramAdminBaseUrl,
   rejectManualPaymentRequestById,
@@ -184,7 +186,26 @@ async function getManualRequest(requestId: string) {
     throw new TelegramWebhookError(404, 'Payment request was not found');
   }
 
-  return request;
+  // A request from before courses were sold one at a time bought them all.
+  const courseLabel = request.category
+    ? getCategoryLabel(request.category, await getCachedTestCollections())
+    : 'Premium, every course';
+
+  return { ...request, courseLabel };
+}
+
+/**
+ * A course's access ends on a whole UTC day (accessPlan.ts), so it is printed
+ * as that date alone, the way the admin pages show it; read in Tashkent time
+ * with the hour, 23:59 UTC would be 04:59 the next morning.
+ */
+function formatCourseAccessUntil(date: Date) {
+  return date.toLocaleDateString('ru-RU', {
+    timeZone: 'UTC',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  });
 }
 
 function formatAccessUntil(date: Date) {
@@ -202,19 +223,24 @@ function formatAccessUntil(date: Date) {
 function buildResultText(
   action: 'approved' | 'rejected',
   request: Awaited<ReturnType<typeof getManualRequest>>,
-  expiresAt?: Date
+  expiresAt?: Date | null
 ) {
+  const approvedTitle = request.category ? 'Course opened' : 'Subscription activated';
   const lines = [
-    `<b>${action === 'approved' ? 'Subscription activated' : 'Payment request rejected'}</b>`,
+    `<b>${action === 'approved' ? approvedTitle : 'Payment request rejected'}</b>`,
     '',
     `<b>Request:</b> <code>${escapeHtml(request.id)}</code>`,
     `<b>User:</b> ${escapeHtml(request.payerName || request.user.name || 'User')}`,
     `<b>Email:</b> ${escapeHtml(request.user.email)}`,
+    `<b>Course:</b> ${escapeHtml(request.courseLabel)}`,
     `<b>Amount:</b> ${escapeHtml(formatManualPaymentAmount(request.amount))}`,
   ];
 
   if (action === 'approved' && expiresAt) {
-    lines.push(`<b>Access until:</b> ${escapeHtml(formatAccessUntil(expiresAt))}`);
+    const until = request.category ? formatCourseAccessUntil(expiresAt) : formatAccessUntil(expiresAt);
+    lines.push(`<b>Access until:</b> ${escapeHtml(until)}`);
+  } else if (action === 'approved' && request.category) {
+    lines.push('<b>Access until:</b> no end date');
   }
 
   return lines.join('\n');
@@ -222,7 +248,7 @@ function buildResultText(
 
 async function approveRequest(requestId: string, reviewer: TelegramUser) {
   const adminNote = `Approved in Telegram by ${reviewerLabel(reviewer)} (${reviewer.id}).`;
-  const result = await activateManualSubscription({
+  const result = await approveManualPayment({
     requestId,
     adminUserId: `telegram:${reviewer.id}`,
     adminNote,

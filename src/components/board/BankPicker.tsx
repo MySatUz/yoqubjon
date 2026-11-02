@@ -13,8 +13,10 @@ import { cardClass } from '@/components/ui/Card';
 import { Alert, EmptyState } from '@/components/ui/Feedback';
 import { checkboxClass, inputClass, labelClass } from '@/components/ui/Field';
 import { List, listRowInteractiveClass, rowChevronClass } from '@/components/ui/List';
+import { segmentClass, segmentedClass } from '@/components/ui/Misc';
 import { cn } from '@/components/ui/cn';
 import {
+  BANKS,
   BANK_DIFFICULTIES,
   BANK_DOMAINS,
   MAX_BANK_SEARCH_LENGTH,
@@ -22,6 +24,7 @@ import {
   getDomainShortLabel,
   isBankDifficulty,
   isBankDomain,
+  type BankId,
 } from '@/lib/questionBank';
 
 function formatCount(count: number) {
@@ -39,7 +42,8 @@ function TileCount({ value }: { value: number | undefined }) {
  * Board's educator bank) it opens on the search, not on a list: domain and
  * difficulty tiles, words from the question, and Search. Nothing is listed
  * before that. Picking a found row puts that question on the board, and
- * "Next question" there walks on down this same search.
+ * "Next question" there walks on down this same search. Above the card, the
+ * bank: our own questions or the official SAT ones.
  */
 export default function BankPicker({
   filter,
@@ -57,6 +61,7 @@ export default function BankPicker({
   onQueryChange,
   onToggleDomain,
   onToggleDifficulty,
+  onBankChange,
   onClearFilter,
   onSearch,
   onRetry,
@@ -72,10 +77,10 @@ export default function BankPicker({
   hasSearched: boolean;
   /** Search was pressed with nothing chosen. */
   needsChoice: boolean;
-  /** Questions in the whole bank; null while unknown. */
+  /** Questions in the bank being searched; null while unknown. */
   bankTotal: number | null;
-  /** The whole bank per tile; null while unknown, and the tiles go without. */
-  counts: BankCounts | null;
+  /** Each bank in all and per tile; null while unknown, and the tiles go without. */
+  counts: Record<BankId, BankCounts> | null;
   isSearching: boolean;
   isLoadingMore: boolean;
   error: string | null;
@@ -86,6 +91,7 @@ export default function BankPicker({
   onQueryChange: (query: string) => void;
   onToggleDomain: (domain: string) => void;
   onToggleDifficulty: (difficulty: number) => void;
+  onBankChange: (bank: BankId) => void;
   onClearFilter: () => void;
   onSearch: () => void;
   onRetry: () => void;
@@ -93,24 +99,54 @@ export default function BankPicker({
   onPick: (index: number) => void;
 }) {
   const hasChoices = filter.query.trim() !== '' || filter.domains.length > 0 || filter.difficulties.length > 0;
+  const bankCounts = counts ? counts[filter.bank] : null;
+  const isOfficial = filter.bank === 'official';
+
+  const bankSwitch = (
+    <div role="radiogroup" aria-label="Bank" className={segmentedClass}>
+      {BANKS.map((bank) => (
+        <button
+          key={bank.value}
+          type="button"
+          role="radio"
+          aria-checked={filter.bank === bank.value}
+          onClick={() => onBankChange(bank.value)}
+          className={segmentClass(filter.bank === bank.value)}
+        >
+          {bank.label}
+          {/* gray-600: the idle segment sits on the track's gray-100. */}
+          {counts && <span className="text-xs tabular-nums text-gray-600">{counts[bank.value].total}</span>}
+        </button>
+      ))}
+    </div>
+  );
 
   if (bankTotal === 0) {
     return (
-      <EmptyState
-        icon={<Library />}
-        title="The question bank is empty"
-        description="Questions arrive with every imported test."
-        action={
-          <Link href="/admin/bank" className={buttonClass({ variant: 'secondary' })}>
-            Open the question bank
-          </Link>
-        }
-      />
+      <div className="space-y-4">
+        {bankSwitch}
+        <EmptyState
+          icon={<Library />}
+          title={isOfficial ? 'The official bank is empty' : 'The question bank is empty'}
+          description={isOfficial
+            ? 'Upload a .tex file of questions taken from the College Board SAT question bank.'
+            : 'Questions arrive with every imported test.'}
+          action={
+            <Link
+              href={isOfficial ? '/admin/bank/upload?bank=official' : '/admin/bank'}
+              className={buttonClass({ variant: 'secondary' })}
+            >
+              {isOfficial ? 'Upload questions' : 'Open the question bank'}
+            </Link>
+          }
+        />
+      </div>
     );
   }
 
   return (
     <div className="space-y-4">
+      {bankSwitch}
       <form
         role="search"
         aria-label="Find questions"
@@ -133,7 +169,7 @@ export default function BankPicker({
                     className={checkboxClass}
                   />
                   <span className="min-w-0 flex-1 text-sm font-medium text-gray-900">{domain.label}</span>
-                  <TileCount value={counts ? counts.domains[domain.value] ?? 0 : undefined} />
+                  <TileCount value={bankCounts ? bankCounts.domains[domain.value] ?? 0 : undefined} />
                 </label>
               ))}
             </div>
@@ -152,7 +188,7 @@ export default function BankPicker({
                   />
                   <DifficultyBars level={difficulty.value} />
                   <span className="min-w-0 flex-1 text-sm font-medium text-gray-900">{difficulty.label}</span>
-                  <TileCount value={counts ? counts.difficulties[difficulty.value] ?? 0 : undefined} />
+                  <TileCount value={bankCounts ? bankCounts.difficulties[difficulty.value] ?? 0 : undefined} />
                 </label>
               ))}
             </div>
@@ -199,7 +235,7 @@ export default function BankPicker({
             {needsChoice
               ? 'Choose a domain or a difficulty, or type words, then search.'
               : bankTotal !== null
-                ? `${formatCount(bankTotal)} in the bank`
+                ? `${formatCount(bankTotal)} in ${isOfficial ? 'the official bank' : 'the bank'}`
                 : null}
           </p>
           {(hasChoices || hasSearched) && (

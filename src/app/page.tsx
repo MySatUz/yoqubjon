@@ -53,7 +53,7 @@ const developers = [
   },
   {
     name: 'Mr Yoqubjon',
-    email: 'yoqubjon.isaqjonov@mail.ru',
+    email: 'isaqjonovyoqubjon@gmail.com',
     phone: { href: 'tel:+998999214595', label: '+998 99 921 45 95' },
     telegram: { href: 'https://t.me/Yokubjon_Isaqjonov', label: '@Yokubjon_Isaqjonov' },
   },

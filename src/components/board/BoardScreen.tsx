@@ -38,6 +38,7 @@ import {
   toolIdleClass,
 } from '@/components/exam/toolButtons';
 import BoardWhiteboard from '@/components/board/BoardWhiteboard';
+import TelegramChannel from '@/components/board/TelegramChannel';
 import type { BankTags, BoardQuestion } from '@/components/board/types';
 import BrandMark from '@/components/layout/BrandMark';
 import { Badge } from '@/components/ui/Badge';
@@ -367,14 +368,18 @@ export default function BoardScreen({
           BAR_GUTTER_CLASS,
         )}
       >
-        {/* The logo at its larger size and the question's tags: the bar says
-            nothing else, so a recording shows only the question. */}
+        {/* The logo at its larger size, the question's tags and the Telegram
+            channel: the bar says nothing else, so a recording shows only the
+            question and where to find more. The channel from lg: below it,
+            beside "Problem-Solving and Data Analysis" and the tool strip, the
+            bar would cut it off. */}
         <div className="flex min-w-0 flex-1 items-center gap-3 overflow-hidden">
           <span className="hidden sm:block">
             <BrandMark size="md" />
           </span>
           {shown.tags?.domain && <Badge size="md">{getDomainLabel(shown.tags.domain)}</Badge>}
           {shown.tags?.difficulty && <Badge size="md">{getDifficultyLabel(shown.tags.difficulty)}</Badge>}
+          <TelegramChannel className="ml-2 hidden lg:inline-flex" />
         </div>
 
         {/* The exam's strip, in the exam's order, with full screen at the end. */}

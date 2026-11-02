@@ -6,16 +6,18 @@ import { requireAdminPage } from '@/lib/admin';
 import { prisma } from '@/lib/prisma';
 import { formatDate } from '@/lib/formatDate';
 import {
+  BANKS,
   BANK_DIFFICULTIES,
   BANK_DOMAINS,
   BANK_PAGE_SIZES,
-  EMPTY_BANK_FILTERS,
   bankListHref,
+  emptyBankFilters,
   getDifficultyLabel,
   getDomainShortLabel,
   hasBankFilters,
   isBankDifficulty,
   isBankDomain,
+  isOfficialBank,
   readBankFilters,
 } from '@/lib/questionBank';
 import { bankQuestionWhere, countTestsUsing, readOptions } from '@/lib/questionBankServer';
@@ -71,6 +73,11 @@ const pageOffClass = 'border-gray-200 bg-gray-100 text-gray-400';
  * nothing is listed before that (the owner's call: the whole bank as one long
  * list was a page of text to scroll, and the bank only grows).
  *
+ * Two banks, one at a time: our own questions and the official SAT ones an
+ * admin takes from the College Board's open bank (`?bank=official`). The
+ * switch above the search keeps the choices, so the same search runs in the
+ * other bank.
+ *
  * A plain GET form: the choices are in the URL, so a result survives a
  * reload and the back button, and the page needs no script to search.
  */
@@ -86,11 +93,12 @@ export default async function QuestionBankPage({
   const where = bankQuestionWhere(filters);
   const skip = (page - 1) * size;
   const filtered = hasBankFilters(filters);
+  const inBank = { official: isOfficialBank(filters.bank) };
 
-  const [total, matching, unsorted, rows, byDomain, byDifficulty] = await Promise.all([
-    prisma.bankQuestion.count(),
+  const [byBank, matching, unsorted, rows, byDomain, byDifficulty] = await Promise.all([
+    prisma.bankQuestion.groupBy({ by: ['official'], _count: { _all: true } }),
     filtered ? prisma.bankQuestion.count({ where }) : Promise.resolve(0),
-    prisma.bankQuestion.count({ where: { OR: [{ domain: null }, { difficulty: null }] } }),
+    prisma.bankQuestion.count({ where: { ...inBank, OR: [{ domain: null }, { difficulty: null }] } }),
     filtered
       ? prisma.bankQuestion.findMany({
           where,
@@ -110,20 +118,24 @@ export default async function QuestionBankPage({
           },
         })
       : Promise.resolve([]),
-    prisma.bankQuestion.groupBy({ by: ['domain'], _count: { _all: true } }),
-    prisma.bankQuestion.groupBy({ by: ['difficulty'], _count: { _all: true } }),
+    prisma.bankQuestion.groupBy({ by: ['domain'], where: inBank, _count: { _all: true } }),
+    prisma.bankQuestion.groupBy({ by: ['difficulty'], where: inBank, _count: { _all: true } }),
   ]);
+  const bankSize = (official: boolean) => byBank.find((group) => group.official === official)?._count._all ?? 0;
+  const total = bankSize(inBank.official);
   const usage = await countTestsUsing(rows.map((row) => row.id));
   const domainCount = (value: string) => byDomain.find((group) => group.domain === value)?._count._all ?? 0;
   const difficultyCount = (value: number) => byDifficulty.find((group) => group.difficulty === value)?._count._all ?? 0;
 
   const totalPages = Math.max(1, Math.ceil(matching / size));
+  const isOfficial = inBank.official;
   const uploadLink = (
-    <Link href="/admin/bank/upload" prefetch={false} className={buttonClass()}>
+    <Link href={isOfficial ? '/admin/bank/upload?bank=official' : '/admin/bank/upload'} prefetch={false} className={buttonClass()}>
       <Upload className="h-4 w-4" />
       Upload .tex
     </Link>
   );
+  const clearHref = bankListHref(emptyBankFilters(filters.bank), 1, size);
 
   const rowFacts = rows.map((row) => {
     const options = readOptions(row.options);
@@ -142,20 +154,41 @@ export default async function QuestionBankPage({
     <Page>
       <PageHeader
         title="Question bank"
-        description="Every question imported since the bank exists, by SAT Math domain and difficulty. Tests copy their questions from here."
+        description="Our own questions and the official SAT ones, each by SAT Math domain and difficulty. Tests copy their questions from here."
         actions={total > 0 ? uploadLink : undefined}
       />
+
+      {/* Links, not a form control: each bank is its own URL, and the same
+          choices search the other one. Two options, so a segmented control. */}
+      <nav aria-label="Bank" className={segmentedClass}>
+        {BANKS.map((bank) => (
+          <Link
+            key={bank.value}
+            href={bankListHref({ ...filters, bank: bank.value }, 1, size)}
+            prefetch={false}
+            aria-current={bank.value === filters.bank ? 'page' : undefined}
+            className={segmentClass(bank.value === filters.bank)}
+          >
+            {bank.label}
+            {/* gray-600: the idle segment sits on the track's gray-100. */}
+            <span className="text-xs tabular-nums text-gray-600">{bankSize(isOfficialBank(bank.value))}</span>
+          </Link>
+        ))}
+      </nav>
 
       {total === 0 ? (
         <EmptyState
           icon={<Library />}
-          title="The question bank is empty"
-          description="Upload a .tex file, or import a test into a course: its questions land here."
+          title={isOfficial ? 'The official bank is empty' : 'The question bank is empty'}
+          description={isOfficial
+            ? 'Upload a .tex file of questions taken from the College Board SAT question bank.'
+            : 'Upload a .tex file, or import a test into a course: its questions land here.'}
           action={uploadLink}
         />
       ) : (
         <>
           <form action="/admin/bank" method="get" role="search" aria-label="Find questions" className={cardClass}>
+            {isOfficial && <input type="hidden" name="bank" value="official" />}
             {size !== BANK_PAGE_SIZES[0] && <input type="hidden" name="size" value={size} />}
             <div className="space-y-5 p-5">
               <fieldset className="space-y-2">
@@ -230,9 +263,11 @@ export default async function QuestionBankPage({
             </div>
 
             <div className="flex flex-wrap items-center gap-2 border-t border-gray-100 px-5 py-3">
-              <p className="mr-auto text-xs tabular-nums text-gray-500">{formatCount(total)} in the bank</p>
+              <p className="mr-auto text-xs tabular-nums text-gray-500">
+                {formatCount(total)} in {isOfficial ? 'the official bank' : 'the bank'}
+              </p>
               {filtered && (
-                <Link href={bankListHref(EMPTY_BANK_FILTERS, 1, size)} prefetch={false} className={buttonClass({ variant: 'secondary' })}>
+                <Link href={clearHref} prefetch={false} className={buttonClass({ variant: 'secondary' })}>
                   Clear
                 </Link>
               )}
@@ -275,7 +310,7 @@ export default async function QuestionBankPage({
                   title={matching > 0 ? 'No questions on this page' : 'Nothing matches these choices'}
                   action={
                     <Link
-                      href={matching > 0 ? bankListHref(filters, 1, size) : bankListHref(EMPTY_BANK_FILTERS, 1, size)}
+                      href={matching > 0 ? bankListHref(filters, 1, size) : clearHref}
                       prefetch={false}
                       className={buttonClass({ variant: 'secondary', size: 'sm' })}
                     >
