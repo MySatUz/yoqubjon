@@ -25,6 +25,7 @@ model User {
   subscriptions Subscription[]
   payments      Payment[]
   manualPaymentRequests ManualPaymentRequest[]
+  questionReports QuestionReport[]
   sectionAccesses SectionAccess[]
   testCodeUnlocks TestCodeUnlock[]
   emailCodes      EmailCode[]
@@ -115,6 +116,7 @@ model Test {
   questions      Question[]
   results        Result[]
   codeUnlocks    TestCodeUnlock[]
+  questionReports QuestionReport[]
 
   @@index([createdAt])
   @@index([collectionCategory])
@@ -197,10 +199,38 @@ model Question {
 
   test          Test     @relation(fields: [testId], references: [id])
   bankQuestion  BankQuestion? @relation(fields: [bankQuestionId], references: [id], onDelete: SetNull)
+  reports       QuestionReport[]
 
   @@index([testId, order])
   @@index([testId, moduleIndex, order])
   @@index([bankQuestionId])
+}
+
+// A student's note that a question is wrong - its key, its picture, its
+// words - sent from the review of their result. It stays in the platform:
+// admins see the open ones under the Courses page's bell, with a link to the
+// question's editor, and close them once it is fixed.
+model QuestionReport {
+  id             String    @id @default(uuid())
+  questionId     String
+  // The test the student sat. For a copy that is not the question's own test.
+  testId         String
+  userId         String
+  // Where the question stood as the student saw it, for "Module 2, question 14".
+  moduleIndex    Int
+  questionNumber Int
+  message        String
+  createdAt      DateTime  @default(now())
+  // Set when an admin closes it: fixed, or nothing was wrong.
+  resolvedAt     DateTime?
+  resolvedById   String?
+
+  question       Question  @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  test           Test      @relation(fields: [testId], references: [id], onDelete: Cascade)
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([resolvedAt, createdAt])
+  @@index([questionId])
 }
 
 // The question bank: every question imported or written since it exists,

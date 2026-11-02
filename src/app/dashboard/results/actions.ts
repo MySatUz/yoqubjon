@@ -7,6 +7,7 @@ import { renderMathHtml } from '@/lib/renderMathHtml';
 import { normalizeStoredAnswer, parseAnswerLetters } from '@/lib/resultAnswers';
 import { optionAsMath } from '@/components/exam/optionMath';
 import { formatReviewOpens, getReviewOpensAt } from '@/lib/olympiad';
+import { MAX_REPORT_LENGTH } from '@/lib/questionReports';
 import { getViewerAccess } from '@/lib/studentView';
 
 /**
@@ -181,4 +182,107 @@ export async function revealResultQuestion(
       credit: answer.credit,
     },
   };
+}
+
+export type ReportQuestionResponse = { ok: true; error?: undefined } | { ok?: undefined; error: string };
+
+/**
+ * Files a student's report that a question is wrong - its key, its picture,
+ * its words - for the admins, who see it under the Courses page's bell with a
+ * link to the question's editor. Only a question the student's own result
+ * shows can be reported, and only once its review is open. A second report on
+ * the same question while the first is still open replaces its words, so
+ * pressing twice files one report.
+ */
+export async function reportResultQuestion(
+  resultId: string,
+  questionId: string,
+  message: string
+): Promise<ReportQuestionResponse> {
+  if (
+    typeof resultId !== 'string' ||
+    typeof questionId !== 'string' ||
+    typeof message !== 'string' ||
+    resultId.length === 0 ||
+    questionId.length === 0 ||
+    resultId.length > MAX_ID_LENGTH ||
+    questionId.length > MAX_ID_LENGTH
+  ) {
+    return { error: 'Invalid request.' };
+  }
+
+  const text = message.trim();
+  if (!text) {
+    return { error: 'Write what is wrong with the question.' };
+  }
+  if (text.length > MAX_REPORT_LENGTH) {
+    return { error: `Use at most ${MAX_REPORT_LENGTH} characters.` };
+  }
+
+  const session = await auth();
+
+  if (!session?.user?.id) {
+    return { error: 'Your session has expired. Sign in again, then send the report.' };
+  }
+
+  const userId = session.user.id;
+
+  try {
+    const [result, viewer] = await Promise.all([
+      prisma.result.findFirst({
+        where: { id: resultId, userId },
+        select: { testId: true, test: { select: { olympiadStartsAt: true, olympiadEndsAt: true } } },
+      }),
+      getViewerAccess(userId),
+    ]);
+
+    if (!result) {
+      return { error: 'Result not found.' };
+    }
+
+    // As the review itself: an olympiad's questions are closed until it ends.
+    const opensAt = viewer.isAdmin ? null : getReviewOpensAt(result.test);
+    if (opensAt) {
+      return { error: formatReviewOpens(opensAt) };
+    }
+
+    const question = await prisma.question.findFirst({
+      where: { id: questionId, ...questionsShownBy(result.testId) },
+      select: { id: true, order: true, moduleIndex: true },
+    });
+
+    if (!question) {
+      return { error: 'Question not found.' };
+    }
+
+    // Numbered inside its module, as the exam screen and the review number it.
+    const before = await prisma.question.count({
+      where: { ...questionsShownBy(result.testId), moduleIndex: question.moduleIndex, order: { lt: question.order } },
+    });
+
+    const open = await prisma.questionReport.findFirst({
+      where: { questionId: question.id, userId, resolvedAt: null },
+      select: { id: true },
+    });
+
+    if (open) {
+      await prisma.questionReport.update({ where: { id: open.id }, data: { message: text } });
+    } else {
+      await prisma.questionReport.create({
+        data: {
+          questionId: question.id,
+          testId: result.testId,
+          userId,
+          moduleIndex: question.moduleIndex,
+          questionNumber: before + 1,
+          message: text,
+        },
+      });
+    }
+
+    return { ok: true };
+  } catch (error) {
+    console.error('Report Question Error:', error);
+    return { error: 'The report was not sent. Try again in a minute.' };
+  }
 }

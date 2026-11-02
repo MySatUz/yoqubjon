@@ -23,11 +23,13 @@ import {
   isBankDomain,
 } from '@/lib/questionBank';
 import { readOptions } from '@/lib/questionBankServer';
+import { reportPlace } from '@/lib/questionReports';
 import { optionAsMath } from '@/components/exam/optionMath';
 import { BankQuestionEditor, DeleteBankQuestionButton } from '@/components/admin/bank/BankQuestionEditor';
 import { BankTagBadges } from '@/components/admin/bank/bankBadges';
+import { CloseReportsButton } from '@/components/admin/CloseReportsButton';
 import { CardBody, CardHeader, cardClass } from '@/components/ui/Card';
-import { EmptyState } from '@/components/ui/Feedback';
+import { Alert, EmptyState } from '@/components/ui/Feedback';
 import { List, listRowInteractiveClass, rowChevronClass, RowText } from '@/components/ui/List';
 import { BackLink, Page, PageHeader, SectionHeading } from '@/components/ui/Page';
 import { cn } from '@/components/ui/cn';
@@ -101,9 +103,25 @@ export default async function BankQuestionPage({
   // Kept here on purpose: access must not depend on the segment layout.
   await requireAdminPage();
 
-  const [question, collectionRows] = await Promise.all([
+  const [question, collectionRows, reports] = await Promise.all([
     readBankQuestion(questionId),
     getCollectionVisibilityRows(),
+    // Students' open reports about any test row that shows this question.
+    QUESTION_ID_PATTERN.test(questionId)
+      ? prisma.questionReport.findMany({
+          where: { resolvedAt: null, question: { bankQuestionId: questionId } },
+          orderBy: { createdAt: 'asc' },
+          select: {
+            id: true,
+            message: true,
+            createdAt: true,
+            moduleIndex: true,
+            questionNumber: true,
+            test: { select: { title: true, moduleDurations: true } },
+            user: { select: { name: true, email: true } },
+          },
+        })
+      : Promise.resolve([]),
   ]);
 
   if (!question) {
@@ -157,6 +175,36 @@ export default async function BankQuestionPage({
         )}
         actions={<DeleteBankQuestionButton questionId={question.id} usedIn={usedIn.length} />}
       />
+
+      {/* What students reported, above the editor that fixes it. Amber: it
+          waits for an admin, like a pending payment. */}
+      {reports.length > 0 && (
+        <Alert
+          tone="warning"
+          title={reports.length === 1
+            ? 'A student reported a problem with this question'
+            : `${reports.length} students reported a problem with this question`}
+          action={
+            <CloseReportsButton
+              reportIds={reports.map((report) => report.id)}
+              label={reports.length === 1 ? 'Close report' : `Close ${reports.length} reports`}
+              variant="secondary"
+            />
+          }
+        >
+          <ul className="mt-1 space-y-2">
+            {reports.map((report) => (
+              <li key={report.id}>
+                <p className="break-words">“{report.message}”</p>
+                <p className="text-xs">
+                  {report.user.name || report.user.email} · {reportPlace(report, report.test.moduleDurations.length > 1)} of {report.test.title} · {formatDate(report.createdAt)}
+                </p>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-2 text-xs">Fix the question below and save, then close the report. Close it too if nothing is wrong.</p>
+        </Alert>
+      )}
 
       <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-5">
         <div className="space-y-6 lg:col-span-3">

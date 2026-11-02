@@ -17,14 +17,14 @@ export const metadata: Metadata = {
 };
 
 /*
- * Written from what the code does on 31 Oct 2026, not from a template: each
+ * Written from what the code does on 2 Nov 2026, not from a template: each
  * line names something the app really stores, shows or sends, so change the
  * page when that changes (sign-up fields, the payment form, the Telegram
- * payment chat, cookies). Not settled in code, and so not promised here: who
+ * payment chat, question reports, cookies). Not settled in code, and so not promised here: who
  * runs the service, how long data is kept, and how deletion requests are
  * handled. Those are the owner's to add.
  */
-const UPDATED = new Date('2026-10-31T12:00:00+05:00');
+const UPDATED = new Date('2026-11-02T12:00:00+05:00');
 
 function TelegramLink() {
   return (
@@ -55,6 +55,7 @@ export default function PrivacyPage() {
             payment note, an optional message and a photo or PDF of your receipt. We never ask for your card number or
             bank details.
           </li>
+          <li>If you report a problem with a question: what you write, with the test and the question it is about.</li>
         </ul>
       </LegalSection>
 
@@ -83,8 +84,8 @@ export default function PrivacyPage() {
         <ul>
           <li>You: your profile, results, reviews and payment requests.</li>
           <li>
-            Our admins: your name, email, results, course access, and payment requests with their receipts. They use them
-            to give access, check payments and answer your questions.
+            Our admins: your name, email, results, course access, payment requests with their receipts, and your reports
+            about questions. They use them to give access, check payments, fix questions and answer your questions.
           </li>
           <li>
             Other students: your name and your olympiad result (questions solved, time, attempts, and the score on longer

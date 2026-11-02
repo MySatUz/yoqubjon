@@ -317,9 +317,18 @@ beside an olympiad window, the rule under a ranking.
 
 Admins have no hub page: their places sit in the sidebar, seen by admins only —
 Courses, Users, Question bank, Board. What waits for a decision (payments,
-access about to end, hidden imports, the olympiad) is one bell button with a
+students' reports about questions, access about to end, hidden imports, the
+olympiad) is one bell button with a
 count beside the Courses page's actions, opening a popover — not a card that
-pushes the table down. The question bank opens on a search card, as the
+pushes the table down. A student reports a problem with a question (a wrong
+key, a broken picture, unclear words) from the review of their result, with
+Report a problem (`ReportProblem.tsx`). The report stays in the platform, not
+in Telegram (`QuestionReport`, `src/lib/questionReports.ts`). The bell lists
+the open ones with the student's words, a Fix question button to the
+question's bank page (the test's editor for a row with no bank question) and
+Close; the bank page shows them above its editor with Close report. A report
+is closed once the question is fixed, or when nothing was wrong; a student
+has at most one open report per question. The question bank opens on a search card, as the
 College Board's educator bank does: domain and difficulty tiles (a checkbox
 in a bordered tile, each with its count; difficulty drawn as three bars, the
 `DifficultyBars` of `bankBadges.tsx`), words to find, and Search. Nothing is

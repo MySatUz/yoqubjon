@@ -9,7 +9,7 @@ import {
   type RevealedQuestion,
 } from '@/app/dashboard/results/actions';
 import { formatCreditTotal } from '@/lib/resultAnswers';
-import { TELEGRAM_URL } from '@/lib/landing/warmup';
+import { ReportProblemButton } from '@/components/dashboard/ReportProblem';
 import { Badge } from '@/components/ui/Badge';
 import { Button, IconButton, buttonClass } from '@/components/ui/Button';
 import { Card, CardHeader, insetClass } from '@/components/ui/Card';
@@ -22,7 +22,6 @@ import {
   ChevronLeft,
   ChevronRight,
   CircleDot,
-  Flag,
   Loader2,
   Lock,
   Minus,
@@ -62,7 +61,7 @@ export type ReviewFilter = 'all' | 'mistakes';
 
 interface ResultReviewProps {
   resultId: string;
-  /** Named in the "Report a problem" message, so the report says where. */
+  /** Named in the "Report a problem" dialog, so the student sees which question it is about. */
   testTitle: string;
   modules: ReviewModule[];
   /** `mistakes` opens the review filtered, on the first mistake. */
@@ -204,12 +203,12 @@ export function ReviewMistakesButton({ resultId, count }: { resultId: string; co
   );
 }
 
-/** A message to support in Telegram, already saying which question it is about. */
-function reportProblemHref(testTitle: string, question: ReviewQuestion, isModular: boolean) {
+/** "Module 2, question 14 of SAT Practice 5", as the review numbers it. */
+function reportPlaceOf(testTitle: string, question: ReviewQuestion, isModular: boolean) {
   const where = isModular
-    ? `module ${question.moduleIndex}, question ${question.number}`
-    : `question ${question.number}`;
-  return `${TELEGRAM_URL}?text=${encodeURIComponent(`A problem in "${testTitle}", ${where}: `)}`;
+    ? `Module ${question.moduleIndex}, question ${question.number}`
+    : `Question ${question.number}`;
+  return `${where} of ${testTitle}`;
 }
 
 /**
@@ -247,6 +246,8 @@ export default function ResultReview({
   const [openQuestionId, setOpenQuestionId] = useState<string | null>(initialQuestion?.id ?? null);
   const [detail, setDetail] = useState<RevealedQuestion | null>(null);
   const [error, setError] = useState<ReviewError | null>(null);
+  // Questions reported while the page is open, so "Report sent" stays on them.
+  const [reportedIds, setReportedIds] = useState<ReadonlySet<string>>(() => new Set());
   const [, startTransition] = useTransition();
 
   const flatQuestions = useMemo(
@@ -582,19 +583,21 @@ export default function ResultReview({
             </div>
 
             {/* A wrong key or a broken diagram is reported from the question
-                itself, and the message already names it. Next is repeated
-                here: it is where the student is once they have read it all. */}
+                itself, and the report already names it: it is kept in the
+                platform for the admins. Next is repeated here: it is where
+                the student is once they have read it all. */}
             <div className="flex flex-wrap items-center justify-between gap-2 border-t border-gray-100 px-5 py-3">
-              <a
-                href={reportProblemHref(testTitle, current, isModular)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={buttonClass({ variant: 'secondary', size: 'sm' })}
-              >
-                <Flag className="h-4 w-4" />
-                Report a problem
-                <span className="sr-only"> with this question (opens Telegram)</span>
-              </a>
+              <ReportProblemButton
+                key={current.id}
+                resultId={resultId}
+                questionId={current.id}
+                place={reportPlaceOf(testTitle, current, isModular)}
+                sent={reportedIds.has(current.id)}
+                onSent={() => {
+                  const reportedId = current.id;
+                  setReportedIds((ids) => new Set(ids).add(reportedId));
+                }}
+              />
               {/* Kept, greyed, on the last one: removing the button that
                   has focus sends the keyboard back to the top of the page. */}
               <Button variant="secondary" size="sm" onClick={() => next && openQuestion(next)} aria-disabled={!next || undefined}>

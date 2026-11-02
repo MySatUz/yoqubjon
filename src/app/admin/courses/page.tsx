@@ -1,10 +1,11 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { CalendarPlus, ChevronRight, EyeOff, GraduationCap, Hourglass, Receipt, Trophy } from 'lucide-react';
+import { CalendarPlus, ChevronRight, EyeOff, Flag, GraduationCap, Hourglass, Pencil, Receipt, Trophy } from 'lucide-react';
 import { requireAdminPage } from '@/lib/admin';
 import { prisma } from '@/lib/prisma';
 import { formatOlympiadMoment, getOlympiadStatus, readOlympiadWindow } from '@/lib/olympiad';
 import { formatDate } from '@/lib/formatDate';
+import { LISTED_REPORTS, questionFixHref, reportPlace } from '@/lib/questionReports';
 import {
   getCourses,
   grantEndKey,
@@ -16,6 +17,7 @@ import { courseHref } from '@/components/admin/courses/courseLinks';
 import { GiveAccessButton, GiveAccessHost } from '@/components/admin/courses/GiveAccess';
 import { NewCourseButton } from '@/components/admin/courses/NewCourse';
 import { AttentionButton } from '@/components/admin/courses/AttentionButton';
+import { CloseReportsButton } from '@/components/admin/CloseReportsButton';
 import { linkRowClass, rowLinkClass } from '@/components/admin/adminControls';
 import { Badge } from '@/components/ui/Badge';
 import { EmptyState } from '@/components/ui/Feedback';
@@ -32,7 +34,7 @@ import {
 } from '@/components/ui/List';
 import { iconCircleClass } from '@/components/ui/Misc';
 import { Page, PageHeader } from '@/components/ui/Page';
-import { linkClass } from '@/components/ui/Button';
+import { buttonClass, linkClass } from '@/components/ui/Button';
 import { cn } from '@/components/ui/cn';
 
 export const dynamic = 'force-dynamic';
@@ -60,7 +62,7 @@ async function loadCoursesOverview() {
   const { now, todayKey } = readToday();
   const recentSince = new Date(now.getTime() - RECENT_HIDDEN_DAYS * DAY_MS);
 
-  const [courses, testGroups, grants, pendingPayments, hiddenRecent, hiddenRecentCount, olympiad] = await Promise.all([
+  const [courses, testGroups, grants, pendingPayments, hiddenRecent, hiddenRecentCount, olympiad, openReports, openReportCount] = await Promise.all([
     getCourses(),
     prisma.test.groupBy({
       by: ['collectionCategory', 'visible'],
@@ -83,6 +85,23 @@ async function loadCoursesOverview() {
       orderBy: { olympiadStartsAt: 'asc' },
       select: { id: true, title: true, olympiadStartsAt: true, olympiadEndsAt: true },
     }),
+    // Students' reports that a question is wrong, newest first.
+    prisma.questionReport.findMany({
+      where: { resolvedAt: null },
+      orderBy: { createdAt: 'desc' },
+      take: LISTED_REPORTS,
+      select: {
+        id: true,
+        message: true,
+        createdAt: true,
+        moduleIndex: true,
+        questionNumber: true,
+        test: { select: { title: true, moduleDurations: true } },
+        question: { select: { id: true, testId: true, bankQuestionId: true } },
+        user: { select: { name: true, email: true } },
+      },
+    }),
+    prisma.questionReport.count({ where: { resolvedAt: null } }),
   ]);
 
   const activeGrants = grants.filter((grant) => isGrantActive(grant, now));
@@ -114,6 +133,8 @@ async function loadCoursesOverview() {
     pendingPayments,
     hiddenRecent,
     hiddenRecentCount,
+    openReports,
+    openReportCount,
     olympiad: olympiad && olympiadWindow
       ? { ...olympiad, window: olympiadWindow, isRunning: getOlympiadStatus(olympiadWindow, now) === 'running' }
       : null,
@@ -124,13 +145,25 @@ export default async function AdminCoursesPage() {
   // Kept here on purpose: access must not depend on the segment layout.
   await requireAdminPage();
 
-  const { todayKey, courses, rows, pendingPayments, hiddenRecent, hiddenRecentCount, olympiad } = await loadCoursesOverview();
+  const {
+    todayKey,
+    courses,
+    rows,
+    pendingPayments,
+    hiddenRecent,
+    hiddenRecentCount,
+    openReports,
+    openReportCount,
+    olympiad,
+  } = await loadCoursesOverview();
   const accessCourses = courses.map(({ value, label, visible }) => ({ value, label, visible }));
   const labelOf = (courseId: string | null) =>
     (courseId && courses.find((course) => course.value === courseId)?.label) || 'No course';
   const endingRows = rows.filter((row) => row.ending.length > 0);
   const attentionCount =
     (pendingPayments > 0 ? 1 : 0) +
+    openReports.length +
+    (openReportCount > openReports.length ? 1 : 0) +
     endingRows.length +
     hiddenRecent.length +
     (hiddenRecentCount > hiddenRecent.length ? 1 : 0) +
@@ -159,6 +192,40 @@ export default async function AdminCoursesPage() {
                     />
                     <ChevronRight aria-hidden className={rowChevronClass} />
                   </Link>
+                </li>
+              )}
+
+              {/* A student's report that a question is wrong: what they wrote,
+                  a way straight to the question's editor, and Close for one
+                  that needs no fix. Once fixed, it is closed on that page. */}
+              {openReports.map((report) => (
+                <li key={report.id} className={listRowClass}>
+                  <span className={iconCircleClass}><Flag /></span>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium text-gray-900">
+                      {reportPlace(report, report.test.moduleDurations.length > 1)} · {report.test.title}
+                    </p>
+                    <p className="mt-0.5 line-clamp-3 break-words text-sm text-gray-700">“{report.message}”</p>
+                    <p className="mt-0.5 truncate text-xs text-gray-500">
+                      {report.user.name || report.user.email} · {formatDate(report.createdAt)}
+                    </p>
+                    <div className="mt-2 flex flex-wrap items-start gap-2">
+                      <Link
+                        href={questionFixHref(report.question)}
+                        prefetch={false}
+                        className={buttonClass({ variant: 'secondary', size: 'sm' })}
+                      >
+                        <Pencil className="h-4 w-4" />
+                        Fix question
+                      </Link>
+                      <CloseReportsButton reportIds={[report.id]} label="Close" />
+                    </div>
+                  </div>
+                </li>
+              ))}
+              {openReportCount > openReports.length && (
+                <li className={cn(listRowClass, 'text-xs text-gray-500')}>
+                  {plural(openReportCount - openReports.length, 'more question report', 'more question reports')}, listed here as these are closed
                 </li>
               )}
 

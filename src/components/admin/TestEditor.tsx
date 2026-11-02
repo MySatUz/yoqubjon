@@ -341,6 +341,9 @@ export function QuestionOptionsEditor({ initialOptions }: { initialOptions: stri
 
 function QuestionEditor({ question }: { question: EditorQuestion }) {
   const [isOpen, setIsOpen] = useState(false);
+  // A student's report links here (questionFixHref) for a row with no bank
+  // question, scrolled to the question it names.
+  const anchorId = `question-${question.id}`;
   const [isSaving, setIsSaving] = useState(false);
   const [result, setResult] = useState<{ success?: boolean; error?: string } | null>(null);
   const fieldId = useId();
@@ -368,7 +371,7 @@ function QuestionEditor({ question }: { question: EditorQuestion }) {
   };
 
   return (
-    <li>
+    <li id={anchorId} className="scroll-mt-24">
       <button
         type="button"
         onClick={() => setIsOpen((current) => !current)}
