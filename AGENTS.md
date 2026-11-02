@@ -326,7 +326,10 @@ Report a problem (`ReportProblem.tsx`). The report stays in the platform, not
 in Telegram (`QuestionReport`, `src/lib/questionReports.ts`). The bell lists
 the open ones with the student's words, a Fix question button to the
 question's bank page (the test's editor for a row with no bank question) and
-Close; the bank page shows them above its editor with Close report. A report
+Close; the bank page shows them above its editor with Close report. On every
+page the sidebar's Courses row carries their count, as Subscription carries
+the payments waiting (a dot on the collapsed rail, an amber dot on the
+phone's Admin tab); there is no Telegram message (the owner's choice). A report
 is closed once the question is fixed, or when nothing was wrong; a student
 has at most one open report per question. The question bank opens on a search card, as the
 College Board's educator bank does: domain and difficulty tiles (a checkbox

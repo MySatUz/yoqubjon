@@ -45,3 +45,8 @@ export const getShellStudentView = cache(async () => {
 export const getShellPendingPayments = cache(async () =>
   prisma.manualPaymentRequest.count({ where: { status: 'PENDING' } })
 );
+
+/** Students' reports that a question is wrong, still open: the count beside the sidebar's Courses row, whose bell lists them. */
+export const getShellOpenReports = cache(async () =>
+  prisma.questionReport.count({ where: { resolvedAt: null } })
+);

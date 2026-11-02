@@ -148,8 +148,25 @@ function SidebarRow({
  * `onMouseEnter`/`onFocus` did nothing on touch devices, where `mouseenter`
  * either never arrives or arrives simultaneously with the tap.
  */
-function NavLink({ item, variant, active }: { item: NavItem; variant: ShellNavVariant; active: boolean }) {
+/** Things waiting for an admin behind a nav entry, counted beside it: "2 question reports waiting". */
+type Waiting = { count: number; one: string; many: string };
+
+function NavLink({
+  item,
+  variant,
+  active,
+  waiting,
+}: {
+  item: NavItem;
+  variant: ShellNavVariant;
+  active: boolean;
+  waiting?: Waiting;
+}) {
   const Icon = item.icon;
+  const waitingCount = waiting?.count ?? 0;
+  const waitingText = waiting && waitingCount > 0
+    ? `${waitingCount} ${waitingCount === 1 ? waiting.one : waiting.many} waiting`
+    : null;
 
   if (variant === 'mobile') {
     return (
@@ -161,20 +178,52 @@ function NavLink({ item, variant, active }: { item: NavItem; variant: ShellNavVa
         }`}
       >
         <span
-          className={`flex h-8 w-14 items-center justify-center rounded-full transition-colors ${
+          className={`relative flex h-8 w-14 items-center justify-center rounded-full transition-colors ${
             active ? 'bg-ink-600 text-white' : ''
           }`}
         >
           <Icon className="h-5 w-5" />
+          {/* A tab has no room for a number: an amber dot, as amber marks
+              what is pending, says something waits behind it. */}
+          {waitingText && (
+            <span aria-hidden className="absolute right-3 top-1 h-2 w-2 rounded-full bg-amber-600 ring-2 ring-white" />
+          )}
         </span>
-        <span className="max-w-full truncate">{item.shortLabel}</span>
+        <span className="max-w-full truncate">
+          {item.shortLabel}
+          {waitingText && <span className="sr-only">, {waitingText}</span>}
+        </span>
       </Link>
     );
   }
 
   return (
-    <SidebarRow href={item.href} tooltip={item.label} active={active} socket={<Icon className="h-5 w-5" />}>
-      <span className="block truncate">{item.label}</span>
+    <SidebarRow
+      href={item.href}
+      tooltip={waitingText ? `${item.label} · ${waitingText}` : item.label}
+      active={active}
+      socket={
+        <>
+          <Icon className="h-5 w-5" />
+          {/* As on Subscription: the collapsed rail hides the count, so a dot
+              on the icon keeps "act now" visible there. */}
+          {waitingText && (
+            <span aria-hidden className="absolute right-1.5 top-1.5 hidden h-2 w-2 rounded-full bg-white collapsed:block" />
+          )}
+        </>
+      }
+    >
+      {waitingText ? (
+        <span className="flex items-center gap-2">
+          <span className="min-w-0 flex-1 truncate">{item.label}</span>
+          <span className="shrink-0 rounded-full bg-white px-1.5 text-xs font-medium tabular-nums text-ink-950">
+            {waitingCount}
+            <span className="sr-only"> {waitingCount === 1 ? waiting?.one : waiting?.many} waiting</span>
+          </span>
+        </span>
+      ) : (
+        <span className="block truncate">{item.label}</span>
+      )}
     </SidebarRow>
   );
 }
@@ -184,6 +233,8 @@ function NavLink({ item, variant, active }: { item: NavItem; variant: ShellNavVa
  * is no "Admin Panel" page to go through. A test belongs to a course, so a
  * test's editor and its stats keep Courses lit. Payments are not here: they
  * are part of Subscription, whose row carries the count of requests waiting.
+ * Courses carries the count of students' reports about questions, which its
+ * bell lists.
  */
 export const adminItems: NavItem[] = [
   { href: '/admin/courses', label: 'Courses', shortLabel: 'Courses', icon: GraduationCap },
@@ -205,11 +256,13 @@ export function isAdminActive(pathname: string, href: string) {
  * On a phone it is the one "Admin" tab. On desktop it is a labelled group with
  * every admin place.
  */
-export function ShellAdminNavLink({ variant }: { variant: ShellNavVariant }) {
+export function ShellAdminNavLink({ variant, openReports = 0 }: { variant: ShellNavVariant; openReports?: number }) {
   const pathname = usePathname();
+  // Students' reports about questions: counted on Courses, whose bell lists them.
+  const reports: Waiting = { count: openReports, one: 'question report', many: 'question reports' };
 
   if (variant === 'mobile') {
-    return <NavLink item={adminItem} variant="mobile" active={isActivePath(pathname, adminItem.href)} />;
+    return <NavLink item={adminItem} variant="mobile" active={isActivePath(pathname, adminItem.href)} waiting={reports} />;
   }
 
   return (
@@ -221,7 +274,13 @@ export function ShellAdminNavLink({ variant }: { variant: ShellNavVariant }) {
           the icon column still marks where the student's places end. */}
       <span aria-hidden className="mb-2 ml-1 hidden h-px w-10 bg-ink-900 collapsed:block" />
       {adminItems.map((item) => (
-        <NavLink key={item.href} item={item} variant="desktop" active={isAdminActive(pathname, item.href)} />
+        <NavLink
+          key={item.href}
+          item={item}
+          variant="desktop"
+          active={isAdminActive(pathname, item.href)}
+          waiting={item.href === '/admin/courses' ? reports : undefined}
+        />
       ))}
     </div>
   );

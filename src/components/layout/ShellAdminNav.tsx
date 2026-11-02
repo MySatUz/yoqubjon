@@ -1,4 +1,9 @@
-import { getShellCanManageTests, getShellPendingPayments, getShellStudentView } from '@/components/layout/shell-data';
+import {
+  getShellCanManageTests,
+  getShellOpenReports,
+  getShellPendingPayments,
+  getShellStudentView,
+} from '@/components/layout/shell-data';
 import { ShellAdminNavLink, ShellSubscriptionLink } from '@/components/layout/ShellNav';
 
 type ShellAdminNavProps = {
@@ -25,7 +30,8 @@ export default async function ShellAdminNav({ variant, hideInStudentView = false
 
   if (!canManageTests || studentView) return null;
 
-  return <ShellAdminNavLink variant={variant} />;
+  // Read once per request (cache), though the desktop and phone navs both ask.
+  return <ShellAdminNavLink variant={variant} openReports={await getShellOpenReports()} />;
 }
 
 /**
