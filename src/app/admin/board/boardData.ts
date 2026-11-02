@@ -140,8 +140,40 @@ function locateError(text: string, message: string): number | null {
   const answer = findCommand(text, 'answer');
 
   if (/missing \\content|missing \\answer/.test(message)) return begin >= 0 ? lineAt(text, begin) : 1;
-  if (/only one option/.test(message)) return options ? lineAt(text, options.at) : null;
+  if (/only one option|has \d+ options/.test(message)) return options ? lineAt(text, options.at) : null;
   if (/ answer /.test(message) && !/invalid math/.test(message)) return answer ? lineAt(text, answer.at) : null;
+
+  const option = /has (?:an empty option|option) ([A-H])\b/.exec(message);
+  if (option) return options ? optionLine(text, options, option[1]) : null;
+
+  // The block's own shape: a tag twice, braces that never close, a block
+  // that never closes, and pieces of a question outside its block.
+  const twice = /has two \\(\w+)\{/.exec(message);
+  if (twice) {
+    const second = [...text.matchAll(new RegExp(`\\\\${twice[1]}\\s*\\{`, 'g'))][1];
+    return second ? lineAt(text, second.index) : null;
+  }
+  const unclosed = /has a \\(\w+)\{\.\.\.\} whose braces do not close/.exec(message);
+  if (unclosed) {
+    const tag = findCommand(text, unclosed[1]);
+    return tag ? lineAt(text, tag.at) : null;
+  }
+  if (/no \\end\{question\} before the next/.test(message)) {
+    const next = text.indexOf('\\begin{question}', begin + 1);
+    return next >= 0 ? lineAt(text, next) : null;
+  }
+  const blockEnd = begin >= 0 ? text.indexOf('\\end{question}', begin) : -1;
+  if (/^The \\end\{question\} /.test(message)) {
+    const stray = [...text.matchAll(/\\end\{question\}/g)].find((match) => match.index !== blockEnd);
+    return stray ? lineAt(text, stray.index) : null;
+  }
+  const loose = /^The \\(\w+)\{\.\.\.\} .* is outside a question/.exec(message);
+  if (loose) {
+    const outside = [...text.matchAll(new RegExp(`\\\\${loose[1]}\\s*\\{`, 'g'))].find(
+      (match) => begin < 0 || match.index < begin || (blockEnd >= 0 && match.index > blockEnd)
+    );
+    return outside ? lineAt(text, outside.index) : null;
+  }
 
   const field = /invalid math in (content|option ([A-H])|answer)/.exec(message);
   if (field) {

@@ -4,8 +4,8 @@ This project imports practice questions from `.tex` files using one canonical st
 
 A file goes in through either of two doors, and both store every question in the question bank:
 
-- **Question bank → Upload questions** puts the questions in the bank only.
-- **A course → Tests → Import test** makes a test from the file, and also puts every question in the bank, linked to the test.
+- **Question bank → Upload questions** puts the questions in the bank only. The form asks which bank: **Our questions**, or **Official SAT** for questions taken from the College Board's open question bank. The file is the same for both.
+- **A course → Tests → Import test** makes a test from the file, and also puts every question in our own bank, linked to the test.
 
 So every question needs a domain and a difficulty (see [Question bank tags](#question-bank-tags)). A ready file to start from is [`TEX_TEMPLATE.tex`](TEX_TEMPLATE.tex).
 
@@ -29,7 +29,9 @@ Each question must use a `question` environment:
 \end{question}
 ```
 
-The order of the tags inside a block does not matter.
+The order of the tags inside a block does not matter, but each tag is written once: a second `\answer{...}` in one block stops the import.
+
+Every `\begin{question}` needs its `\end{question}`, and a question's tags go between them. A `\begin{question}` that is never closed, an `\end{question}` with no `\begin{question}`, or a tag such as `\content{...}` outside a block stops the import with the question's number, so a question is never dropped without a word. A `{` that is never closed inside a tag stops it too: write `\{` for a literal brace.
 
 ## Required tags
 
@@ -143,7 +145,7 @@ Inside `\options{...}`, every option must start on its own line:
 }
 ```
 
-The parser also accepts `A)`, `A.`, and `\item[A]` labels:
+The parser also accepts `A)`, `A.`, `\item[A]` and lowercase labels, or a bare `\item` with no letter:
 
 ```tex
 \options{
@@ -154,7 +156,12 @@ The parser also accepts `A)`, `A.`, and `\item[A]` labels:
 }
 ```
 
-Do not place two options on one line.
+Rules:
+
+- Do not place two options on one line: they are read as one.
+- Label the options A, B, C… in order. Options are lettered by their place, so a skipped or repeated letter would point the answer at another choice; the import stops instead.
+- No option may be empty.
+- A question has 0 options (a grid-in) or 2–8, lettered A–H.
 
 ## Modules (SAT format)
 
@@ -185,9 +192,9 @@ Rules:
   at least one question.
 - A test can have up to 6 modules.
 - Question numbering restarts at 1 inside each module in the test interface.
-- When the file has module markers, the test must be uploaded with the
-  "SAT modules" format selected; the per-module time comes from the upload form.
-- Without markers, the file stays a single-module test, or the upload form
+- When the file has module markers, the test must be uploaded with
+  **Modules** chosen under Format; the per-module time comes from the upload form.
+- Without markers, **One block** gives the test a single timer, and **Modules**
   splits the questions by the counts entered per module (default 22 + 22).
 
 ## Multiple correct answers
@@ -252,6 +259,8 @@ For open numeric answers, omit `\options{...}`:
 \end{question}
 ```
 
+A single letter with no `\options{...}`, such as `\answer{C}`, is read as a grid-in value. The import screen marks every grid-in and multi-select question, so check that a choice question has not lost its options.
+
 ## Best practices
 
 - Keep one logical question per `\begin{question}...\end{question}` block.
@@ -277,7 +286,10 @@ Anything else inside a block (an explanation, a source note) is ignored. Explana
 
 Before saving, it checks:
 
+- every `\begin{question}` has its `\end{question}`, and no `\end{question}` or question tag stands outside a block;
+- the braces of every tag close, and no tag appears twice in a block;
 - every question has content and an answer;
+- options are labelled A, B, C… in order, none is empty, and there are at most 8;
 - multiple-choice answers point to an existing option;
 - a multi-select answer names each option at most once;
 - a list of answer letters belongs to a question that has options;

@@ -76,23 +76,52 @@ function stripLatexComments(value: string) {
     .join('\n');
 }
 
+/** Choices are lettered A-H, as the exam screen and the answer keys read them. */
+const MAX_OPTION_COUNT = 8;
+
+/** The tags the importer reads in a question block; any other is ignored. */
+const QUESTION_TAGS = ['content', 'image', 'options', 'answer', 'domain', 'difficulty'] as const;
+
+function tagPattern(tagName: string, flags = '') {
+  return new RegExp(`\\\\${tagName}\\s*\\{`, flags);
+}
+
+interface ParsedOption {
+  text: string;
+  /**
+   * The letter written before it, upper-cased (`B:`, `b)`, `\item[B]`). Null
+   * for a bare `\item`, and for text before the first label.
+   */
+  label: string | null;
+}
+
 function parseOptionsBlock(optionsRaw: string) {
-  const options: string[] = [];
+  const options: ParsedOption[] = [];
   const lines = optionsRaw.replace(/\r\n/g, '\n').split('\n');
   let current: string[] = [];
+  let label: string | null = null;
+  let started = false;
 
   function pushCurrent() {
     const value = normalizeLatexText(current.join('\n'));
-    if (value) options.push(value);
+    // Text before the first label counts only when there is some; a labelled
+    // option is kept even when empty, so the check can name it.
+    if (value || started) options.push({ text: value, label });
     current = [];
   }
 
   for (const line of lines) {
-    const labelledOption = line.match(/^\s*([A-Ha-h])\s*[:.)]\s*(.*)$/);
+    // `I:` after the eighth option is read as a ninth, so the count check
+    // stops it, instead of being glued onto option H.
+    const labelledOption =
+      line.match(/^\s*([A-Ha-h])\s*[:.)]\s*(.*)$/) ??
+      (started && options.length === MAX_OPTION_COUNT - 1 ? line.match(/^\s*(I)\s*[:.)]\s*(.*)$/) : null);
     const itemOption = line.match(/^\s*\\item(?:\s*\[\s*([A-Ha-h])\s*\])?\s*(.*)$/);
 
     if (labelledOption || itemOption) {
       pushCurrent();
+      started = true;
+      label = (labelledOption?.[1] ?? itemOption?.[1])?.toUpperCase() ?? null;
       current.push(labelledOption ? labelledOption[2] : itemOption?.[2] || '');
       continue;
     }
@@ -105,12 +134,13 @@ function parseOptionsBlock(optionsRaw: string) {
 }
 
 /**
- * Helper to extract content inside a LaTeX command like \content{...}
- * Handles whitespace before the opening brace and nested escaped braces.
+ * The inside of a tag such as \content{...} in question `order`'s block, or
+ * undefined when the block has no such tag. Nested braces count, escaped \{
+ * and \} do not. Braces that never close stop the import: read as no tag, a
+ * question's choices vanished and it went in as a grid-in.
  */
-function extractTagContent(block: string, tagName: string): string | undefined {
-  const tagRegex = new RegExp(`\\\\${tagName}\\s*\\{`);
-  const match = tagRegex.exec(block);
+function extractTagContent(block: string, tagName: string, order: number): string | undefined {
+  const match = tagPattern(tagName).exec(block);
   if (!match) return undefined;
 
   const contentStart = match.index + match[0].length;
@@ -126,7 +156,9 @@ function extractTagContent(block: string, tagName: string): string | undefined {
   if (bracketCount === 0) {
     return block.substring(contentStart, i - 1).trim();
   }
-  return undefined;
+  throw new TexParseError(
+    `Question ${order} has a \\${tagName}{...} whose braces do not close. Check for a missing }, or write \\{ for a literal brace.`
+  );
 }
 
 type MathSegment = {
@@ -206,13 +238,35 @@ function validateMath(value: string, questionOrder: number, fieldName: string) {
   }
 }
 
-function validateQuestion(question: ParsedQuestion) {
+function validateQuestion(question: ParsedQuestion, optionLabels: (string | null)[]) {
   if (!question.content) {
     throw new TexParseError(`Question ${question.order} is missing \\content{...}`);
   }
 
   if (!question.correctAnswer) {
     throw new TexParseError(`Question ${question.order} is missing \\answer{...}`);
+  }
+
+  if (question.options.length > MAX_OPTION_COUNT) {
+    throw new TexParseError(
+      `Question ${question.order} has ${question.options.length} options. A question can have at most ${MAX_OPTION_COUNT}, A–H.`
+    );
+  }
+
+  for (const [index, option] of question.options.entries()) {
+    const letter = String.fromCharCode(65 + index);
+    if (!option) {
+      throw new TexParseError(`Question ${question.order} has an empty option ${letter}. Write its text, or remove its label.`);
+    }
+
+    // Options are lettered by their place, so a label out of order would
+    // point the answer at another choice than the one the file names.
+    const label = optionLabels[index];
+    if (label && label !== letter) {
+      throw new TexParseError(
+        `Question ${question.order} has option ${letter} labelled ${label}. Label the options A, B, C… in order.`
+      );
+    }
   }
 
   if (question.options.length === 1) {
@@ -259,6 +313,31 @@ function validateQuestion(question: ParsedQuestion) {
   validateMath(question.correctAnswer, question.order, 'answer');
 }
 
+/**
+ * Text between question blocks is ignored - a preamble, comments, module
+ * markers - but not the pieces of a question. An \end{question} or a tag
+ * there is a block never opened, a \begin{question} there one never closed;
+ * read as they stood, they dropped a question without a word.
+ */
+function checkBetweenQuestions(text: string, nextOrder: number) {
+  const place = nextOrder === 1 ? 'before the first question' : `after question ${nextOrder - 1}`;
+
+  if (text.includes('\\end{question}')) {
+    throw new TexParseError(`The \\end{question} ${place} has no \\begin{question}. Add the \\begin{question}, or remove it.`);
+  }
+
+  if (text.includes('\\begin{question}')) {
+    throw new TexParseError(`Question ${nextOrder} has no \\end{question}. Add one at the end of the question.`);
+  }
+
+  const looseTag = QUESTION_TAGS.find((tag) => tagPattern(tag).test(text));
+  if (looseTag) {
+    throw new TexParseError(
+      `The \\${looseTag}{...} ${place} is outside a question. Put it between \\begin{question} and \\end{question}.`
+    );
+  }
+}
+
 function validateModuleIndexes(moduleIndexes: number[]) {
   const moduleCount = Math.max(...moduleIndexes);
 
@@ -293,11 +372,15 @@ export function parseTexFile(texContent: string): ParsedTex {
   let hasModuleMarkers = false;
   let currentModule = 1;
   let order = 1;
+  let scannedTo = 0;
   let tokenMatch;
 
   TEX_TOKEN_REGEX.lastIndex = 0;
 
   while ((tokenMatch = TEX_TOKEN_REGEX.exec(cleanedTexContent)) !== null) {
+    checkBetweenQuestions(cleanedTexContent.slice(scannedTo, tokenMatch.index), order);
+    scannedTo = TEX_TOKEN_REGEX.lastIndex;
+
     const [token, questionBlock, explicitModule, startedModule] = tokenMatch;
 
     if (questionBlock === undefined) {
@@ -323,26 +406,41 @@ export function parseTexFile(texContent: string): ParsedTex {
       continue;
     }
 
+    // The block runs to the first \end{question}, so a question that never
+    // closed has the next one inside it.
+    if (questionBlock.includes('\\begin{question}')) {
+      throw new TexParseError(
+        `Question ${order} has no \\end{question} before the next \\begin{question}. Add one at the end of the question.`
+      );
+    }
+
+    // Only the first of a repeated tag would be read.
+    for (const tag of QUESTION_TAGS) {
+      if ((questionBlock.match(tagPattern(tag, 'g')) ?? []).length > 1) {
+        throw new TexParseError(`Question ${order} has two \\${tag}{...}. Keep one.`);
+      }
+    }
+
     const content = normalizeLatexText(
-      extractTagContent(questionBlock, 'content') || ''
+      extractTagContent(questionBlock, 'content', order) || ''
     );
 
-    const image = extractTagContent(questionBlock, 'image')?.trim();
+    const image = extractTagContent(questionBlock, 'image', order)?.trim();
 
-    const optionsRaw = extractTagContent(questionBlock, 'options');
+    const optionsRaw = extractTagContent(questionBlock, 'options', order);
     const options = optionsRaw ? parseOptionsBlock(optionsRaw) : [];
 
-    const correctAnswer = normalizeLatexText(extractTagContent(questionBlock, 'answer') || "");
+    const correctAnswer = normalizeLatexText(extractTagContent(questionBlock, 'answer', order) || "");
 
     // Empty braces count as no tag, so `\domain{}` left in a template asks
     // for a domain instead of reporting an unknown one.
-    const domainTag = extractTagContent(questionBlock, 'domain')?.trim() || undefined;
-    const difficultyTag = extractTagContent(questionBlock, 'difficulty')?.trim() || undefined;
+    const domainTag = extractTagContent(questionBlock, 'domain', order)?.trim() || undefined;
+    const difficultyTag = extractTagContent(questionBlock, 'difficulty', order)?.trim() || undefined;
 
     const question: ParsedQuestion = {
       order: order++,
       content,
-      options,
+      options: options.map((option) => option.text),
       correctAnswer,
       image,
       domainTag,
@@ -351,10 +449,12 @@ export function parseTexFile(texContent: string): ParsedTex {
       difficulty: parseDifficultyTag(difficultyTag),
     };
 
-    validateQuestion(question);
+    validateQuestion(question, options.map((option) => option.label));
     questions.push(question);
     moduleIndexes.push(currentModule);
   }
+
+  checkBetweenQuestions(cleanedTexContent.slice(scannedTo), order);
 
   if (!hasModuleMarkers || questions.length === 0) {
     return { questions, moduleIndexes: null };
