@@ -196,6 +196,7 @@ const courseTestSelect = {
   createdAt: true,
   durationSeconds: true,
   moduleDurations: true,
+  untimed: true,
   maxAttempts: true,
   olympiadStartsAt: true,
   olympiadEndsAt: true,

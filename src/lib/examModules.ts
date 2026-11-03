@@ -10,6 +10,15 @@ export const DEFAULT_MODULE_DURATION_SECONDS = 35 * 60;
 export interface ModularTest {
   durationSeconds: number;
   moduleDurations: number[];
+  /** No time limit (Test.untimed). Left out by a caller that never shows or runs the time. */
+  untimed?: boolean;
+}
+
+export const NO_TIME_LIMIT_LABEL = 'No time limit';
+
+/** A test with no time limit: never timed out, only the time taken is recorded. */
+export function isUntimedTest(test: { untimed?: boolean | null }) {
+  return test.untimed === true;
 }
 
 /** A module as the exam client needs it: its own clock and its own questions. */
@@ -82,9 +91,16 @@ export function secondsToMinutes(seconds: number) {
   return Math.max(1, Math.round(seconds / 60));
 }
 
-/** Short label for module-based tests, or null for classic single-timer tests. */
+/**
+ * Short label for module-based tests and for any test with no time limit
+ * ("2 modules · no time limit", "No time limit"), or null for a classic
+ * single-timer test, which callers show as its duration.
+ */
 export function formatModuleBadge(test: ModularTest) {
   const durations = readModuleDurations(test);
+  if (isUntimedTest(test)) {
+    return durations.length > 1 ? `${durations.length} modules · no time limit` : NO_TIME_LIMIT_LABEL;
+  }
   if (durations.length < 2) return null;
 
   const minutes = durations.map(secondsToMinutes);

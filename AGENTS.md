@@ -304,7 +304,9 @@ beside an olympiad window, the rule under a ranking.
   student could print.
 - **A test has one or more modules.** Many are two modules, each with its own
   timer; some are one block (30 questions, one timer). Every screen — catalog,
-  start, exam, Check your work, result, admin — must read right for both.
+  start, exam, Check your work, result, admin — must read right for both. A test
+  has a time limit or none ("No time limit"): with none there is no clock and
+  the time taken is only recorded. An olympiad always has a limit.
 - **Premium Pro is sold one course at a time** (2026-10-31). The student picks
   one course on the Subscription page, pays, and an approved payment gives 30
   days of that course as course access (`SectionAccess`, run on from its

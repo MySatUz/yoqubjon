@@ -5,7 +5,7 @@ import { optionAsMath } from '@/components/exam/optionMath';
 import { requireAdminPage } from '@/lib/admin';
 import { prisma } from '@/lib/prisma';
 import { renderMathText } from '@/lib/renderMathText';
-import { buildExamModules } from '@/lib/examModules';
+import { NO_TIME_LIMIT_LABEL, buildExamModules, isUntimedTest } from '@/lib/examModules';
 import { formatDuration } from '@/lib/olympiad';
 import { getShownQuestions } from '@/lib/questionSource';
 import { isMultiSelectKey } from '@/lib/resultAnswers';
@@ -116,6 +116,8 @@ export default async function ExamPdfPage({ params }: { params: Promise<{ id: st
       isFree: true,
       durationSeconds: true,
       moduleDurations: true,
+      // The module headers say "No time limit" for it, not the stored minutes.
+      untimed: true,
       questions: {
         orderBy: { order: 'asc' },
         select: PDF_QUESTION_FIELDS,
@@ -139,6 +141,7 @@ export default async function ExamPdfPage({ params }: { params: Promise<{ id: st
   const questions = getShownQuestions(test);
   const modules = buildExamModules(test, questions);
   const isModular = modules.length > 1;
+  const untimed = isUntimedTest(test);
 
   // Outside the app shell, so the page paints the shell's canvas itself.
   return (
@@ -184,7 +187,7 @@ export default async function ExamPdfPage({ params }: { params: Promise<{ id: st
                     Module {module.index}
                   </h2>
                   <p className="mt-0.5 text-xs text-gray-500 tabular-nums">
-                    {module.questions.length} {module.questions.length === 1 ? 'question' : 'questions'} · {formatDuration(module.durationSeconds)}
+                    {module.questions.length} {module.questions.length === 1 ? 'question' : 'questions'} · {untimed ? NO_TIME_LIMIT_LABEL : formatDuration(module.durationSeconds)}
                   </p>
                 </div>
               )}

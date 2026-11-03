@@ -166,7 +166,8 @@ Rules:
 ## Modules (SAT format)
 
 A test can be split into SAT-style modules. Every module has its own timer, and
-time left over in one module is never added to the next one.
+time left over in one module is never added to the next one. A test can also have
+[no time limit](#no-time-limit), and then there are no timers at all.
 
 Mark the split with `\module{N}` before the questions of that module:
 
@@ -193,9 +194,25 @@ Rules:
 - A test can have up to 6 modules.
 - Question numbering restarts at 1 inside each module in the test interface.
 - When the file has module markers, the test must be uploaded with
-  **Modules** chosen under Format; the per-module time comes from the upload form.
+  **Modules** chosen under Format; the per-module time comes from the upload form
+  (unless **No time limit** is ticked).
 - Without markers, **One block** gives the test a single timer, and **Modules**
   splits the questions by the counts entered per module (default 22 + 22).
+
+### No time limit
+
+The import form has a **No time limit** checkbox for a test that is not timed.
+The `.tex` file does not change: there is no tag for it.
+
+With it ticked:
+
+- The form has no minutes fields: no time per module under **Modules**, and no
+  test time under **One block**.
+- Modules still split the test exactly as above, by the `\module` markers or by
+  the counts entered per module.
+- Each module starts when the student presses Start, and there is no clock.
+  Nothing ends a module except the student; the time taken is only recorded.
+- Wherever the test shows its length it says "No time limit" instead of minutes.
 
 ## Multiple correct answers
 

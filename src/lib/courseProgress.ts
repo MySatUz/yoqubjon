@@ -34,6 +34,8 @@ export type OverviewTest = {
   isOlympiad: boolean;
   durationSeconds: number;
   moduleDurations: number[];
+  /** No time limit: the card says so instead of the minutes stored under it. */
+  untimed: boolean;
 };
 
 export type OverviewResult = {

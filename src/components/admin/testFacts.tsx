@@ -1,5 +1,12 @@
 import { EyeOff, KeyRound, Trophy } from 'lucide-react';
-import { readModuleDurations, secondsToMinutes, type ModularTest } from '@/lib/examModules';
+import {
+  NO_TIME_LIMIT_LABEL,
+  formatModuleBadge,
+  isUntimedTest,
+  readModuleDurations,
+  secondsToMinutes,
+  type ModularTest,
+} from '@/lib/examModules';
 import { formatDuration, formatOlympiadMoment, readOlympiadWindow, type OlympiadTest } from '@/lib/olympiad';
 import { Badge } from '@/components/ui/Badge';
 
@@ -11,10 +18,14 @@ import { Badge } from '@/components/ui/Badge';
 
 /**
  * How long a test runs, said once: "2 modules × 35 min" for an SAT-style test,
- * "1 h 10 min" for a single timer. A row used to carry a duration pill and a
- * module pill that said the same thing twice.
+ * "1 h 10 min" for a single timer, "No time limit" (or "2 modules · no time
+ * limit") for a test with none - never the placeholder minutes stored under
+ * it. A row used to carry a duration pill and a module pill that said the same
+ * thing twice.
  */
 export function formatTestLength(test: ModularTest) {
+  if (isUntimedTest(test)) return formatModuleBadge(test) ?? NO_TIME_LIMIT_LABEL;
+
   const durations = readModuleDurations(test);
   if (durations.length < 2) return formatDuration(durations[0]);
 

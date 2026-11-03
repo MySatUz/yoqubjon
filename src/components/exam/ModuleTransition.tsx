@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useSyncExternalStore } from 'react';
 import { ArrowRight, Calculator, Check, Clock3, HardDrive, ListChecks, Lock, Trophy } from 'lucide-react';
 import { formatDuration, formatOlympiadMoment, OLYMPIAD_TIME_ZONE } from '@/lib/olympiad';
+import { NO_TIME_LIMIT_LABEL } from '@/lib/examModules';
 import { Badge } from '@/components/ui/Badge';
 import { buttonClass } from '@/components/ui/Button';
 import { cardClass } from '@/components/ui/Card';
@@ -14,6 +15,8 @@ interface ModuleTransitionProps {
   moduleIndex: number;
   moduleCount: number;
   durationSeconds: number;
+  /** No time limit: nothing counts down, so the screen says so instead of a duration. */
+  untimed?: boolean;
   /** This module and every one after it: the time a full attempt still needs from here. */
   secondsToFinish: number;
   questionCount: number;
@@ -66,6 +69,7 @@ export default function ModuleTransition({
   moduleIndex,
   moduleCount,
   durationSeconds,
+  untimed = false,
   secondsToFinish,
   questionCount,
   olympiadEndsAtMs = null,
@@ -98,7 +102,9 @@ export default function ModuleTransition({
     ? [
       {
         icon: <Clock3 className={ruleIconClass} />,
-        text: 'The clock starts when you press Start and keeps running if you leave the page.',
+        text: untimed
+          ? 'There is no time limit. The time you take is recorded with your result.'
+          : 'The clock starts when you press Start and keeps running if you leave the page.',
       },
       {
         icon: <Calculator className={ruleIconClass} />,
@@ -116,7 +122,9 @@ export default function ModuleTransition({
       },
       {
         icon: <Clock3 className={ruleIconClass} />,
-        text: 'This module has its own clock. Time left over from the last one is not added.',
+        text: untimed
+          ? 'There is no time limit on this module either.'
+          : 'This module has its own clock. Time left over from the last one is not added.',
       },
     ];
 
@@ -179,7 +187,7 @@ export default function ModuleTransition({
           </span>
           <span className="inline-flex items-center gap-1.5">
             <Clock3 className="h-4 w-4 text-gray-500" />
-            {formatDuration(durationSeconds)}
+            {untimed ? NO_TIME_LIMIT_LABEL : formatDuration(durationSeconds)}
           </span>
         </p>
 

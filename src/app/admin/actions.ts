@@ -26,6 +26,7 @@ import { parseOlympiadMoment } from '@/lib/olympiad';
 import { normalizeAccessCode } from '@/lib/testAccessCode';
 import { copyTakingOver } from '@/lib/questionSource';
 import {
+  DEFAULT_MODULE_DURATION_SECONDS,
   MAX_MODULE_COUNT,
   MIN_MODULE_COUNT,
   resolveExamModules,
@@ -79,6 +80,14 @@ function readBooleanField(formData: FormData, fieldName: string, defaultValue = 
   if (values.length === 0) return defaultValue;
 
   return values.includes('true');
+}
+
+/**
+ * The "No time limit" checkbox, which sends a checkbox's own value ("on") when
+ * ticked and nothing when not.
+ */
+function readUntimed(formData: FormData) {
+  return formData.get('untimed') === 'on';
 }
 
 function sanitizeFileName(fileName: string) {
@@ -146,7 +155,8 @@ export async function uploadTest(formData: FormData) {
 
     const collection = await resolveCollectionCategory(formData.get('testCategory'));
     const testCategory = collection.category;
-    const examFormat = normalizeExamFormat(formData);
+    const untimed = readUntimed(formData);
+    const examFormat = normalizeExamFormat(formData, untimed);
     const maxAttempts = normalizeTestMaxAttempts(
       formData.get('maxAttempts'),
       collection.maxAttempts
@@ -189,7 +199,7 @@ export async function uploadTest(formData: FormData) {
       format: examFormat,
     });
 
-    const olympiadWindow = normalizeOlympiadWindow(formData, examModules.durationSeconds);
+    const olympiadWindow = normalizeOlympiadWindow(formData, untimed ? null : examModules.durationSeconds);
 
     const imageMap: Record<string, string> = {};
     for (const image of uploadedImages) {
@@ -257,6 +267,7 @@ export async function uploadTest(formData: FormData) {
           visible,
           durationSeconds: examModules.durationSeconds,
           moduleDurations: examModules.moduleDurations,
+          untimed,
           maxAttempts,
           accessCode,
           ...olympiadWindow,
@@ -403,6 +414,7 @@ export async function copyTest(testId: string, formData: FormData) {
           visible: true,
           durationSeconds: true,
           moduleDurations: true,
+          untimed: true,
           maxAttempts: true,
           olympiadStartsAt: true,
           olympiadEndsAt: true,
@@ -431,6 +443,7 @@ export async function copyTest(testId: string, formData: FormData) {
         visible: source.visible,
         durationSeconds: source.durationSeconds,
         moduleDurations: source.moduleDurations,
+        untimed: source.untimed,
         maxAttempts: source.maxAttempts,
         olympiadStartsAt: keepOlympiadWindow ? source.olympiadStartsAt : null,
         olympiadEndsAt: keepOlympiadWindow ? source.olympiadEndsAt : null,
@@ -475,19 +488,40 @@ function normalizeModuleDurations(formData: FormData) {
 }
 
 /**
+ * What the modules of a test with no time limit store in place of minutes:
+ * `DEFAULT_MODULE_DURATION_SECONDS` each (a one-block test stores
+ * `EXAM_DURATION_SECONDS`). Never zero or left out, because the length of
+ * `moduleDurations` is also the module count - `readModuleDurations` drops a
+ * zero - and they are the timers the test starts from if a limit is set later.
+ */
+function placeholderModuleDurations(moduleCount: number) {
+  if (moduleCount < MIN_MODULE_COUNT || moduleCount > MAX_MODULE_COUNT) {
+    throw new Error(`A test can have between ${MIN_MODULE_COUNT} and ${MAX_MODULE_COUNT} modules`);
+  }
+
+  return Array.from({ length: moduleCount }, () => DEFAULT_MODULE_DURATION_SECONDS);
+}
+
+/**
  * Reads the exam format from the admin form: either one classic timer for the
  * whole test, or one timer per SAT-style module.
+ *
+ * A test with no time limit sends no minutes and gets placeholders instead.
+ * Its modules are still counted from the per-module question counts, so
+ * `resolveExamModules` splits the questions exactly as it would with timers.
  */
-function normalizeExamFormat(formData: FormData): ExamFormatInput {
+function normalizeExamFormat(formData: FormData, untimed: boolean): ExamFormatInput {
   if (formData.get('examFormat') !== 'modular') {
     return {
-      durationSeconds: normalizeDurationSeconds(formData.get('durationMinutes')),
+      durationSeconds: untimed ? EXAM_DURATION_SECONDS : normalizeDurationSeconds(formData.get('durationMinutes')),
       moduleDurations: [],
       moduleQuestionCounts: [],
     };
   }
 
-  const moduleDurations = normalizeModuleDurations(formData);
+  const moduleDurations = untimed
+    ? placeholderModuleDurations(formData.getAll('moduleQuestions').length)
+    : normalizeModuleDurations(formData);
 
   return {
     durationSeconds: moduleDurations.reduce((total, duration) => total + duration, 0),
@@ -504,13 +538,21 @@ function normalizeExamFormat(formData: FormData): ExamFormatInput {
  * The window also has to be at least one test long. A shorter one accepts nobody
  * — the entrance closes a full test length before the end — and there is no
  * point storing a competition that cannot be entered.
+ *
+ * `totalDurationSeconds` is null for a test with no time limit, which cannot
+ * have a window at all: it has no length to close the entrance by, and a
+ * student who is never timed out could still be working when the window ends.
  */
-function normalizeOlympiadWindow(formData: FormData, totalDurationSeconds: number) {
+function normalizeOlympiadWindow(formData: FormData, totalDurationSeconds: number | null) {
   const startsAt = parseOlympiadMoment(formData.get('olympiadStartsAt'));
   const endsAt = parseOlympiadMoment(formData.get('olympiadEndsAt'));
 
   if (!startsAt && !endsAt) {
     return { olympiadStartsAt: null, olympiadEndsAt: null };
+  }
+
+  if (totalDurationSeconds === null) {
+    throw new Error('An olympiad needs a time limit. Untick No time limit, or remove the olympiad window.');
   }
 
   if (!startsAt || !endsAt) {
@@ -792,6 +834,7 @@ export async function updateTestDetails(testId: string, formData: FormData) {
         select: {
           description: true,
           visible: true,
+          durationSeconds: true,
           moduleDurations: true,
           collection: { select: { maxAttempts: true } },
         },
@@ -802,6 +845,7 @@ export async function updateTestDetails(testId: string, formData: FormData) {
       collection?.maxAttempts ?? existingTest?.collection?.maxAttempts
     );
     const isFree = formData.get('isFree') === 'true';
+    const untimed = readUntimed(formData);
     // Empty clears the code. A changed code asks every student again, because an
     // unlock only counts while it matches the code on the test.
     const accessCode = normalizeAccessCode(formData.get('accessCode'));
@@ -810,27 +854,35 @@ export async function updateTestDetails(testId: string, formData: FormData) {
       throw new Error('Test not found');
     }
 
-    // Module questions are fixed at upload time, so editing only changes how
-    // long each existing module runs.
-    const moduleDurations = existingTest.moduleDurations.length > 1
-      ? normalizeModuleDurations(formData)
-      : [];
+    // A test with no time limit sends no minutes and keeps the durations it
+    // has, exactly: their count is its module count, and they are its timers
+    // again once a limit is set.
+    let durationSeconds = existingTest.durationSeconds;
+    let moduleDurations = existingTest.moduleDurations;
 
-    if (
-      moduleDurations.length > 0 &&
-      moduleDurations.length !== existingTest.moduleDurations.length
-    ) {
-      throw new Error(
-        `This test has ${existingTest.moduleDurations.length} modules. Set a time for each module.`
-      );
-    }
+    if (!untimed) {
+      // Module questions are fixed at upload time, so editing only changes how
+      // long each existing module runs.
+      moduleDurations = existingTest.moduleDurations.length > 1
+        ? normalizeModuleDurations(formData)
+        : [];
 
-    const durationSeconds = moduleDurations.length > 0
-      ? moduleDurations.reduce((total, duration) => total + duration, 0)
-      : normalizeDurationSeconds(formData.get('durationMinutes'));
+      if (
+        moduleDurations.length > 0 &&
+        moduleDurations.length !== existingTest.moduleDurations.length
+      ) {
+        throw new Error(
+          `This test has ${existingTest.moduleDurations.length} modules. Set a time for each module.`
+        );
+      }
 
-    if (durationSeconds > MAX_EXAM_DURATION_SECONDS) {
-      throw new Error(`Total test time must not exceed ${MAX_DURATION_MINUTES} minutes`);
+      durationSeconds = moduleDurations.length > 0
+        ? moduleDurations.reduce((total, duration) => total + duration, 0)
+        : normalizeDurationSeconds(formData.get('durationMinutes'));
+
+      if (durationSeconds > MAX_EXAM_DURATION_SECONDS) {
+        throw new Error(`Total test time must not exceed ${MAX_DURATION_MINUTES} minutes`);
+      }
     }
 
     await prisma.test.update({
@@ -841,9 +893,10 @@ export async function updateTestDetails(testId: string, formData: FormData) {
         visible: readBooleanField(formData, 'isVisible', existingTest.visible),
         durationSeconds,
         moduleDurations,
+        untimed,
         maxAttempts,
         accessCode,
-        ...normalizeOlympiadWindow(formData, durationSeconds),
+        ...normalizeOlympiadWindow(formData, untimed ? null : durationSeconds),
         ...(collection && {
           collectionCategory: collection.category,
           description: encodeTestDescription(collection.category, cleanTestDescription(existingTest.description)),
@@ -917,9 +970,11 @@ export async function updateQuestion(questionId: string, formData: FormData) {
 export type BuildTestInput = {
   course: string;
   title: string;
-  /** One block on one timer, or two or more modules with a timer each. */
+  /** One block on one timer, or two or more modules with a timer each - unless `untimed`. */
   format: 'single' | 'modular';
-  /** Minutes per module, in order; one entry for a one-block test. */
+  /** No time limit: `minutes` is not read, and the test stores placeholders in their place. */
+  untimed: boolean;
+  /** Minutes per module, in order; one entry for a one-block test, none with no time limit. */
   minutes: number[];
   /** Bank question ids per module, in the order they will be asked. */
   modules: string[][];
@@ -933,7 +988,8 @@ export type BuildTestInput = {
  * on /admin/bank/build. The test gets rows of its own, copies of the bank text
  * linked by `bankQuestionId`, exactly like an imported test, so everything
  * downstream reads it the same way. Timers are stored as `uploadTest` stores
- * them. Lands on the new test's editor.
+ * them, placeholders included for a test with no time limit. Lands on the new
+ * test's editor.
  */
 export async function createTestFromBank(input: BuildTestInput) {
   let testId: string;
@@ -948,6 +1004,7 @@ export async function createTestFromBank(input: BuildTestInput) {
 
     const collection = await resolveCollectionCategory(typeof input?.course === 'string' ? input.course : null);
     const modular = input?.format === 'modular';
+    const untimed = input?.untimed === true;
     const modules = Array.isArray(input?.modules) ? input.modules : [];
     const minutes = Array.isArray(input?.minutes) ? input.minutes : [];
 
@@ -956,13 +1013,17 @@ export async function createTestFromBank(input: BuildTestInput) {
         ? `A test can have between 2 and ${MAX_MODULE_COUNT} modules`
         : 'A one-block test has one list of questions');
     }
-    if (minutes.length !== modules.length) {
+    if (!untimed && minutes.length !== modules.length) {
       throw new Error('Set a time for each module');
     }
 
-    const durations = minutes.map((value) => normalizeDurationSeconds(String(value)));
+    // With no time limit, the placeholders `uploadTest` stores. The cap is on
+    // the time a student is given, and such a test gives none.
+    const durations = untimed
+      ? (modular ? placeholderModuleDurations(modules.length) : [EXAM_DURATION_SECONDS])
+      : minutes.map((value) => normalizeDurationSeconds(String(value)));
     const durationSeconds = durations.reduce((total, duration) => total + duration, 0);
-    if (durationSeconds > MAX_EXAM_DURATION_SECONDS) {
+    if (!untimed && durationSeconds > MAX_EXAM_DURATION_SECONDS) {
       throw new Error(`Total test time must not exceed ${MAX_DURATION_MINUTES} minutes`);
     }
 
@@ -1020,6 +1081,7 @@ export async function createTestFromBank(input: BuildTestInput) {
         // modules keep one duration each and the total beside them.
         durationSeconds,
         moduleDurations: modular ? durations : [],
+        untimed,
         maxAttempts: normalizeTestMaxAttempts(input.maxAttempts, collection.maxAttempts),
         collectionCategory: collection.category,
         questions: { createMany: { data: questions } },

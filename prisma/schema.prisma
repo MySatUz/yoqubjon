@@ -89,6 +89,11 @@ model Test {
   // One entry per SAT-style module, in order. Empty means a single-module test
   // that runs on durationSeconds alone.
   moduleDurations    Int[]                     @default([])
+  // No time limit: the student is never timed out, and the time taken is only
+  // recorded. The durations above stay positive placeholders - the length of
+  // moduleDurations is also the module count - and come back if a limit is
+  // set again. An olympiad always has a limit (admin/actions.ts).
+  untimed            Boolean                   @default(false)
   maxAttempts        Int                       @default(10)
   // A competition window. Both set means the test runs as an olympiad: it can
   // only be opened between these two instants, and the ranking counts only the

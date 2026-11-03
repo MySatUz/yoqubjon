@@ -31,14 +31,17 @@ interface TopNavProps {
   modules: ExamModuleSpec[];
   /** Shows the whiteboard switch - admins only, see `/exam/[id]`. */
   canDraw?: boolean;
+  /** No time limit: the clock shows the time used, counting up, and never ends a module. */
+  untimed?: boolean;
   /** The reference sheet's content, rendered on the server. */
   referenceSheet: React.ReactNode;
 }
 
-export default function TopNav({ testId, title, modules, canDraw = false, referenceSheet }: TopNavProps) {
+export default function TopNav({ testId, title, modules, canDraw = false, untimed = false, referenceSheet }: TopNavProps) {
   // The clock lives here, so this is the one component that has to follow
   // `timeLeftSeconds` - the auto handover below depends on it.
   const timeLeftSeconds = useExamStore((state) => state.timeLeftSeconds);
+  const elapsedSeconds = useExamStore((state) => state.elapsedSeconds);
   const modulePhase = useExamStore((state) => state.modulePhase);
   const activeTestId = useExamStore((state) => state.activeTestId);
   const attemptId = useExamStore((state) => state.attemptId);
@@ -68,20 +71,24 @@ export default function TopNav({ testId, title, modules, canDraw = false, refere
   const isLoadedHere = isAttemptLoaded && activeTestId === testId;
   const isOwnLiveAttempt = isLoadedHere && !isSubmitted;
   const shownModuleIndex = isLoadedHere ? currentModuleIndex : 1;
-  const shownTimeLeft = isLoadedHere ? timeLeftSeconds : modules[0]?.durationSeconds ?? 0;
+  // With no time limit the clock is the time used, counting up from 00:00.
+  const shownTime = untimed
+    ? (isLoadedHere && modulePhase === 'active' ? elapsedSeconds : 0)
+    : isLoadedHere ? timeLeftSeconds : modules[0]?.durationSeconds ?? 0;
 
   const moduleCount = modules.length;
   const isLastModule = currentModuleIndex >= moduleCount;
   // Before a module starts, and while the student decides what to do with an
   // attempt whose time ran out while they were away, no clock is running.
   const isPaused = !isLoadedHere || modulePhase === 'pending' || ranOutWhileAway;
-  const isLowTime = isOwnLiveAttempt && !isPaused && shownTimeLeft <= LOW_TIME_SECONDS;
+  const isLowTime = !untimed && isOwnLiveAttempt && !isPaused && shownTime <= LOW_TIME_SECONDS;
   const showsTime = !isTimerHidden || isLowTime;
   // Where there is a question on screen to draw over.
   const showWhiteboardSwitch = canDraw && !isPaused && !isReviewOpen;
 
   useEffect(() => {
-    if (!isOwnLiveAttempt || isPaused || timeLeftSeconds > 0) return;
+    // With no time limit nothing runs out: only the student ends a module.
+    if (untimed || !isOwnLiveAttempt || isPaused || timeLeftSeconds > 0) return;
 
     // Per attempt, not just per module: a new attempt started on this same
     // screen must still end on its own clock.
@@ -106,6 +113,7 @@ export default function TopNav({ testId, title, modules, canDraw = false, refere
     isPaused,
     submitExam,
     timeLeftSeconds,
+    untimed,
   ]);
 
   const formatTime = (seconds: number) => {
@@ -165,8 +173,16 @@ export default function TopNav({ testId, title, modules, canDraw = false, refere
             {showsTime ? (
               <>
                 {isLowTime && <Clock className="h-4 w-4" />}
-                <span className="sr-only">Time left </span>
-                {formatTime(shownTimeLeft)}
+                {/* Counting up, so it is named: a bare clock reads as time left. */}
+                {untimed ? (
+                  <>
+                    <span className="hidden text-xs font-medium text-gray-600 sm:inline">Time used</span>
+                    <span className="sr-only sm:hidden">Time used </span>
+                  </>
+                ) : (
+                  <span className="sr-only">Time left </span>
+                )}
+                {formatTime(shownTime)}
               </>
             ) : (
               <>

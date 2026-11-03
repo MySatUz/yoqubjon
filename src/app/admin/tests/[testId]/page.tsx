@@ -113,6 +113,7 @@ export default async function AdminTestEditorPage({
     collectionCategory: test.collectionCategory,
     durationSeconds: test.durationSeconds,
     moduleDurations: test.moduleDurations,
+    untimed: test.untimed,
     maxAttempts: test.maxAttempts,
     olympiadStartsAt: test.olympiadStartsAt,
     olympiadEndsAt: test.olympiadEndsAt,

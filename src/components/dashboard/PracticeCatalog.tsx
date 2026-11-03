@@ -47,6 +47,8 @@ type CatalogTest = {
   collectionCategory: string | null;
   durationSeconds: number;
   moduleDurations: number[];
+  /** No time limit: the card says so instead of the minutes stored under it. */
+  untimed: boolean;
   maxAttempts: number;
   attemptsUsed: number;
   /** Questions the test shows (its original's, for a copy). */
@@ -352,7 +354,9 @@ export default function PracticeCatalog({
                   </li>
                   {/* Both formats read right: "44 questions · 2 modules × 35 min"
                       for a two-module test, "30 questions · 35 min" for one
-                      block on one timer. */}
+                      block on one timer. A test with no time limit says so
+                      ("No time limit", "2 modules · no time limit") and never
+                      the placeholder minutes stored under it. */}
                   {test.questionCount > 0 && (
                     <li className="inline-flex items-center gap-1 whitespace-nowrap tabular-nums">
                       <ListOrdered className="h-3.5 w-3.5" aria-hidden />

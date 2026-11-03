@@ -17,6 +17,8 @@ interface ModuleReviewProps {
   moduleCount: number;
   /** The next module's clock, for what finishing this one means; null on the last. */
   nextModuleSeconds: number | null;
+  /** No time limit: the next module has no clock to name. */
+  untimed?: boolean;
 }
 
 /**
@@ -32,6 +34,7 @@ export default function ModuleReview({
   moduleIndex,
   moduleCount,
   nextModuleSeconds,
+  untimed = false,
 }: ModuleReviewProps) {
   const setCurrentQuestionIndex = useExamStore((state) => state.setCurrentQuestionIndex);
   const setReviewOpen = useExamStore((state) => state.setReviewOpen);
@@ -88,7 +91,9 @@ export default function ModuleReview({
         <p className="text-sm text-gray-600">
           {isLastModule
             ? 'Finishing sends your answers and opens your result.'
-            : `Once you finish, you cannot come back to Module ${moduleIndex}. Module ${moduleIndex + 1} is timed on its own (${formatDuration(nextModuleSeconds)}) and starts when you press Start.`}
+            : untimed
+              ? `Once you finish, you cannot come back to Module ${moduleIndex}. Module ${moduleIndex + 1} starts when you press Start.`
+              : `Once you finish, you cannot come back to Module ${moduleIndex}. Module ${moduleIndex + 1} is timed on its own (${formatDuration(nextModuleSeconds)}) and starts when you press Start.`}
         </p>
       </div>
     </div>

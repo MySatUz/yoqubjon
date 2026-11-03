@@ -126,6 +126,9 @@ export default function BuildTestForm({
   const courseAttempts = (value: string) => courses.find((item) => item.value === value)?.maxAttempts;
   const [title, setTitle] = useState('');
   const [format, setFormat] = useState<'modular' | 'single'>('modular');
+  // Ticked, no minutes are sent and the server stores placeholders
+  // (createTestFromBank); the minutes typed stay in the drafts.
+  const [untimed, setUntimed] = useState(false);
   const [modules, setModules] = useState<ModuleDraft[]>(() => Array.from({ length: DEFAULT_MODULE_COUNT }, newModule));
   const [blockMinutes, setBlockMinutes] = useState(DEFAULT_BLOCK_MINUTES);
   const [attempts, setAttempts] = useState(() => String(courseAttempts(course) ?? 10));
@@ -249,9 +252,12 @@ export default function BuildTestForm({
         course,
         title: title.trim(),
         format,
-        minutes: format === 'single'
-          ? [readMinutes(blockMinutes, DEFAULT_BLOCK_MINUTES)]
-          : active.map((module) => readMinutes(module.minutes, DEFAULT_MODULE_MINUTES)),
+        untimed,
+        minutes: untimed
+          ? []
+          : format === 'single'
+            ? [readMinutes(blockMinutes, DEFAULT_BLOCK_MINUTES)]
+            : active.map((module) => readMinutes(module.minutes, DEFAULT_MODULE_MINUTES)),
         modules: active.map((module) => chosenOf(module).map((row) => row.id)),
         maxAttempts: attempts,
         visible,
@@ -342,23 +348,45 @@ export default function BuildTestForm({
               ))}
             </div>
 
+            {/* Above the minutes it hides, so ticking it never moves it. */}
+            <label className="flex w-fit items-start gap-2.5 text-sm text-gray-700">
+              <input
+                type="checkbox"
+                checked={untimed}
+                onChange={(event) => setUntimed(event.target.checked)}
+                className={cn(checkboxClass, 'mt-0.5')}
+              />
+              <span>
+                <span className="font-medium text-gray-900">No time limit</span>
+                <span className={cn(hintClass, 'block')}>
+                  The student is never timed out. The time taken is still recorded.
+                </span>
+              </span>
+            </label>
+
             {format === 'modular' ? (
               <div className="space-y-2 pt-1">
-                <p className={hintClass}>Each module runs on its own timer and has its own questions.</p>
+                <p className={hintClass}>
+                  {untimed
+                    ? 'Each module has its own questions.'
+                    : 'Each module runs on its own timer and has its own questions.'}
+                </p>
                 {modules.map((module, index) => (
                   <div key={module.key} className="flex flex-wrap items-center gap-2">
                     <span className="w-20 text-sm text-gray-600">Module {index + 1}</span>
-                    <Input
-                      type="number"
-                      min={1}
-                      max={360}
-                      step={1}
-                      aria-label={`Module ${index + 1} minutes`}
-                      value={module.minutes}
-                      onChange={(event) => updateModule(module.key, (current) => ({ ...current, minutes: event.target.value }))}
-                      suffix="minutes"
-                      className="max-w-36"
-                    />
+                    {!untimed && (
+                      <Input
+                        type="number"
+                        min={1}
+                        max={360}
+                        step={1}
+                        aria-label={`Module ${index + 1} minutes`}
+                        value={module.minutes}
+                        onChange={(event) => updateModule(module.key, (current) => ({ ...current, minutes: event.target.value }))}
+                        suffix="minutes"
+                        className="max-w-36"
+                      />
+                    )}
                     {modules.length > MIN_MODULES && (
                       <IconButton
                         variant="danger-secondary"
@@ -381,7 +409,7 @@ export default function BuildTestForm({
                   Add module
                 </Button>
               </div>
-            ) : (
+            ) : !untimed && (
               <div className="max-w-xs pt-1">
                 <p className={cn(hintClass, 'mb-2')}>One timer for the whole test, e.g. 30 questions in 60 minutes.</p>
                 <Input
@@ -450,7 +478,7 @@ export default function BuildTestForm({
           methodLabel={format === 'single'
             ? 'How to choose the questions'
             : `How to choose the questions of module ${index + 1}`}
-          minutes={format === 'single' ? blockMinutes : module.minutes}
+          minutes={untimed ? null : format === 'single' ? blockMinutes : module.minutes}
           module={module}
           conflicts={conflicts}
           usedIn={usedElsewhere(index)}
@@ -474,8 +502,8 @@ export default function BuildTestForm({
         <p className="mr-auto text-sm tabular-nums text-gray-600">
           {blocker ?? (
             format === 'single'
-              ? `${questionCount(totalQuestions)} on one timer.`
-              : `${questionCount(totalQuestions)} in ${active.length} modules.`
+              ? `${questionCount(totalQuestions)} ${untimed ? 'with no time limit' : 'on one timer'}.`
+              : `${questionCount(totalQuestions)} in ${active.length} modules${untimed ? ', with no time limit' : ''}.`
           )}
         </p>
         {createError && (
@@ -528,7 +556,8 @@ function ModuleCard({
   title: string;
   /** The name of the By hand / Random control; a one-block test has no module to name. */
   methodLabel: string;
-  minutes: string;
+  /** As typed; null for a test with no time limit. */
+  minutes: string | null;
   module: ModuleDraft;
   conflicts: Set<string>;
   usedIn: Map<string, string>;
@@ -545,6 +574,7 @@ function ModuleCard({
   const fieldId = useId();
   const rows = chosenOf(module);
   const requested = BANK_DIFFICULTIES.reduce((total, difficulty) => total + readCount(module.random.counts[difficulty.value]), 0);
+  const time = minutes === null ? 'no time limit' : `${minutes || '—'} min`;
 
   const move = (index: number, step: -1 | 1) => {
     const next = [...module.manual];
@@ -557,7 +587,7 @@ function ModuleCard({
     <section className={cardClass} aria-labelledby={`${fieldId}-title`}>
       <CardHeader
         title={<span id={`${fieldId}-title`}>{title}</span>}
-        description={<span className="tabular-nums">{`${questionCount(rows.length)} · ${minutes || '—'} min`}</span>}
+        description={<span className="tabular-nums">{`${questionCount(rows.length)} · ${time}`}</span>}
         actions={
           <div role="radiogroup" aria-label={methodLabel} className={segmentedClass}>
             {([

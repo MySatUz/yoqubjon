@@ -2,7 +2,7 @@ import type { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { getShownQuestions } from '@/lib/questionSource';
 import { gradeAnswer } from '@/lib/resultAnswers';
-import { EXAM_TIME_GRACE_SECONDS, MAX_EXAM_DURATION_SECONDS } from '@/lib/examConfig';
+import { EXAM_TIME_GRACE_SECONDS, MAX_EXAM_DURATION_SECONDS, MAX_UNTIMED_TIME_SPENT_SECONDS } from '@/lib/examConfig';
 import { estimateSatMathScore } from '@/lib/satScoring';
 import { isAdminSessionUser } from '@/lib/admin';
 import { userHasActiveSectionAccess } from '@/lib/sectionAccess';
@@ -77,11 +77,13 @@ export function parseExamSubmissionBody(body: unknown): ExamSubmissionInput {
     throw new ExamSubmissionError('Invalid answers', 400);
   }
 
+  // Read before the test is: the bound is the longest any test records, which
+  // is one with no time limit. A timed test is held to its own limit below.
   if (
     typeof timeSpent !== 'number' ||
     !Number.isInteger(timeSpent) ||
     timeSpent < 0 ||
-    timeSpent > MAX_EXAM_DURATION_SECONDS + EXAM_TIME_GRACE_SECONDS
+    timeSpent > Math.max(MAX_EXAM_DURATION_SECONDS + EXAM_TIME_GRACE_SECONDS, MAX_UNTIMED_TIME_SPENT_SECONDS)
   ) {
     throw new ExamSubmissionError('Invalid time spent', 400);
   }
@@ -226,7 +228,8 @@ export async function createExamResult(
     throw new ExamSubmissionError('Test not found', 404);
   }
 
-  if (submission.timeSpent > test.durationSeconds + EXAM_TIME_GRACE_SECONDS) {
+  // A test with no time limit records the time taken and is held to nothing.
+  if (!test.untimed && submission.timeSpent > test.durationSeconds + EXAM_TIME_GRACE_SECONDS) {
     throw new ExamSubmissionError('Invalid time spent', 400);
   }
 

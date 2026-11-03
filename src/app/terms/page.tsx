@@ -18,14 +18,14 @@ export const metadata: Metadata = {
 };
 
 /*
- * The rules as the code applies them on 31 Oct 2026: plans from plans.ts,
+ * The rules as the code applies them on 3 Nov 2026: plans from plans.ts,
  * Premium from manual-payments.ts and the payment request route, course access
  * from accessPlan.ts, attempts and scores from the exam and scoreDisplay.ts,
  * olympiads from olympiad.ts. Change the page with the rule. Not settled in
  * code, and so not stated: who runs the service, refunds, governing law.
  * No price on this page (the owner's rule); the amount lives in the payment form.
  */
-const UPDATED = new Date('2026-10-31T12:00:00+05:00');
+const UPDATED = new Date('2026-11-03T12:00:00+05:00');
 
 function TelegramLink() {
   return (
@@ -105,6 +105,10 @@ export default function TermsPage() {
             A test is 1 timed block or a set of modules, each with its own clock, and the clock keeps running if you
             close the test. When a module’s time runs out on screen, it ends by itself. If it ran out while the test was
             closed, you choose to send the saved answers or start again.
+          </li>
+          <li>
+            A test marked No time limit has no clock. A module ends only when you finish it, and the time you take is
+            recorded with your result.
           </li>
           <li>A test in progress is saved in your browser until you submit it.</li>
           <li>

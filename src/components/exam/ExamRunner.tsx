@@ -40,6 +40,8 @@ interface ExamRunnerProps {
   userId: string;
   /** An olympiad's closing time, in ms; null for an ordinary test. */
   olympiadEndsAtMs?: number | null;
+  /** No time limit (Test.untimed): no countdown, the time used counts up instead. */
+  untimed?: boolean;
   /** The reference sheet's content, rendered on the server (see `ReferenceSheet`). */
   referenceSheet: React.ReactNode;
 }
@@ -51,6 +53,7 @@ export default function ExamRunner({
   canDraw = false,
   userId,
   olympiadEndsAtMs = null,
+  untimed = false,
   referenceSheet,
 }: ExamRunnerProps) {
   const router = useRouter();
@@ -88,11 +91,12 @@ export default function ExamRunner({
   // Unloading on the way out is what lets the next exam screen tell this
   // attempt, still in the store, from the one it is about to load.
   useEffect(() => {
-    initializeExam(testId, specs, userId, title);
+    initializeExam(testId, specs, userId, title, untimed);
     return unloadExam;
-  }, [initializeExam, specs, testId, title, unloadExam, userId]);
+  }, [initializeExam, specs, testId, title, unloadExam, untimed, userId]);
 
-  // The clock only has to run while a module is counting down. In every other
+  // The clock only has to run while a module is counting down - or, with no
+  // time limit, counting up. In every other
   // phase `syncTimeLeft` would return `{}`, which zustand still turns into a
   // new state object and broadcasts to every subscriber once a second.
   //
@@ -150,7 +154,14 @@ export default function ExamRunner({
     // `h-dvh`, not `h-screen`: on a phone 100vh reaches under the browser's
     // own toolbar and hides the bottom bar with Next on it.
     <main className="flex h-dvh flex-col overflow-hidden bg-gray-100">
-      <TopNav testId={testId} title={title} modules={specs} canDraw={canDraw} referenceSheet={referenceSheet} />
+      <TopNav
+        testId={testId}
+        title={title}
+        modules={specs}
+        canDraw={canDraw}
+        untimed={untimed}
+        referenceSheet={referenceSheet}
+      />
       {!isReady ? (
         // No question until the attempt is in: question 1 must not be
         // readable before Start, and a resumed attempt is not on question 1
@@ -161,7 +172,7 @@ export default function ExamRunner({
           testId={testId}
           moduleIndex={activeModule.index}
           moduleCount={modules.length}
-          onStartOver={() => startNewAttempt(testId, specs, userId, title)}
+          onStartOver={() => startNewAttempt(testId, specs, userId, title, untimed)}
           onContinue={continueExpiredAttempt}
         />
       ) : isWaitingForModuleStart ? (
@@ -170,6 +181,7 @@ export default function ExamRunner({
           moduleIndex={activeModule.index}
           moduleCount={modules.length}
           durationSeconds={activeModule.durationSeconds}
+          untimed={untimed}
           secondsToFinish={secondsToFinish}
           questionCount={activeModule.questions.length}
           olympiadEndsAtMs={olympiadEndsAtMs}
@@ -190,6 +202,7 @@ export default function ExamRunner({
                 moduleIndex={activeModule.index}
                 moduleCount={modules.length}
                 nextModuleSeconds={nextModule?.durationSeconds ?? null}
+                untimed={untimed}
               />
             ) : null}
           />
@@ -214,7 +227,7 @@ export default function ExamRunner({
         confirmLabel="Discard and start this test"
         cancelLabel="Continue it"
         tone="danger"
-        onConfirm={() => startNewAttempt(testId, specs, userId, title)}
+        onConfirm={() => startNewAttempt(testId, specs, userId, title, untimed)}
         onCancel={() => {
           if (!blockingAttempt || isLeaving) return;
           setLeavingFor(blockingAttempt.testId);

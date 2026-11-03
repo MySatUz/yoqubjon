@@ -24,6 +24,8 @@ export type CourseTestRow = {
   createdAt: Date;
   durationSeconds: number;
   moduleDurations: number[];
+  /** No time limit: the row says so (formatTestLength) instead of the stored minutes. */
+  untimed: boolean;
   maxAttempts: number;
   olympiadStartsAt: Date | null;
   olympiadEndsAt: Date | null;

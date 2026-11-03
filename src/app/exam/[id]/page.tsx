@@ -37,6 +37,7 @@ const getExamTest = cache((id: string) =>
       collectionCategory: true,
       durationSeconds: true,
       moduleDurations: true,
+      untimed: true,
       olympiadStartsAt: true,
       olympiadEndsAt: true,
       accessCode: true,
@@ -181,6 +182,7 @@ export default async function DynamicExamPage({ params }: { params: Promise<{ id
       canDraw={isAdmin}
       userId={userId}
       olympiadEndsAtMs={olympiadWindow ? olympiadWindow.endsAt.getTime() : null}
+      untimed={test.untimed}
       referenceSheet={<ReferenceSheet />}
     />
   );

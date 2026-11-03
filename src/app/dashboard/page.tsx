@@ -164,6 +164,8 @@ async function PracticeCatalogSection({
         collectionCategory: true,
         durationSeconds: true,
         moduleDurations: true,
+        // "No time limit" instead of the placeholder minutes stored under it.
+        untimed: true,
         maxAttempts: true,
         isFree: true,
         visible: true,
@@ -243,6 +245,7 @@ async function PracticeCatalogSection({
         isOlympiad: test.olympiadStartsAt !== null,
         durationSeconds: test.durationSeconds,
         moduleDurations: test.moduleDurations,
+        untimed: test.untimed,
       };
     }),
     results: recentResults,

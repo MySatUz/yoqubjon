@@ -59,6 +59,9 @@ export async function getOlympiadTest(testId: string) {
       maxAttempts: true,
       durationSeconds: true,
       moduleDurations: true,
+      // An olympiad always has a limit; selected so the page's "Time limit"
+      // reads the same way as every other test's.
+      untimed: true,
       olympiadStartsAt: true,
       olympiadEndsAt: true,
     },

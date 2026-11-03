@@ -76,6 +76,8 @@ const readStatsTest = cache((testId: string) => prisma.test.findUnique({
     collectionCategory: true,
     durationSeconds: true,
     moduleDurations: true,
+    // formatTestLength says "No time limit" for it, not the stored minutes.
+    untimed: true,
     // The paper, for the per-question table: its opening line and module only,
     // never the answer key. A copy is scored on its original's questions.
     questions: {

@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
-import { EXAM_DURATION_SECONDS, EXAM_TIME_GRACE_SECONDS } from '@/lib/examConfig';
+import { EXAM_DURATION_SECONDS, EXAM_TIME_GRACE_SECONDS, MAX_UNTIMED_TIME_SPENT_SECONDS } from '@/lib/examConfig';
 import type { ExamModuleSpec } from '@/lib/examModules';
 
 /**
@@ -49,6 +49,20 @@ interface ExamState {
   moduleDurationSeconds: number;
   timeLeftSeconds: number;
   endsAtMs: number | null;
+  /**
+   * The test has no time limit: nothing counts down and nothing ends a module
+   * but the student. The time used is still recorded, counted up instead.
+   */
+  untimed: boolean;
+  /**
+   * With no time limit: the running module's time used, counted up to
+   * `checkpointMs`. Moved on at most every CHECKPOINT_MS, so a tick does not
+   * rewrite the saved attempt every second.
+   */
+  elapsedMs: number;
+  checkpointMs: number | null;
+  /** With no time limit: the running module's time used, live, for the header. Not persisted. */
+  elapsedSeconds: number;
   currentQuestionIndex: number;
   isSubmitted: boolean;
   /**
@@ -96,11 +110,11 @@ interface ExamState {
   isWhiteboardOpen: boolean;
 
   // Actions
-  initializeExam: (testId: string, modules: ExamModuleSpec[], ownerId: string, title: string) => void;
+  initializeExam: (testId: string, modules: ExamModuleSpec[], ownerId: string, title: string, untimed: boolean) => void;
   unloadExam: () => void;
   startSending: (attemptId: string) => void;
   stopSending: (attemptId: string) => void;
-  startNewAttempt: (testId: string, modules: ExamModuleSpec[], ownerId: string, title: string) => void;
+  startNewAttempt: (testId: string, modules: ExamModuleSpec[], ownerId: string, title: string, untimed: boolean) => void;
   continueExpiredAttempt: () => void;
   startCurrentModule: () => void;
   finishCurrentModule: () => void;
@@ -132,6 +146,10 @@ const createInitialState = () => ({
   moduleDurationSeconds: EXAM_DURATION_SECONDS,
   timeLeftSeconds: EXAM_DURATION_SECONDS,
   endsAtMs: null as number | null,
+  untimed: false,
+  elapsedMs: 0,
+  checkpointMs: null as number | null,
+  elapsedSeconds: 0,
   currentQuestionIndex: 0,
   isSubmitted: false,
   sendingAttemptId: null as string | null,
@@ -159,7 +177,8 @@ function createAttempt(
   testId: string,
   moduleDurations: number[],
   ownerId: string | null,
-  title: string | null
+  title: string | null,
+  untimed: boolean
 ) {
   const durationSeconds = moduleDurations[0];
 
@@ -174,6 +193,7 @@ function createAttempt(
     moduleDurationSeconds: durationSeconds,
     timeLeftSeconds: durationSeconds,
     endsAtMs: null,
+    untimed,
     isAttemptLoaded: true,
   };
 }
@@ -222,6 +242,26 @@ function isPageHidden() {
 }
 
 /**
+ * With no time limit, how often the time used is saved with the attempt. The
+ * header reads it live every second; the saved copy only has to survive a
+ * reload.
+ */
+const CHECKPOINT_MS = 15 * 1000;
+
+/**
+ * The time used on a module with no time limit, brought up to `now`. A gap
+ * longer than WOKE_PAST_DEADLINE_MS means nothing was running the page - a
+ * closed laptop, the test closed and opened again tomorrow - and is not
+ * counted. A hidden tab still ticks at least once a minute, so time spent in
+ * another tab (a calculator, a worksheet) is.
+ */
+function advanceElapsed(state: { elapsedMs: number; checkpointMs: number | null }, now: number) {
+  const gap = state.checkpointMs === null ? -1 : now - state.checkpointMs;
+  const counted = gap >= 0 && gap <= WOKE_PAST_DEADLINE_MS ? gap : 0;
+  return { elapsedMs: state.elapsedMs + counted, checkpointMs: now };
+}
+
+/**
  * `persist` writes on every `set()`, including the timer tick and the actions
  * that return `{}`. Most of those serialize to the exact same string, so the
  * write is skipped instead of blocking the main thread on localStorage.
@@ -263,6 +303,13 @@ export const selectTotalTimeSpent = (state: ExamState) => {
     0
   );
 
+  // No time limit: the time used as counted up. Bounded only so a page left
+  // ticking for days cannot fail the server's sanity check on the send.
+  if (state.untimed) {
+    const runningSeconds = state.modulePhase === 'pending' ? 0 : state.elapsedSeconds;
+    return Math.min(MAX_UNTIMED_TIME_SPENT_SECONDS, finishedSeconds + runningSeconds);
+  }
+
   const currentSeconds = state.modulePhase === 'pending'
     ? 0
     : Math.min(
@@ -278,7 +325,7 @@ export const useExamStore = create<ExamState>()(
     (set) => ({
       ...createInitialState(),
 
-      initializeExam: (testId, modules, ownerId, title) =>
+      initializeExam: (testId, modules, ownerId, title, untimed) =>
         set((state) => {
           if (modules.length === 0) return {};
 
@@ -305,7 +352,7 @@ export const useExamStore = create<ExamState>()(
               };
             }
 
-            return createAttempt(testId, moduleDurations, ownerId, title);
+            return createAttempt(testId, moduleDurations, ownerId, title, untimed);
           }
 
           const now = Date.now();
@@ -329,17 +376,60 @@ export const useExamStore = create<ExamState>()(
               moduleDurationSeconds: activeModule.durationSeconds,
               timeLeftSeconds: activeModule.durationSeconds,
               endsAtMs: null,
+              untimed,
+              elapsedMs: 0,
+              checkpointMs: null,
+              elapsedSeconds: 0,
               currentQuestionIndex: 0,
               isAttemptLoaded: true,
               ranOutWhileAway: false,
             };
           }
 
+          // No time limit: the module carries on counting up. A reload a
+          // moment ago counts as time used, a return tomorrow does not
+          // (advanceElapsed). If an admin took the limit off since the module
+          // started, it carries on from what the clock had used.
+          if (untimed) {
+            const elapsed = state.untimed
+              ? advanceElapsed(state, now)
+              : {
+                elapsedMs: state.endsAtMs === null
+                  ? 0
+                  : Math.min(
+                    state.moduleDurationSeconds * 1000,
+                    Math.max(0, state.moduleDurationSeconds * 1000 - (state.endsAtMs - now))
+                  ),
+                checkpointMs: now,
+              };
+
+            return {
+              attemptId,
+              ...claimed,
+              moduleDurations,
+              currentModuleIndex: moduleIndex,
+              moduleDurationSeconds: activeModule.durationSeconds,
+              timeLeftSeconds: activeModule.durationSeconds,
+              endsAtMs: null,
+              untimed: true,
+              ...elapsed,
+              elapsedSeconds: Math.floor(elapsed.elapsedMs / 1000),
+              currentQuestionIndex: Math.min(state.currentQuestionIndex, lastQuestionIndex),
+              isAttemptLoaded: true,
+              ranOutWhileAway: false,
+            };
+          }
+
           // The module's deadline, moved along with its duration if an admin
-          // changed that since the module started.
-          const deadlineMs = state.endsAtMs === null
-            ? null
-            : state.endsAtMs + (activeModule.durationSeconds - state.moduleDurationSeconds) * 1000;
+          // changed that since the module started. A module that started with
+          // no time limit, which an admin has given one since, counts the time
+          // it has used against it.
+          const deadlineMs = state.untimed
+            ? now + activeModule.durationSeconds * 1000 - advanceElapsed(state, now).elapsedMs
+            : state.endsAtMs === null
+              ? null
+              : state.endsAtMs + (activeModule.durationSeconds - state.moduleDurationSeconds) * 1000;
+          const timed = { untimed: false, elapsedMs: 0, checkpointMs: null, elapsedSeconds: 0 };
 
           // Past the deadline by more than the grace period: the clock ran
           // out while the test was closed - the student left yesterday and is
@@ -347,7 +437,7 @@ export const useExamStore = create<ExamState>()(
           // seconds, which still ends the module as usual.
           if (deadlineMs !== null && now - deadlineMs > EXAM_TIME_GRACE_SECONDS * 1000) {
             if (!hasAnyAnswer(state.answers)) {
-              return createAttempt(testId, moduleDurations, ownerId, title);
+              return createAttempt(testId, moduleDurations, ownerId, title, untimed);
             }
 
             return {
@@ -360,6 +450,7 @@ export const useExamStore = create<ExamState>()(
               // Kept as the deadline rather than reset to now, so a reload on
               // the question screen asks again instead of ending the module.
               endsAtMs: deadlineMs,
+              ...timed,
               currentQuestionIndex: Math.min(state.currentQuestionIndex, lastQuestionIndex),
               isAttemptLoaded: true,
               ranOutWhileAway: true,
@@ -385,6 +476,7 @@ export const useExamStore = create<ExamState>()(
             moduleDurationSeconds: activeModule.durationSeconds,
             timeLeftSeconds,
             endsAtMs: timeLeftSeconds > 0 ? now + timeLeftSeconds * 1000 : now,
+            ...timed,
             currentQuestionIndex: Math.min(state.currentQuestionIndex, lastQuestionIndex),
             isAttemptLoaded: true,
             ranOutWhileAway: false,
@@ -409,11 +501,11 @@ export const useExamStore = create<ExamState>()(
       // are submitted, and opening another test discards the saved one once
       // the student agrees - so offering it here opens no new way around the
       // clock. Also how another test's attempt is discarded (`blockingAttempt`).
-      startNewAttempt: (testId, modules, ownerId, title) =>
+      startNewAttempt: (testId, modules, ownerId, title, untimed) =>
         set(() => (
           modules.length === 0
             ? {}
-            : createAttempt(testId, modules.map((item) => item.durationSeconds), ownerId, title)
+            : createAttempt(testId, modules.map((item) => item.durationSeconds), ownerId, title, untimed)
         )),
 
       // For a module before the last one. Leaves the clock at 00:00, so the
@@ -427,10 +519,16 @@ export const useExamStore = create<ExamState>()(
         set((state) => {
           if (state.modulePhase !== 'pending') return {};
 
+          const now = Date.now();
+
           return {
             modulePhase: 'active' as ModulePhase,
             timeLeftSeconds: state.moduleDurationSeconds,
-            endsAtMs: Date.now() + state.moduleDurationSeconds * 1000,
+            // No time limit: nothing counts down; the time used counts up from now.
+            endsAtMs: state.untimed ? null : now + state.moduleDurationSeconds * 1000,
+            elapsedMs: 0,
+            checkpointMs: state.untimed ? now : null,
+            elapsedSeconds: 0,
             currentQuestionIndex: 0,
             isReviewOpen: false,
           };
@@ -444,10 +542,12 @@ export const useExamStore = create<ExamState>()(
           // The last module ends with the submission, not with a handover.
           if (nextDuration === undefined) return {};
 
-          const spentSeconds = Math.min(
-            state.moduleDurationSeconds,
-            Math.max(0, state.moduleDurationSeconds - state.timeLeftSeconds)
-          );
+          const spentSeconds = state.untimed
+            ? Math.round(advanceElapsed(state, Date.now()).elapsedMs / 1000)
+            : Math.min(
+              state.moduleDurationSeconds,
+              Math.max(0, state.moduleDurationSeconds - state.timeLeftSeconds)
+            );
 
           return {
             moduleTimeSpent: {
@@ -459,6 +559,9 @@ export const useExamStore = create<ExamState>()(
             moduleDurationSeconds: nextDuration,
             timeLeftSeconds: nextDuration,
             endsAtMs: null,
+            elapsedMs: 0,
+            checkpointMs: null,
+            elapsedSeconds: 0,
             currentQuestionIndex: 0,
             isReviewOpen: false,
           };
@@ -531,6 +634,19 @@ export const useExamStore = create<ExamState>()(
 
           const now = Date.now();
 
+          // No time limit: the time used counts up, and nothing ever runs out.
+          // The saved count moves on only every CHECKPOINT_MS, or when a gap
+          // shows the page was asleep; between those only the live value
+          // changes, which is not saved.
+          if (state.untimed) {
+            const gap = state.checkpointMs === null ? -1 : now - state.checkpointMs;
+            if (gap < 0 || gap >= CHECKPOINT_MS) {
+              const elapsed = advanceElapsed(state, now);
+              return { ...elapsed, elapsedSeconds: Math.floor(elapsed.elapsedMs / 1000) };
+            }
+            return { elapsedSeconds: Math.floor((state.elapsedMs + gap) / 1000) };
+          }
+
           // A clock that was still running and now finds itself well past its
           // deadline was frozen or asleep, not counting down in front of the
           // student. That is the same as reopening the test later, so it is
@@ -557,7 +673,8 @@ export const useExamStore = create<ExamState>()(
                 state.activeTestId,
                 state.moduleDurations,
                 state.ownerId,
-                state.activeTestTitle
+                state.activeTestTitle,
+                state.untimed
               );
           }
 
@@ -602,6 +719,12 @@ export const useExamStore = create<ExamState>()(
         // keeping it out is what makes a timer tick serialize to the same
         // string as the tick before it.
         endsAtMs: state.endsAtMs,
+        // With no time limit: the saved count and when it was taken, so a
+        // reload carries on from it. `elapsedSeconds` is the live value and,
+        // like `timeLeftSeconds`, is not saved.
+        untimed: state.untimed,
+        elapsedMs: state.elapsedMs,
+        checkpointMs: state.checkpointMs,
         currentQuestionIndex: state.currentQuestionIndex,
         isSubmitted: state.isSubmitted,
       }),

@@ -99,6 +99,9 @@ export default function AdminForm({ collections, defaultCategory: preselected, o
     collections.find((option) => option.value === category)?.maxAttempts ?? DEFAULT_TEST_MAX_ATTEMPTS;
   const [maxAttempts, setMaxAttempts] = useState(() => String(courseAttempts(defaultCategory)));
   const [examFormat, setExamFormat] = useState<ExamFormat>('modular');
+  // Ticked, no minutes are sent and the server stores placeholders
+  // (uploadTest); the question counts still split the modules.
+  const [untimed, setUntimed] = useState(false);
   const [modules, setModules] = useState<ModuleDraft[]>(() => createModuleDrafts(DEFAULT_MODULE_COUNT));
   // The code and olympiad fields keep their values in state, which
   // `form.reset()` cannot reach; a new key remounts them empty after a
@@ -124,8 +127,12 @@ export default function AdminForm({ collections, defaultCategory: preselected, o
           : null,
         format: {
           durationSeconds: 0,
+          // The placeholders the server stores with no time limit, so minutes
+          // typed before the box was ticked cannot fail the total here.
           moduleDurations: examFormat === 'modular'
-            ? modules.map((module) => parseDraftNumber(module.minutes, DEFAULT_MODULE_MINUTES) * 60)
+            ? modules.map((module) => (untimed
+              ? DEFAULT_MODULE_DURATION_SECONDS
+              : parseDraftNumber(module.minutes, DEFAULT_MODULE_MINUTES) * 60))
             : [],
           moduleQuestionCounts: modules.map((module) => parseDraftNumber(module.questions, DEFAULT_MODULE_QUESTION_COUNT)),
         },
@@ -136,7 +143,7 @@ export default function AdminForm({ collections, defaultCategory: preselected, o
       const message = error instanceof Error ? error.message.replace('SAT modules', 'Modules') : null;
       return { modules: null, error: message || 'The file does not fit this format.' };
     }
-  }, [texCheck.questions, examFormat, modules]);
+  }, [texCheck.questions, examFormat, untimed, modules]);
 
   const missingImages = findMissingImages(texCheck.questions, imageNames);
   const blocker = describeImportBlocker({
@@ -212,15 +219,18 @@ export default function AdminForm({ collections, defaultCategory: preselected, o
       serverFormData.set('isVisible', isVisible ? 'true' : 'false');
       if (typeof testCategory === 'string') serverFormData.set('testCategory', testCategory);
       serverFormData.set('examFormat', examFormat);
+      if (untimed) serverFormData.set('untimed', 'on');
       if (examFormat === 'modular') {
         for (const draft of modules) {
-          serverFormData.append('moduleMinutes', String(parseDraftNumber(draft.minutes, DEFAULT_MODULE_MINUTES)));
+          if (!untimed) {
+            serverFormData.append('moduleMinutes', String(parseDraftNumber(draft.minutes, DEFAULT_MODULE_MINUTES)));
+          }
           serverFormData.append('moduleQuestions', String(parseDraftNumber(
             draft.questions,
             DEFAULT_MODULE_QUESTION_COUNT
           )));
         }
-      } else if (typeof durationMinutes === 'string') {
+      } else if (!untimed && typeof durationMinutes === 'string') {
         serverFormData.set('durationMinutes', durationMinutes);
       }
       if (typeof attempts === 'string') serverFormData.set('maxAttempts', attempts);
@@ -242,6 +252,7 @@ export default function AdminForm({ collections, defaultCategory: preselected, o
         form.reset();
         setMaxAttempts(String(courseAttempts(defaultCategory)));
         setExamFormat('modular');
+        setUntimed(false);
         setModules(createModuleDrafts(DEFAULT_MODULE_COUNT));
         setResetKey((key) => key + 1);
         setTexFile(null);
@@ -388,6 +399,22 @@ export default function AdminForm({ collections, defaultCategory: preselected, o
             ))}
           </div>
 
+          {/* Above the minutes it hides, so ticking it never moves it. */}
+          <label className="mt-3 flex w-fit items-start gap-2.5 text-sm text-gray-700">
+            <input
+              type="checkbox"
+              checked={untimed}
+              onChange={(event) => setUntimed(event.target.checked)}
+              className={cn(checkboxClass, 'mt-0.5')}
+            />
+            <span>
+              <span className="font-medium text-gray-900">No time limit</span>
+              <span className={cn(hintClass, 'block')}>
+                The student is never timed out. The time taken is still recorded.
+              </span>
+            </span>
+          </label>
+
           {examFormat === 'modular' ? (
             <div ref={moduleListRef} className="mt-3 space-y-2">
               {modules.map((module, index) => (
@@ -407,18 +434,21 @@ export default function AdminForm({ collections, defaultCategory: preselected, o
                     className="max-w-36"
                   />
 
-                  <Input
-                    type="number"
-                    min={1}
-                    max={360}
-                    step={1}
-                    required
-                    aria-label={`Module ${index + 1} minutes`}
-                    value={module.minutes}
-                    onChange={(event) => updateModule(module.id, { minutes: event.target.value })}
-                    suffix="minutes"
-                    className="max-w-36"
-                  />
+                  {/* Kept in the draft while hidden, so unticking brings them back as typed. */}
+                  {!untimed && (
+                    <Input
+                      type="number"
+                      min={1}
+                      max={360}
+                      step={1}
+                      required
+                      aria-label={`Module ${index + 1} minutes`}
+                      value={module.minutes}
+                      onChange={(event) => updateModule(module.id, { minutes: event.target.value })}
+                      suffix="minutes"
+                      className="max-w-36"
+                    />
+                  )}
 
                   {/* Keyed, red only on hover and focus, like the remove
                       buttons of the question editor's options. */}
@@ -453,7 +483,7 @@ export default function AdminForm({ collections, defaultCategory: preselected, o
                 </Button>
               </div>
             </div>
-          ) : (
+          ) : !untimed && (
             <Field label="Test time" htmlFor={`${fieldId}-duration`} className="mt-3 max-w-xs">
               <Input
                 id={`${fieldId}-duration`}
