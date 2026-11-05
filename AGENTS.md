@@ -99,10 +99,16 @@ link preview (`public/brand/social-card.png`, `SITE_OG_IMAGE`) are the kit's
 files as delivered; replace them from a new kit, never redraw them.
 
 The Board's top bar also names the owner's Telegram channel, t.me/sat_800,
-beside the question's tags (`TelegramChannel.tsx`), so a lesson recording
-carries it. Telegram's mark keeps its own blue disc and white plane, like the
-logo's colours; the address beside it is `ink-700`, since Telegram's blue is
-about 3:1 on white.
+beside the question's tags (`TelegramChannel.tsx`, in `components/layout/`),
+so a lesson recording carries it. Since 2026-11-05 (the owner's request) the
+top bar of every test screen - each course's tests, olympiads and homework -
+names it too, mark and address in full: after the test's title from `md`
+(`size="md"`), and below it, where the bar has no room beside the title, the
+clock and the tools, on a `text-xs` line of its own under the bar
+(`TelegramChannelBar`), the bar dropping its bottom edge so the two read as
+one header. It opens in a new tab, so a test in progress stays put. Telegram's
+mark keeps its own blue disc and white plane, like the logo's colours; the
+address beside it is `ink-700`, since Telegram's blue is about 3:1 on white.
 
 The auth pages (sign-in, sign-up, email confirmation, password reset) share
 `AuthShell`: the landing's header line over one narrow column held to the top —

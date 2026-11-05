@@ -38,7 +38,7 @@ import {
   toolIdleClass,
 } from '@/components/exam/toolButtons';
 import BoardWhiteboard from '@/components/board/BoardWhiteboard';
-import TelegramChannel from '@/components/board/TelegramChannel';
+import TelegramChannel from '@/components/layout/TelegramChannel';
 import type { BankTags, BoardQuestion } from '@/components/board/types';
 import BrandMark from '@/components/layout/BrandMark';
 import { Badge } from '@/components/ui/Badge';
