@@ -165,7 +165,12 @@ export async function countPeopleWithResults(testIds: string[]) {
     SELECT r."testId"                                                     AS "testId",
            COUNT(DISTINCT r."userId")::int                                AS "people",
            COUNT(DISTINCT r."userId") FILTER (WHERE a."id" IS NOT NULL)::int AS "withAccess"
-      FROM "Result" r
+      -- A homework answer counts as a result: homework never files one.
+      FROM (
+        SELECT "testId", "userId" FROM "Result" WHERE "testId" IN (${Prisma.join(testIds)})
+        UNION
+        SELECT "testId", "userId" FROM "HomeworkAnswer" WHERE "testId" IN (${Prisma.join(testIds)})
+      ) r
       JOIN "Test" t ON t."id" = r."testId"
       JOIN "User" u ON u."id" = r."userId"
       LEFT JOIN "SectionAccess" a
@@ -173,16 +178,27 @@ export async function countPeopleWithResults(testIds: string[]) {
        AND (a."userId" = r."userId" OR a."email" = LOWER(u."email"))
        -- The column holds UTC without a zone (Prisma's TIMESTAMP(3)): compare with UTC now.
        AND (a."expiresAt" IS NULL OR a."expiresAt" > (NOW() AT TIME ZONE 'UTC'))
-     WHERE r."testId" IN (${Prisma.join(testIds)})
      GROUP BY r."testId"
   `;
 
   return new Map(rows.map((row) => [row.testId, { people: row.people, withAccess: row.withAccess }]));
 }
 
-/** "18 of 24 have a result"; with nobody given access, the people who have one. */
-export function describeResultReach(counts: { people: number; withAccess: number } | undefined, withAccess: number) {
+/**
+ * "18 of 24 have a result"; with nobody given access, the people who have one.
+ * Homework has no results, so there it is who has started it.
+ */
+export function describeResultReach(
+  counts: { people: number; withAccess: number } | undefined,
+  withAccess: number,
+  homework = false
+) {
   const people = counts?.people ?? 0;
+  if (homework) {
+    if (withAccess > 0) return `${counts?.withAccess ?? 0} of ${withAccess} have started`;
+    if (people === 0) return 'Nobody has started';
+    return people === 1 ? '1 person has started' : `${people} people have started`;
+  }
   if (withAccess > 0) return `${counts?.withAccess ?? 0} of ${withAccess} have a result`;
   if (people === 0) return 'No result yet';
   return people === 1 ? '1 person has a result' : `${people} people have a result`;
@@ -197,6 +213,7 @@ const courseTestSelect = {
   durationSeconds: true,
   moduleDurations: true,
   untimed: true,
+  homework: true,
   maxAttempts: true,
   olympiadStartsAt: true,
   olympiadEndsAt: true,

@@ -90,6 +90,15 @@ function readUntimed(formData: FormData) {
   return formData.get('untimed') === 'on';
 }
 
+/**
+ * Homework (Test.homework): "Homework" picked as the import's format, or the
+ * settings' Homework box ticked. It has no time limit, so it is stored
+ * untimed as well, and every place that shows a test's time says so.
+ */
+function readHomework(formData: FormData) {
+  return formData.get('examFormat') === 'homework' || formData.get('homework') === 'on';
+}
+
 function sanitizeFileName(fileName: string) {
   const normalized = fileName.trim().replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 120);
   return normalized || `${crypto.randomUUID()}.bin`;
@@ -155,7 +164,8 @@ export async function uploadTest(formData: FormData) {
 
     const collection = await resolveCollectionCategory(formData.get('testCategory'));
     const testCategory = collection.category;
-    const untimed = readUntimed(formData);
+    const homework = readHomework(formData);
+    const untimed = homework || readUntimed(formData);
     const examFormat = normalizeExamFormat(formData, untimed);
     const maxAttempts = normalizeTestMaxAttempts(
       formData.get('maxAttempts'),
@@ -195,11 +205,12 @@ export async function uploadTest(formData: FormData) {
 
     const examModules = resolveExamModules({
       questionCount: parsedQuestions.length,
-      markerModules: moduleIndexes,
+      // Homework is one list: the file's module markers are not read.
+      markerModules: homework ? null : moduleIndexes,
       format: examFormat,
     });
 
-    const olympiadWindow = normalizeOlympiadWindow(formData, untimed ? null : examModules.durationSeconds);
+    const olympiadWindow = normalizeOlympiadWindow(formData, untimed ? null : examModules.durationSeconds, homework);
 
     const imageMap: Record<string, string> = {};
     for (const image of uploadedImages) {
@@ -268,6 +279,7 @@ export async function uploadTest(formData: FormData) {
           durationSeconds: examModules.durationSeconds,
           moduleDurations: examModules.moduleDurations,
           untimed,
+          homework,
           maxAttempts,
           accessCode,
           ...olympiadWindow,
@@ -415,6 +427,7 @@ export async function copyTest(testId: string, formData: FormData) {
           durationSeconds: true,
           moduleDurations: true,
           untimed: true,
+          homework: true,
           maxAttempts: true,
           olympiadStartsAt: true,
           olympiadEndsAt: true,
@@ -444,6 +457,7 @@ export async function copyTest(testId: string, formData: FormData) {
         durationSeconds: source.durationSeconds,
         moduleDurations: source.moduleDurations,
         untimed: source.untimed,
+        homework: source.homework,
         maxAttempts: source.maxAttempts,
         olympiadStartsAt: keepOlympiadWindow ? source.olympiadStartsAt : null,
         olympiadEndsAt: keepOlympiadWindow ? source.olympiadEndsAt : null,
@@ -543,12 +557,16 @@ function normalizeExamFormat(formData: FormData, untimed: boolean): ExamFormatIn
  * have a window at all: it has no length to close the entrance by, and a
  * student who is never timed out could still be working when the window ends.
  */
-function normalizeOlympiadWindow(formData: FormData, totalDurationSeconds: number | null) {
+function normalizeOlympiadWindow(formData: FormData, totalDurationSeconds: number | null, homework = false) {
   const startsAt = parseOlympiadMoment(formData.get('olympiadStartsAt'));
   const endsAt = parseOlympiadMoment(formData.get('olympiadEndsAt'));
 
   if (!startsAt && !endsAt) {
     return { olympiadStartsAt: null, olympiadEndsAt: null };
+  }
+
+  if (homework) {
+    throw new Error('Homework cannot be an olympiad. Untick Homework, or remove the olympiad window.');
   }
 
   if (totalDurationSeconds === null) {
@@ -845,7 +863,8 @@ export async function updateTestDetails(testId: string, formData: FormData) {
       collection?.maxAttempts ?? existingTest?.collection?.maxAttempts
     );
     const isFree = formData.get('isFree') === 'true';
-    const untimed = readUntimed(formData);
+    const homework = readHomework(formData);
+    const untimed = homework || readUntimed(formData);
     // Empty clears the code. A changed code asks every student again, because an
     // unlock only counts while it matches the code on the test.
     const accessCode = normalizeAccessCode(formData.get('accessCode'));
@@ -894,9 +913,10 @@ export async function updateTestDetails(testId: string, formData: FormData) {
         durationSeconds,
         moduleDurations,
         untimed,
+        homework,
         maxAttempts,
         accessCode,
-        ...normalizeOlympiadWindow(formData, untimed ? null : durationSeconds),
+        ...normalizeOlympiadWindow(formData, untimed ? null : durationSeconds, homework),
         ...(collection && {
           collectionCategory: collection.category,
           description: encodeTestDescription(collection.category, cleanTestDescription(existingTest.description)),
@@ -970,8 +990,11 @@ export async function updateQuestion(questionId: string, formData: FormData) {
 export type BuildTestInput = {
   course: string;
   title: string;
-  /** One block on one timer, or two or more modules with a timer each - unless `untimed`. */
-  format: 'single' | 'modular';
+  /**
+   * One block on one timer, or two or more modules with a timer each - unless
+   * `untimed`. Homework is one list with no time limit, checked as it is answered.
+   */
+  format: 'single' | 'modular' | 'homework';
   /** No time limit: `minutes` is not read, and the test stores placeholders in their place. */
   untimed: boolean;
   /** Minutes per module, in order; one entry for a one-block test, none with no time limit. */
@@ -1004,7 +1027,8 @@ export async function createTestFromBank(input: BuildTestInput) {
 
     const collection = await resolveCollectionCategory(typeof input?.course === 'string' ? input.course : null);
     const modular = input?.format === 'modular';
-    const untimed = input?.untimed === true;
+    const homework = input?.format === 'homework';
+    const untimed = homework || input?.untimed === true;
     const modules = Array.isArray(input?.modules) ? input.modules : [];
     const minutes = Array.isArray(input?.minutes) ? input.minutes : [];
 
@@ -1082,6 +1106,7 @@ export async function createTestFromBank(input: BuildTestInput) {
         durationSeconds,
         moduleDurations: modular ? durations : [],
         untimed,
+        homework,
         maxAttempts: normalizeTestMaxAttempts(input.maxAttempts, collection.maxAttempts),
         collectionCategory: collection.category,
         questions: { createMany: { data: questions } },

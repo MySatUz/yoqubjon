@@ -114,6 +114,7 @@ export default async function AdminTestEditorPage({
     durationSeconds: test.durationSeconds,
     moduleDurations: test.moduleDurations,
     untimed: test.untimed,
+    homework: test.homework,
     maxAttempts: test.maxAttempts,
     olympiadStartsAt: test.olympiadStartsAt,
     olympiadEndsAt: test.olympiadEndsAt,

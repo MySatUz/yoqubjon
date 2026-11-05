@@ -38,7 +38,7 @@ export default async function CourseTestsPage({ params }: Props) {
     <CourseTests
       course={{ value: course.value, label: course.label, maxAttempts: course.maxAttempts }}
       collections={courses}
-      tests={tests.map((test) => ({ ...test, reach: describeResultReach(reach.get(test.id), summary.withAccess) }))}
+      tests={tests.map((test) => ({ ...test, reach: describeResultReach(reach.get(test.id), summary.withAccess, test.homework) }))}
     />
   );
 }

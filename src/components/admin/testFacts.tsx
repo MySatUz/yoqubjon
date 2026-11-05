@@ -1,4 +1,4 @@
-import { EyeOff, KeyRound, Trophy } from 'lucide-react';
+import { EyeOff, KeyRound, NotebookPen, Trophy } from 'lucide-react';
 import {
   NO_TIME_LIMIT_LABEL,
   formatModuleBadge,
@@ -50,9 +50,10 @@ type BadgeTest = ModularTest & OlympiadTest & {
 /** Whether `TestBadges` would draw anything, so a caller can drop the row it sits in. */
 export function hasTestBadges(test: BadgeTest, sectionMaxAttempts?: number) {
   return !test.visible
+    || test.homework === true
     || readOlympiadWindow(test) !== null
     || Boolean(test.accessCode)
-    || (sectionMaxAttempts !== undefined && test.maxAttempts !== sectionMaxAttempts)
+    || (!test.homework && sectionMaxAttempts !== undefined && test.maxAttempts !== sectionMaxAttempts)
     || test.isFree;
 }
 
@@ -74,7 +75,8 @@ export function TestBadges({
   onCanvas?: boolean;
 }) {
   const olympiadWindow = readOlympiadWindow(test);
-  const hasOwnAttemptLimit = sectionMaxAttempts !== undefined && test.maxAttempts !== sectionMaxAttempts;
+  // Homework files no results, so its attempt limit never applies.
+  const hasOwnAttemptLimit = !test.homework && sectionMaxAttempts !== undefined && test.maxAttempts !== sectionMaxAttempts;
 
   return (
     <>
@@ -82,6 +84,12 @@ export function TestBadges({
         <Badge onCanvas={onCanvas} title="Students do not see this test in Practice">
           <EyeOff />
           Hidden
+        </Badge>
+      )}
+      {test.homework && (
+        <Badge onCanvas={onCanvas} title="No time limit and no finish; each answer is checked when it is chosen">
+          <NotebookPen />
+          Homework
         </Badge>
       )}
       {olympiadWindow && (

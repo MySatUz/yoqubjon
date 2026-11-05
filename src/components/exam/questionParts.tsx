@@ -2,7 +2,7 @@
 
 import React, { memo, useEffect, useState } from 'react';
 import Image from 'next/image';
-import { CircleCheck, Strikethrough } from 'lucide-react';
+import { CircleCheck, CircleX, Strikethrough } from 'lucide-react';
 import { focusRingClass } from '@/components/ui/Button';
 import { cn } from '@/components/ui/cn';
 import { fieldFocusClass } from '@/components/ui/Field';
@@ -114,10 +114,17 @@ interface AnswerChoiceProps {
   isCrossedOut: boolean;
   isMultiSelect: boolean;
   /**
-   * Marked as the right answer - only on the admin Board, after "Show answer".
-   * The exam never passes it.
+   * Marked as the right answer - on the admin Board after "Show answer", and
+   * on a checked homework question. The exam never passes it.
    */
   isCorrect?: boolean;
+  /** A checked homework question: the student picked this one and it is wrong. */
+  isWrongPick?: boolean;
+  /**
+   * A checked homework question: nothing can be chosen or crossed out any
+   * more, so the row is no longer a button to press and has no cross-out.
+   */
+  isLocked?: boolean;
   onSelect: (letter: string) => void;
   onToggleCrossOut: (letter: string) => void;
 }
@@ -150,6 +157,8 @@ export const AnswerChoice = memo(function AnswerChoice({
   isCrossedOut,
   isMultiSelect,
   isCorrect = false,
+  isWrongPick = false,
+  isLocked = false,
   onSelect,
   onToggleCrossOut,
 }: AnswerChoiceProps) {
@@ -158,15 +167,21 @@ export const AnswerChoice = memo(function AnswerChoice({
       <button
         type="button"
         aria-pressed={isSelected}
+        disabled={isLocked}
         onClick={() => onSelect(letter)}
         className={cn(
-          'group flex min-h-13 w-full items-center rounded-xl border py-2.5 pl-4 pr-14 text-left transition-colors pointer-coarse:min-h-14',
+          'group flex min-h-13 w-full items-center rounded-xl border py-2.5 pl-4 text-left transition-colors pointer-coarse:min-h-14',
+          isLocked ? 'pr-4' : 'pr-14',
           focusRingClass,
           isCorrect
             ? 'border-green-700 bg-green-50 ring-1 ring-green-700'
-            : isSelected
-              ? 'border-ink-600 bg-ink-50 ring-1 ring-ink-600'
-              : 'border-gray-300 bg-white hover:border-gray-400 hover:bg-gray-50'
+            : isWrongPick
+              ? 'border-red-600 bg-red-50 ring-1 ring-red-600'
+              : isSelected
+                ? 'border-ink-600 bg-ink-50 ring-1 ring-ink-600'
+                : isLocked
+                  ? 'border-gray-300 bg-white'
+                  : 'border-gray-300 bg-white hover:border-gray-400 hover:bg-gray-50'
         )}
       >
         {/* Letter and text together, so the strike runs through what is
@@ -178,11 +193,15 @@ export const AnswerChoice = memo(function AnswerChoice({
               isMultiSelect ? 'rounded-lg' : 'rounded-xl',
               isCorrect
                 ? 'border-green-700 bg-green-700 text-white'
-                : isSelected
-                  ? 'border-ink-600 bg-ink-600 text-white'
-                  : isCrossedOut
-                    ? 'border-gray-300 text-gray-500'
-                    : 'border-gray-300 text-gray-600 group-hover:border-gray-400 group-hover:text-gray-900'
+                : isWrongPick
+                  ? 'border-red-600 bg-red-600 text-white'
+                  : isSelected
+                    ? 'border-ink-600 bg-ink-600 text-white'
+                    : isCrossedOut
+                      ? 'border-gray-300 text-gray-500'
+                      : isLocked
+                        ? 'border-gray-300 text-gray-600'
+                        : 'border-gray-300 text-gray-600 group-hover:border-gray-400 group-hover:text-gray-900'
             )}
           >
             {letter}
@@ -205,33 +224,43 @@ export const AnswerChoice = memo(function AnswerChoice({
             </>
           )}
         </span>
+        {/* A homework pick that is right is still the student's own answer,
+            so it says so; the key they missed says "Correct answer". */}
         {isCorrect && (
           <span className="ml-auto inline-flex shrink-0 items-center gap-1.5 pl-3 text-sm font-medium text-green-800">
             <CircleCheck aria-hidden className="h-4 w-4" />
-            Correct answer
+            {isLocked && isSelected ? 'Your answer' : 'Correct answer'}
+          </span>
+        )}
+        {isWrongPick && (
+          <span className="ml-auto inline-flex shrink-0 items-center gap-1.5 pl-3 text-sm font-medium text-red-700">
+            <CircleX aria-hidden className="h-4 w-4" />
+            Your answer<span className="sr-only">, incorrect</span>
           </span>
         )}
       </button>
-      <button
-        type="button"
-        aria-pressed={isCrossedOut}
-        aria-label={`Cross out ${letter}`}
-        title={`Cross out ${letter}`}
-        onClick={() => onToggleCrossOut(letter)}
-        // `iconButtonClass` (sm, secondary) geometry and colours, key edge
-        // included, spelled out for the pressed state the primitive does not
-        // have: pressed is a neutral grey with the key down, never the board
-        // green of a chosen answer beside it.
-        className={cn(
-          'absolute right-2 top-1/2 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg border transition-colors pointer-coarse:h-10 pointer-coarse:w-10',
-          focusRingClass,
-          isCrossedOut
-            ? 'border-gray-400 bg-gray-200 text-gray-900 hover:bg-gray-300'
-            : 'border-gray-400 border-b-gray-500 bg-white text-gray-800 shadow-xs hover:border-gray-500 hover:bg-gray-50 hover:text-gray-900 active:bg-gray-100 active:shadow-none'
-        )}
-      >
-        <Strikethrough className="h-4 w-4" />
-      </button>
+      {!isLocked && (
+        <button
+          type="button"
+          aria-pressed={isCrossedOut}
+          aria-label={`Cross out ${letter}`}
+          title={`Cross out ${letter}`}
+          onClick={() => onToggleCrossOut(letter)}
+          // `iconButtonClass` (sm, secondary) geometry and colours, key edge
+          // included, spelled out for the pressed state the primitive does not
+          // have: pressed is a neutral grey with the key down, never the board
+          // green of a chosen answer beside it.
+          className={cn(
+            'absolute right-2 top-1/2 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg border transition-colors pointer-coarse:h-10 pointer-coarse:w-10',
+            focusRingClass,
+            isCrossedOut
+              ? 'border-gray-400 bg-gray-200 text-gray-900 hover:bg-gray-300'
+              : 'border-gray-400 border-b-gray-500 bg-white text-gray-800 shadow-xs hover:border-gray-500 hover:bg-gray-50 hover:text-gray-900 active:bg-gray-100 active:shadow-none'
+          )}
+        >
+          <Strikethrough className="h-4 w-4" />
+        </button>
+      )}
     </div>
   );
 });

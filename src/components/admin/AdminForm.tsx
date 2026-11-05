@@ -38,7 +38,7 @@ type AdminFormProps = {
   onClose?: () => void;
 };
 
-type ExamFormat = 'modular' | 'single';
+type ExamFormat = 'modular' | 'single' | 'homework';
 
 /**
  * Numbers are kept as strings so clearing a field does not produce `NaN` and
@@ -122,7 +122,8 @@ export default function AdminForm({ collections, defaultCategory: preselected, o
     try {
       const resolved = resolveExamModules({
         questionCount: questions.length,
-        markerModules: questions.some((question) => question.markerModule !== null)
+        // Homework is one list: the file's module markers are not read.
+        markerModules: examFormat !== 'homework' && questions.some((question) => question.markerModule !== null)
           ? questions.map((question) => question.markerModule ?? 1)
           : null,
         format: {
@@ -219,7 +220,7 @@ export default function AdminForm({ collections, defaultCategory: preselected, o
       serverFormData.set('isVisible', isVisible ? 'true' : 'false');
       if (typeof testCategory === 'string') serverFormData.set('testCategory', testCategory);
       serverFormData.set('examFormat', examFormat);
-      if (untimed) serverFormData.set('untimed', 'on');
+      if (untimed && examFormat !== 'homework') serverFormData.set('untimed', 'on');
       if (examFormat === 'modular') {
         for (const draft of modules) {
           if (!untimed) {
@@ -230,7 +231,7 @@ export default function AdminForm({ collections, defaultCategory: preselected, o
             DEFAULT_MODULE_QUESTION_COUNT
           )));
         }
-      } else if (!untimed && typeof durationMinutes === 'string') {
+      } else if (examFormat === 'single' && !untimed && typeof durationMinutes === 'string') {
         serverFormData.set('durationMinutes', durationMinutes);
       }
       if (typeof attempts === 'string') serverFormData.set('maxAttempts', attempts);
@@ -356,7 +357,7 @@ export default function AdminForm({ collections, defaultCategory: preselected, o
         <fieldset className="sm:col-span-2">
           <legend className={cn(labelClass, 'mb-1.5')}>Format</legend>
 
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
             {([
               {
                 value: 'modular' as const,
@@ -367,6 +368,11 @@ export default function AdminForm({ collections, defaultCategory: preselected, o
                 value: 'single' as const,
                 title: 'One block',
                 description: 'One timer for the whole test, e.g. a 30-question set with a single time limit.',
+              },
+              {
+                value: 'homework' as const,
+                title: 'Homework',
+                description: 'No time limit and no finish. Each answer is checked when it is chosen, and the student can leave and come back.',
               },
             ]).map((option) => (
               <label key={option.value} className="cursor-pointer">
@@ -399,21 +405,24 @@ export default function AdminForm({ collections, defaultCategory: preselected, o
             ))}
           </div>
 
-          {/* Above the minutes it hides, so ticking it never moves it. */}
-          <label className="mt-3 flex w-fit items-start gap-2.5 text-sm text-gray-700">
-            <input
-              type="checkbox"
-              checked={untimed}
-              onChange={(event) => setUntimed(event.target.checked)}
-              className={cn(checkboxClass, 'mt-0.5')}
-            />
-            <span>
-              <span className="font-medium text-gray-900">No time limit</span>
-              <span className={cn(hintClass, 'block')}>
-                The student is never timed out. The time taken is still recorded.
+          {/* Above the minutes it hides, so ticking it never moves it.
+              Homework has no time limit of its own, so it needs no box. */}
+          {examFormat !== 'homework' && (
+            <label className="mt-3 flex w-fit items-start gap-2.5 text-sm text-gray-700">
+              <input
+                type="checkbox"
+                checked={untimed}
+                onChange={(event) => setUntimed(event.target.checked)}
+                className={cn(checkboxClass, 'mt-0.5')}
+              />
+              <span>
+                <span className="font-medium text-gray-900">No time limit</span>
+                <span className={cn(hintClass, 'block')}>
+                  The student is never timed out. The time taken is still recorded.
+                </span>
               </span>
-            </span>
-          </label>
+            </label>
+          )}
 
           {examFormat === 'modular' ? (
             <div ref={moduleListRef} className="mt-3 space-y-2">
@@ -483,7 +492,7 @@ export default function AdminForm({ collections, defaultCategory: preselected, o
                 </Button>
               </div>
             </div>
-          ) : !untimed && (
+          ) : examFormat === 'single' && !untimed && (
             <Field label="Test time" htmlFor={`${fieldId}-duration`} className="mt-3 max-w-xs">
               <Input
                 id={`${fieldId}-duration`}
@@ -500,24 +509,27 @@ export default function AdminForm({ collections, defaultCategory: preselected, o
           )}
         </fieldset>
 
-        <Field
-          label="Attempts per student"
-          htmlFor={`${fieldId}-attempts`}
-          hint={`The course allows ${courseAttempts(defaultCategory)}. Change it to set a limit for this test only.`}
-        >
-          <Input
-            id={`${fieldId}-attempts`}
-            name="maxAttempts"
-            type="number"
-            min={MIN_TEST_MAX_ATTEMPTS}
-            max={MAX_TEST_MAX_ATTEMPTS}
-            step={1}
-            value={maxAttempts}
-            onChange={(event) => setMaxAttempts(event.target.value)}
-            required
-            suffix="attempts"
-          />
-        </Field>
+        {/* Homework files no results, so it has no attempts to count. */}
+        {examFormat !== 'homework' && (
+          <Field
+            label="Attempts per student"
+            htmlFor={`${fieldId}-attempts`}
+            hint={`The course allows ${courseAttempts(defaultCategory)}. Change it to set a limit for this test only.`}
+          >
+            <Input
+              id={`${fieldId}-attempts`}
+              name="maxAttempts"
+              type="number"
+              min={MIN_TEST_MAX_ATTEMPTS}
+              max={MAX_TEST_MAX_ATTEMPTS}
+              step={1}
+              value={maxAttempts}
+              onChange={(event) => setMaxAttempts(event.target.value)}
+              required
+              suffix="attempts"
+            />
+          </Field>
+        )}
 
         {/* Siblings need keys of their own: with one shared key React lost
             track of the old code field, which stayed in the form and sent
@@ -527,11 +539,14 @@ export default function AdminForm({ collections, defaultCategory: preselected, o
           hint="Students enter it once before the test opens. You can add, change or remove it later."
         />
 
-        <OlympiadWindowFields
-          key={`olympiad-${resetKey}`}
-          className="sm:col-span-2"
-          hint="Both empty for an ordinary test. With a window, the test opens only inside it, entry closes one test length before the end, and a ranking by solved questions, then time, appears once it is over. Times are Tashkent time."
-        />
+        {/* An olympiad needs a time limit, and homework has none. */}
+        {examFormat !== 'homework' && (
+          <OlympiadWindowFields
+            key={`olympiad-${resetKey}`}
+            className="sm:col-span-2"
+            hint="Both empty for an ordinary test. With a window, the test opens only inside it, entry closes one test length before the end, and a ranking by solved questions, then time, appears once it is over. Times are Tashkent time."
+          />
+        )}
 
         <div className="flex flex-wrap items-center gap-x-6 gap-y-2 sm:col-span-2">
           <label className="inline-flex items-center gap-2 text-sm text-gray-700">

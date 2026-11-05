@@ -147,7 +147,7 @@ async function PracticeCatalogSection({
   userId: string;
   userEmail?: string | null;
 }) {
-  const [attemptCounts, tests, subscription, viewer, visibilityRows, sectionAccessGrants, recentResults, questionCounts, salesOpen] = await Promise.all([
+  const [attemptCounts, tests, subscription, viewer, visibilityRows, sectionAccessGrants, recentResults, questionCounts, salesOpen, homeworkCounts] = await Promise.all([
     // The best attempt rides along for the card's "Best 600".
     prisma.result.groupBy({
       by: ['testId'],
@@ -166,6 +166,7 @@ async function PracticeCatalogSection({
         moduleDurations: true,
         // "No time limit" instead of the placeholder minutes stored under it.
         untimed: true,
+        homework: true,
         maxAttempts: true,
         isFree: true,
         visible: true,
@@ -197,7 +198,10 @@ async function PracticeCatalogSection({
     // While an admin has paused sales, a locked card must not offer an unlock
     // that ends on a page with nothing to buy.
     readSalesOpen('Practice'),
+    // A homework card says how far the student has got.
+    prisma.homeworkAnswer.groupBy({ by: ['testId'], where: { userId }, _count: { _all: true } }),
   ]);
+  const homeworkAnsweredByTest = new Map(homeworkCounts.map((row) => [row.testId, row._count._all]));
   const sectionAccessCategories = sectionAccessGrants.map((grant) => grant.category);
 
   // An admin in student view gets the student's catalog: no hidden tests or
@@ -263,6 +267,7 @@ async function PracticeCatalogSection({
         attemptsUsed: attemptsUsedByTest.get(test.id) ?? 0,
         questionCount: ownQuestionCount.get(test.questionSourceId ?? test.id) ?? 0,
         best: bestByTest.get(test.id) ?? null,
+        homeworkAnswered: homeworkAnsweredByTest.get(test.id) ?? 0,
         createdAt: test.createdAt.toISOString(),
         olympiadStartsAt: test.olympiadStartsAt?.toISOString() ?? null,
         olympiadEndsAt: test.olympiadEndsAt?.toISOString() ?? null,

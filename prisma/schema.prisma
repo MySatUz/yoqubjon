@@ -26,6 +26,7 @@ model User {
   payments      Payment[]
   manualPaymentRequests ManualPaymentRequest[]
   questionReports QuestionReport[]
+  homeworkAnswers HomeworkAnswer[]
   sectionAccesses SectionAccess[]
   testCodeUnlocks TestCodeUnlock[]
   emailCodes      EmailCode[]
@@ -94,6 +95,12 @@ model Test {
   // moduleDurations is also the module count - and come back if a limit is
   // set again. An olympiad always has a limit (admin/actions.ts).
   untimed            Boolean                   @default(false)
+  // Homework: one list of questions, no time limit (`untimed` is set with it)
+  // and no finish. Each answer is checked on the server the moment it is
+  // chosen and kept as a HomeworkAnswer, so the student sees right or wrong
+  // at once and comes back to where they were; Start over clears them. No
+  // Result is ever written for it. Never an olympiad (admin/actions.ts).
+  homework           Boolean                   @default(false)
   maxAttempts        Int                       @default(10)
   // A competition window. Both set means the test runs as an olympiad: it can
   // only be opened between these two instants, and the ranking counts only the
@@ -122,6 +129,7 @@ model Test {
   results        Result[]
   codeUnlocks    TestCodeUnlock[]
   questionReports QuestionReport[]
+  homeworkAnswers HomeworkAnswer[]
 
   @@index([createdAt])
   @@index([collectionCategory])
@@ -205,6 +213,7 @@ model Question {
   test          Test     @relation(fields: [testId], references: [id])
   bankQuestion  BankQuestion? @relation(fields: [bankQuestionId], references: [id], onDelete: SetNull)
   reports       QuestionReport[]
+  homeworkAnswers HomeworkAnswer[]
 
   @@index([testId, order])
   @@index([testId, moduleIndex, order])
@@ -246,6 +255,32 @@ model QuestionReport {
 // `bankQuestionId` and a copy of the bank text: deleting the test deletes the
 // row, never the bank question, and an edit to either side is written through
 // to the bank and every row linked to it (src/lib/questionBank.ts).
+// One answer on a homework test (Test.homework), checked when it was chosen.
+// A question is answered once: the row is the student's answer and the verdict
+// it got, and only Start over - deleting the student's rows for the test -
+// opens the questions again.
+model HomeworkAnswer {
+  id         String   @id @default(uuid())
+  userId     String
+  // The test the student is doing. For a copy that is not the question's own test.
+  testId     String
+  questionId String
+  // As the exam stores it: a letter, letters joined by commas, or the grid-in value.
+  answer     String
+  isCorrect  Boolean
+  // 0..1; only a multi-select question lands between (gradeAnswer).
+  credit     Float
+  createdAt  DateTime @default(now())
+
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  test       Test     @relation(fields: [testId], references: [id], onDelete: Cascade)
+  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, testId, questionId])
+  @@index([testId])
+  @@index([questionId])
+}
+
 model BankQuestion {
   id            String   @id @default(uuid())
   content       String

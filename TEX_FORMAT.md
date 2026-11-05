@@ -214,6 +214,21 @@ With it ticked:
   Nothing ends a module except the student; the time taken is only recorded.
 - Wherever the test shows its length it says "No time limit" instead of minutes.
 
+### Homework
+
+**Homework** is the third choice under Format. The `.tex` file does not change:
+there is no tag for it.
+
+- The questions are one list. `\module` markers in the file are not read, and
+  the form has no minutes, no attempts and no olympiad window.
+- There is no clock and no finish. Each answer is checked on the server the
+  moment it is chosen (a multi-select set or a grid-in value with Check
+  answer): the student sees right or wrong at once, with the correct choice,
+  and the question is closed.
+- The answers are kept in the student's account, so the homework opens again
+  on the first question not answered. Start over clears them.
+- No result is filed. The course's Results tab shows "answered/all · N right".
+
 ## Multiple correct answers
 
 List the letters in `\answer{...}`, separated by commas. Nothing else changes —

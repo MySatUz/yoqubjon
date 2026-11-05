@@ -12,13 +12,20 @@ export interface ModularTest {
   moduleDurations: number[];
   /** No time limit (Test.untimed). Left out by a caller that never shows or runs the time. */
   untimed?: boolean;
+  /** Homework (Test.homework): one list, no time limit, checked as it is answered. */
+  homework?: boolean;
 }
 
 export const NO_TIME_LIMIT_LABEL = 'No time limit';
 
 /** A test with no time limit: never timed out, only the time taken is recorded. */
-export function isUntimedTest(test: { untimed?: boolean | null }) {
-  return test.untimed === true;
+export function isUntimedTest(test: { untimed?: boolean | null; homework?: boolean | null }) {
+  return test.untimed === true || test.homework === true;
+}
+
+/** Homework: one list with no clock and no finish, each answer checked as it is chosen. */
+export function isHomeworkTest(test: { homework?: boolean | null }) {
+  return test.homework === true;
 }
 
 /** A module as the exam client needs it: its own clock and its own questions. */
@@ -98,6 +105,8 @@ export function secondsToMinutes(seconds: number) {
  */
 export function formatModuleBadge(test: ModularTest) {
   const durations = readModuleDurations(test);
+  // One list whatever modules it was made with: the student never sees them.
+  if (isHomeworkTest(test)) return NO_TIME_LIMIT_LABEL;
   if (isUntimedTest(test)) {
     return durations.length > 1 ? `${durations.length} modules · no time limit` : NO_TIME_LIMIT_LABEL;
   }

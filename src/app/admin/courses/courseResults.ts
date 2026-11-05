@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma';
 import { formatCorrectOf, hasScoreEstimate } from '@/lib/scoreDisplay';
+import { formatCreditTotal } from '@/lib/resultAnswers';
 import {
   accountForGrant,
   grantEndKey,
@@ -41,13 +42,22 @@ export async function loadResultsGrid(courseId: string, { allOthers = false }: {
       select: { id: true, email: true, userId: true, expiresAt: true },
     }),
   ]);
-  const columns = tests
-    .filter((test) => test.visible)
-    .map((test) => ({ id: test.id, title: test.title, questionCount: test.questionCount }));
+  const visibleTests = tests.filter((test) => test.visible);
+  const columns = visibleTests.map((test) => ({ id: test.id, title: test.title, questionCount: test.questionCount }));
+  const homeworkIds = visibleTests.filter((test) => test.homework).map((test) => test.id);
 
-  const [accounts, latest] = await Promise.all([
+  const [accounts, latest, homework] = await Promise.all([
     readAccountsForGrants(grants),
-    readLatestResults(columns.map((test) => test.id)),
+    readLatestResults(columns.filter((test) => !homeworkIds.includes(test.id)).map((test) => test.id)),
+    // Homework has no results: its cell is how far the student has got.
+    homeworkIds.length > 0
+      ? prisma.homeworkAnswer.groupBy({
+          by: ['userId', 'testId'],
+          where: { testId: { in: homeworkIds } },
+          _count: { _all: true },
+          _sum: { credit: true },
+        })
+      : [],
   ]);
 
   const questionCounts = new Map(columns.map((test) => [test.id, test.questionCount]));
@@ -61,6 +71,15 @@ export async function loadResultsGrid(courseId: string, { allOthers = false }: {
       attempts: result.attempts,
     };
     cellsByUser.set(result.userId, cells);
+  }
+  for (const progress of homework) {
+    const cells = cellsByUser.get(progress.userId) ?? {};
+    // "20/24 · 15 right": answered of all, then the right ones (partial credit counts its share).
+    cells[progress.testId] = {
+      value: `${progress._count._all}/${questionCounts.get(progress.testId) ?? 0} · ${formatCreditTotal(progress._sum.credit ?? 0)} right`,
+      attempts: 1,
+    };
+    cellsByUser.set(progress.userId, cells);
   }
 
   const inGroup = new Set<string>();

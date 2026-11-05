@@ -44,6 +44,8 @@ export type EditorTest = {
   moduleDurations: number[];
   /** No time limit; the durations above are then placeholders, the timers it gets back with a limit. */
   untimed: boolean;
+  /** Homework: no time limit and no finish, each answer checked as it is chosen. */
+  homework: boolean;
   maxAttempts: number;
   olympiadStartsAt: Date | null;
   olympiadEndsAt: Date | null;
@@ -83,6 +85,9 @@ export function TestSettingsCard({
   // Ticked, the minutes leave the form and the test keeps the durations it has
   // (updateTestDetails); unticked, they come back filled from those.
   const [untimed, setUntimed] = useState(test.untimed);
+  // Homework has no time of its own: ticked, the time and attempts go, and
+  // the server stores it untimed (readHomework in admin/actions.ts).
+  const [homework, setHomework] = useState(test.homework);
   const fieldId = useId();
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -121,10 +126,13 @@ export function TestSettingsCard({
           </Select>
         </Field>
 
+        {/* Kept in the form while hidden, so a test made homework and back
+            keeps its own limit. Homework files no results to count. */}
         <Field
           label="Attempts per student"
           htmlFor={`${fieldId}-attempts`}
           hint={sectionRule !== undefined ? `The course allows ${sectionRule}.` : undefined}
+          className={homework ? 'hidden' : undefined}
         >
           <Input
             id={`${fieldId}-attempts`}
@@ -143,26 +151,45 @@ export function TestSettingsCard({
             box comes first, so ticking it never moves it. */}
         <fieldset>
           <legend className={cn(labelClass, 'mb-1.5')}>
-            {moduleDurations.length > 1 && !untimed ? 'Time per module' : 'Time'}
+            {moduleDurations.length > 1 && !untimed && !homework ? 'Time per module' : 'Time'}
           </legend>
 
           <label className="flex w-fit items-start gap-2.5 text-sm text-gray-700">
             <input
-              name="untimed"
+              name="homework"
               type="checkbox"
-              checked={untimed}
-              onChange={(event) => setUntimed(event.target.checked)}
+              checked={homework}
+              onChange={(event) => setHomework(event.target.checked)}
               className={cn(checkboxClass, 'mt-0.5')}
             />
             <span>
-              <span className="font-medium text-gray-900">No time limit</span>
+              <span className="font-medium text-gray-900">Homework</span>
               <span className={cn(hintClass, 'block')}>
-                The student is never timed out. The time taken is still recorded.
+                No time limit and no finish. Each answer is checked when it is chosen, and the student can leave and
+                come back.
               </span>
             </span>
           </label>
 
-          {!untimed && (moduleDurations.length > 1 ? (
+          {!homework && (
+            <label className="mt-3 flex w-fit items-start gap-2.5 text-sm text-gray-700">
+              <input
+                name="untimed"
+                type="checkbox"
+                checked={untimed}
+                onChange={(event) => setUntimed(event.target.checked)}
+                className={cn(checkboxClass, 'mt-0.5')}
+              />
+              <span>
+                <span className="font-medium text-gray-900">No time limit</span>
+                <span className={cn(hintClass, 'block')}>
+                  The student is never timed out. The time taken is still recorded.
+                </span>
+              </span>
+            </label>
+          )}
+
+          {!untimed && !homework && (moduleDurations.length > 1 ? (
             <div className="mt-3 grid grid-cols-2 gap-2">
               {moduleDurations.map((duration, index) => (
                 <label key={`module-${index}-${duration}`} className={affixControlClass}>

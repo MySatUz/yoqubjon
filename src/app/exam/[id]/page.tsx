@@ -19,6 +19,8 @@ import { userHasActiveSectionAccess } from '@/lib/sectionAccess';
 import { getExamQuestionsHtml } from '@/lib/examQuestions';
 import { userHasUnlockedTest } from '@/lib/testAccessCode';
 import AccessCodeGate from '@/components/exam/AccessCodeGate';
+import HomeworkRunner from '@/components/exam/HomeworkRunner';
+import { readHomeworkVerdicts } from '@/lib/homework';
 
 /**
  * The test row, read once per request: `generateMetadata` and the page both
@@ -38,6 +40,7 @@ const getExamTest = cache((id: string) =>
       durationSeconds: true,
       moduleDurations: true,
       untimed: true,
+      homework: true,
       olympiadStartsAt: true,
       olympiadEndsAt: true,
       accessCode: true,
@@ -137,7 +140,9 @@ export default async function DynamicExamPage({ params }: { params: Promise<{ id
     redirect(`/olympiad/${id}`);
   }
 
-  if (!isAdmin && attemptsUsed >= test.maxAttempts) {
+  // Homework files no results, so it has no attempts to run out of: a test
+  // made homework after it was sat must not be locked by those attempts.
+  if (!isAdmin && !test.homework && attemptsUsed >= test.maxAttempts) {
     redirect(`/dashboard?attemptLimit=reached&test=${encodeURIComponent(id)}`);
   }
 
@@ -164,6 +169,26 @@ export default async function DynamicExamPage({ params }: { params: Promise<{ id
     !await userHasUnlockedTest(userId, id, test.accessCode)
   ) {
     return <AccessCodeGate testId={id} title={test.title} />;
+  }
+
+  if (test.homework) {
+    if (questions.length === 0) {
+      notFound();
+    }
+
+    // One list, in the order the test asks them: a test made homework after
+    // it had modules keeps module 1 ahead of module 2.
+    const ordered = [...questions].sort((a, b) => a.moduleIndex - b.moduleIndex);
+
+    return (
+      <HomeworkRunner
+        testId={id}
+        title={test.title}
+        questions={ordered}
+        initialVerdicts={await readHomeworkVerdicts(userId, id)}
+        referenceSheet={<ReferenceSheet />}
+      />
+    );
   }
 
   const modules = buildExamModules(test, questions);

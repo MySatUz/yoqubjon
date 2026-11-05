@@ -125,7 +125,7 @@ export default function BuildTestForm({
   const [course, setCourse] = useState(defaultCourse ?? '');
   const courseAttempts = (value: string) => courses.find((item) => item.value === value)?.maxAttempts;
   const [title, setTitle] = useState('');
-  const [format, setFormat] = useState<'modular' | 'single'>('modular');
+  const [format, setFormat] = useState<'modular' | 'single' | 'homework'>('modular');
   // Ticked, no minutes are sent and the server stores placeholders
   // (createTestFromBank); the minutes typed stay in the drafts.
   const [untimed, setUntimed] = useState(false);
@@ -145,8 +145,12 @@ export default function BuildTestForm({
 
   // One block keeps the first module's questions; switching back to modules
   // brings the others back as they were.
-  const active = format === 'single' ? modules.slice(0, 1) : modules;
-  const moduleName = (index: number) => (format === 'single' ? 'the test' : `module ${index + 1}`);
+  // One block and homework are both one list of questions.
+  const oneList = format !== 'modular';
+  // Homework has no time limit of its own (createTestFromBank stores it untimed).
+  const noTime = untimed || format === 'homework';
+  const active = oneList ? modules.slice(0, 1) : modules;
+  const moduleName = (index: number) => (oneList ? 'the test' : `module ${index + 1}`);
 
   /** Question id → the module that has it, over every module but `skip`. */
   const usedElsewhere = (skip: number) => {
@@ -174,7 +178,7 @@ export default function BuildTestForm({
     : !title.trim()
       ? 'Give the test a title.'
       : emptyModule >= 0
-        ? (format === 'single' ? 'Choose the questions first.' : `Module ${emptyModule + 1} has no questions yet.`)
+        ? (oneList ? 'Choose the questions first.' : `Module ${emptyModule + 1} has no questions yet.`)
         : conflicts.size > 0
           ? `${questionCount(conflicts.size)} ${conflicts.size === 1 ? 'is' : 'are'} in two modules. Remove ${conflicts.size === 1 ? 'it' : 'them'} from one.`
           : null;
@@ -253,9 +257,9 @@ export default function BuildTestForm({
         title: title.trim(),
         format,
         untimed,
-        minutes: untimed
+        minutes: noTime
           ? []
-          : format === 'single'
+          : oneList
             ? [readMinutes(blockMinutes, DEFAULT_BLOCK_MINUTES)]
             : active.map((module) => readMinutes(module.minutes, DEFAULT_MODULE_MINUTES)),
         modules: active.map((module) => chosenOf(module).map((row) => row.id)),
@@ -334,6 +338,7 @@ export default function BuildTestForm({
               {([
                 { value: 'modular' as const, label: 'Modules' },
                 { value: 'single' as const, label: 'One block' },
+                { value: 'homework' as const, label: 'Homework' },
               ]).map((option) => (
                 <button
                   key={option.value}
@@ -348,21 +353,30 @@ export default function BuildTestForm({
               ))}
             </div>
 
-            {/* Above the minutes it hides, so ticking it never moves it. */}
-            <label className="flex w-fit items-start gap-2.5 text-sm text-gray-700">
-              <input
-                type="checkbox"
-                checked={untimed}
-                onChange={(event) => setUntimed(event.target.checked)}
-                className={cn(checkboxClass, 'mt-0.5')}
-              />
-              <span>
-                <span className="font-medium text-gray-900">No time limit</span>
-                <span className={cn(hintClass, 'block')}>
-                  The student is never timed out. The time taken is still recorded.
+            {/* Above the minutes it hides, so ticking it never moves it.
+                Homework has no time limit of its own, so it says what it is
+                in the box's place. */}
+            {format === 'homework' ? (
+              <p className={hintClass}>
+                No time limit and no finish. Each answer is checked when it is chosen, and the student can leave and
+                come back.
+              </p>
+            ) : (
+              <label className="flex w-fit items-start gap-2.5 text-sm text-gray-700">
+                <input
+                  type="checkbox"
+                  checked={untimed}
+                  onChange={(event) => setUntimed(event.target.checked)}
+                  className={cn(checkboxClass, 'mt-0.5')}
+                />
+                <span>
+                  <span className="font-medium text-gray-900">No time limit</span>
+                  <span className={cn(hintClass, 'block')}>
+                    The student is never timed out. The time taken is still recorded.
+                  </span>
                 </span>
-              </span>
-            </label>
+              </label>
+            )}
 
             {format === 'modular' ? (
               <div className="space-y-2 pt-1">
@@ -409,7 +423,7 @@ export default function BuildTestForm({
                   Add module
                 </Button>
               </div>
-            ) : !untimed && (
+            ) : !noTime && (
               <div className="max-w-xs pt-1">
                 <p className={cn(hintClass, 'mb-2')}>One timer for the whole test, e.g. 30 questions in 60 minutes.</p>
                 <Input
@@ -426,10 +440,12 @@ export default function BuildTestForm({
             )}
           </div>
 
+          {/* Homework files no results to count; the value stays for the server's default. */}
           <Field
             label="Attempts per student"
             htmlFor={`${fieldId}-attempts`}
             hint={courseLimit !== undefined ? `The course allows ${courseLimit}.` : undefined}
+            className={format === 'homework' ? 'hidden' : undefined}
           >
             <Input
               id={`${fieldId}-attempts`}
@@ -474,11 +490,11 @@ export default function BuildTestForm({
       {active.map((module, index) => (
         <ModuleCard
           key={module.key}
-          title={format === 'single' ? 'Questions' : `Module ${index + 1}`}
-          methodLabel={format === 'single'
+          title={oneList ? 'Questions' : `Module ${index + 1}`}
+          methodLabel={oneList
             ? 'How to choose the questions'
             : `How to choose the questions of module ${index + 1}`}
-          minutes={untimed ? null : format === 'single' ? blockMinutes : module.minutes}
+          minutes={noTime ? null : oneList ? blockMinutes : module.minutes}
           module={module}
           conflicts={conflicts}
           usedIn={usedElsewhere(index)}
@@ -501,9 +517,11 @@ export default function BuildTestForm({
       <div className={cn(cardClass, 'flex flex-wrap items-center justify-end gap-3 px-5 py-4')}>
         <p className="mr-auto text-sm tabular-nums text-gray-600">
           {blocker ?? (
-            format === 'single'
-              ? `${questionCount(totalQuestions)} ${untimed ? 'with no time limit' : 'on one timer'}.`
-              : `${questionCount(totalQuestions)} in ${active.length} modules${untimed ? ', with no time limit' : ''}.`
+            format === 'homework'
+              ? `${questionCount(totalQuestions)} as homework.`
+              : oneList
+                ? `${questionCount(totalQuestions)} ${untimed ? 'with no time limit' : 'on one timer'}.`
+                : `${questionCount(totalQuestions)} in ${active.length} modules${untimed ? ', with no time limit' : ''}.`
           )}
         </p>
         {createError && (
@@ -519,7 +537,7 @@ export default function BuildTestForm({
         <BankPicker
           open
           onClose={closePicker}
-          title={format === 'single' ? 'Choose questions' : `Choose questions for module ${pickerIndex + 1}`}
+          title={oneList ? 'Choose questions' : `Choose questions for module ${pickerIndex + 1}`}
           picker={picker}
           availability={availability}
           chosen={pickerModule.manual}

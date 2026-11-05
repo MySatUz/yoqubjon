@@ -24,7 +24,10 @@ export type ResultsGridRow = {
   group: 'active' | 'ended' | 'other';
   endedKey: string | null;
   isAdmin: boolean;
-  /** Latest stored result per test id: the score, or "7 of 9" under 10 questions. */
+  /**
+   * Latest stored result per test id: the score, or "7 of 9" under 10
+   * questions; on homework, "20/24 · 15 right" (courseResults.ts).
+   */
   cells: Record<string, { value: string; attempts: number }>;
 };
 

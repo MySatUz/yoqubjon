@@ -11,8 +11,10 @@ import {
   FileDown,
   History,
   Layers3,
+  ListChecks,
   ListOrdered,
   Lock,
+  NotebookPen,
   RotateCcw,
   Trophy,
 } from 'lucide-react';
@@ -49,6 +51,10 @@ type CatalogTest = {
   moduleDurations: number[];
   /** No time limit: the card says so instead of the minutes stored under it. */
   untimed: boolean;
+  /** Homework: no attempts and no score, only how many questions are answered. */
+  homework: boolean;
+  /** Questions this student has answered on it, for homework. */
+  homeworkAnswered: number;
   maxAttempts: number;
   attemptsUsed: number;
   /** Questions the test shows (its original's, for a copy). */
@@ -119,21 +125,25 @@ function formatAttemptsLeft(left: number) {
  *
  * `onPointerDown` is what covers touch: hover never fires there, and firing at
  * press start buys the prefetch a head start before the tap completes.
+ *
+ * Homework is never prefetched in full: its page carries the student's
+ * checked answers, and a copy kept by the router from before they last
+ * answered would open those questions again.
  */
-function StartPracticeLink({ testId }: { testId: string }) {
+function StartPracticeLink({ testId, label = 'Start test', homework = false }: { testId: string; label?: string; homework?: boolean }) {
   const [intent, setIntent] = useState(false);
   const showIntent = () => setIntent(true);
 
   return (
     <Link
       href={`/exam/${testId}`}
-      prefetch={intent ? true : null}
+      prefetch={intent && !homework ? true : null}
       onMouseEnter={showIntent}
       onFocus={showIntent}
       onPointerDown={showIntent}
       className={buttonClass()}
     >
-      Start test
+      {label}
     </Link>
   );
 }
@@ -303,7 +313,8 @@ export default function PracticeCatalog({
             const category = getTestCategory(test);
             const hasSectionAccess = Boolean(category && accessibleCategorySet.has(category));
             const canAccess = isAdmin || test.isFree || isPremium || hasSectionAccess;
-            const attemptLimitReached = !isAdmin && test.attemptsUsed >= test.maxAttempts;
+            // Homework files no results, so it has no attempts to run out of.
+            const attemptLimitReached = !isAdmin && !test.homework && test.attemptsUsed >= test.maxAttempts;
             // "Free" is the test's own mark (Test.isFree), not a plan; a paid
             // test names the plan it comes with, as plans.ts spells it.
             const accessLabel = test.isFree
@@ -345,6 +356,12 @@ export default function PracticeCatalog({
                 <ul className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-gray-500">
                   <li className="flex gap-1.5">
                     <Badge tone={test.isFree ? 'accent' : 'neutral'}>{accessLabel}</Badge>
+                    {test.homework && (
+                      <Badge>
+                        <NotebookPen />
+                        Homework
+                      </Badge>
+                    )}
                     {olympiadStatus && (
                       <Badge tone={OLYMPIAD_BADGE[olympiadStatus].tone}>
                         <Trophy />
@@ -370,7 +387,12 @@ export default function PracticeCatalog({
                   {/* A finished olympiad cannot be taken again, so attempts
                       left would only read as an invitation it cannot keep. */}
                   <li className="inline-flex items-center gap-1 whitespace-nowrap tabular-nums">
-                    {olympiad && olympiadStatus === 'finished' ? (
+                    {test.homework ? (
+                      <>
+                        <ListChecks className="h-3.5 w-3.5" aria-hidden />
+                        {test.homeworkAnswered} of {test.questionCount} answered
+                      </>
+                    ) : olympiad && olympiadStatus === 'finished' ? (
                       <>
                         <CalendarCheck className="h-3.5 w-3.5" aria-hidden />
                         Ended {formatDate(olympiad.endsAt)}
@@ -403,6 +425,16 @@ export default function PracticeCatalog({
                         </Link>
                       ) : attemptLimitReached ? (
                         <p className="text-sm font-medium text-gray-500">Attempt limit reached</p>
+                      ) : test.homework ? (
+                        <StartPracticeLink
+                          testId={test.id}
+                          homework
+                          label={test.homeworkAnswered === 0
+                            ? 'Start homework'
+                            : test.homeworkAnswered < test.questionCount
+                              ? 'Continue homework'
+                              : 'Open homework'}
+                        />
                       ) : (
                         <StartPracticeLink testId={test.id} />
                       )}

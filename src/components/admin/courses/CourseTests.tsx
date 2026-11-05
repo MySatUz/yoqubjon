@@ -26,6 +26,8 @@ export type CourseTestRow = {
   moduleDurations: number[];
   /** No time limit: the row says so (formatTestLength) instead of the stored minutes. */
   untimed: boolean;
+  /** Homework: a pill says so (TestBadges), and its reach counts who has started. */
+  homework: boolean;
   maxAttempts: number;
   olympiadStartsAt: Date | null;
   olympiadEndsAt: Date | null;
