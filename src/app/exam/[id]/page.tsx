@@ -21,6 +21,7 @@ import { userHasUnlockedTest } from '@/lib/testAccessCode';
 import AccessCodeGate from '@/components/exam/AccessCodeGate';
 import HomeworkRunner from '@/components/exam/HomeworkRunner';
 import { readHomeworkVerdicts } from '@/lib/homework';
+import { issueHomeworkPass } from '@/lib/homeworkPass';
 
 /**
  * The test row, read once per request: `generateMetadata` and the page both
@@ -186,6 +187,8 @@ export default async function DynamicExamPage({ params }: { params: Promise<{ id
         title={test.title}
         questions={ordered}
         initialVerdicts={await readHomeworkVerdicts(userId, id)}
+        // Every gate above has passed, so each answer need not run them again.
+        pass={issueHomeworkPass(userId, id)}
         referenceSheet={<ReferenceSheet />}
       />
     );

@@ -2,8 +2,9 @@
 
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
-import { questionsShownBy } from '@/lib/questionSource';
 import { gradeAnswer } from '@/lib/resultAnswers';
+import { isValidHomeworkPass } from '@/lib/homeworkPass';
+import { findTestQuestionKey } from '@/lib/testQuestionKeys';
 import {
   canDoHomework,
   normalizeHomeworkAnswer,
@@ -27,11 +28,16 @@ function isId(value: unknown): value is string {
  * stands: a second send - a double click, a second tab - gets the verdict
  * already stored, never a new one. Failures come back as data the screen
  * shows beside the question, so nothing is thrown at the client.
+ *
+ * `pass` is the page's signed word that this student may do this homework
+ * (`issueHomeworkPass`); with it the access check costs no database read.
+ * Without a valid one the gates are run here, as the page runs them.
  */
 export async function checkHomeworkAnswer(
   testId: string,
   questionId: string,
-  answer: string
+  answer: string,
+  pass?: string | null
 ): Promise<CheckHomeworkResponse> {
   if (!isId(testId) || !isId(questionId)) {
     return { error: 'Question not found.' };
@@ -44,16 +50,17 @@ export async function checkHomeworkAnswer(
   const userId = session.user.id;
 
   try {
-    if (!(await canDoHomework(userId, session.user.email, testId))) {
+    if (
+      !isValidHomeworkPass(pass, userId, testId) &&
+      !(await canDoHomework(userId, session.user.email, testId))
+    ) {
       return { error: 'This homework is not open to you any more. Reload the page.' };
     }
 
-    // Scoped to the questions this test shows - its own, or a copy's
-    // original's - so an id from another test cannot be checked through it.
-    const question = await prisma.question.findFirst({
-      where: { id: questionId, ...questionsShownBy(testId) },
-      select: { correctAnswer: true, options: true },
-    });
+    // Only the questions this test shows - its own, or a copy's original's -
+    // so an id from another test cannot be checked through it. Cached per
+    // test with the key, on the server (`getTestQuestionKeys`).
+    const question = await findTestQuestionKey(testId, questionId);
     if (!question) {
       return { error: 'This question was removed from the homework. Reload the page.' };
     }
@@ -64,14 +71,25 @@ export async function checkHomeworkAnswer(
     }
 
     const graded = gradeAnswer(stored, question.correctAnswer);
-    const where = { userId_testId_questionId: { userId, testId, questionId } };
-    // `update: {}` keeps the first answer: upsert only writes on a miss.
-    const row = await prisma.homeworkAnswer.upsert({
-      where,
-      create: { userId, testId, questionId, answer: stored, isCorrect: graded.isCorrect, credit: graded.credit },
-      update: {},
-      select: { answer: true, isCorrect: true, credit: true },
+    const checked = { answer: stored, isCorrect: graded.isCorrect, credit: graded.credit };
+    // One INSERT ... ON CONFLICT DO NOTHING, which keeps the first answer.
+    // An `upsert` with an empty update ran as a read, an insert and a read
+    // again. Only when the question was already answered is the stored
+    // verdict read back.
+    const { count } = await prisma.homeworkAnswer.createMany({
+      data: [{ userId, testId, questionId, ...checked }],
+      skipDuplicates: true,
     });
+    const row =
+      count === 1
+        ? checked
+        : await prisma.homeworkAnswer.findUnique({
+            where: { userId_testId_questionId: { userId, testId, questionId } },
+            select: { answer: true, isCorrect: true, credit: true },
+          });
+    if (!row) {
+      return { error: 'Could not check your answer. Try again.' };
+    }
 
     return { verdict: toHomeworkVerdict(row, question) };
   } catch (error: unknown) {

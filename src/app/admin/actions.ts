@@ -9,6 +9,7 @@ import { redirect } from 'next/navigation';
 import { requireAdmin } from '@/lib/admin';
 import { TEST_COLLECTIONS_CACHE_TAG } from '@/lib/testCollections';
 import { examQuestionsCacheTag } from '@/lib/examQuestions';
+import { expireTestCatalog } from '@/lib/testCatalogCache';
 import {
   EXAM_DURATION_SECONDS,
   MAX_EXAM_DURATION_SECONDS,
@@ -306,6 +307,7 @@ export async function uploadTest(formData: FormData) {
     // HTML for that id has to go. `{ expire: 0 }` = the very next exam start
     // re-renders instead of serving the old questions.
     revalidateTag(examQuestionsCacheTag(testId), { expire: 0 });
+    expireTestCatalog();
     // Every admin page is `force-dynamic`, so there is no route cache for
     // `revalidatePath` to clear. `refresh()` re-renders the page that called the
     // action and ships the new RSC payload in this same response, which removes
@@ -386,6 +388,7 @@ export async function deleteTest(testId: string) {
     for (const id of [testId, ...copyIds]) {
       revalidateTag(examQuestionsCacheTag(id), { expire: 0 });
     }
+    expireTestCatalog();
     refresh();
     return { success: true };
   } catch (error: unknown) {
@@ -468,6 +471,7 @@ export async function copyTest(testId: string, formData: FormData) {
       select: { id: true },
     });
 
+    expireTestCatalog();
     refresh();
     return { success: true as const, testId: copy.id, title, category: collection.category };
   } catch (error: unknown) {
@@ -745,6 +749,8 @@ export async function updateSectionSettings(formData: FormData) {
     // `{ expire: 0 }` = immediate expiry, so a hidden section disappears on the
     // very next request instead of after a stale-while-revalidate round.
     revalidateTag(TEST_COLLECTIONS_CACHE_TAG, { expire: 0 });
+    // A changed course limit is written onto its tests.
+    expireTestCatalog();
     // Order matters: the tag is expired first, so the re-render triggered by
     // `refresh()` reads the collections back from the database, not the cache.
     refresh();
@@ -925,6 +931,7 @@ export async function updateTestDetails(testId: string, formData: FormData) {
     });
 
     revalidateTag(examQuestionsCacheTag(testId), { expire: 0 });
+    expireTestCatalog();
     refresh();
     return { success: true };
   } catch (error: unknown) {
@@ -948,7 +955,8 @@ export async function updateTestVisibility(testId: string, visible: boolean) {
     });
 
     // `/exam/[id]` reads the session, so it is dynamic as well: nothing cached
-    // to invalidate there either.
+    // to invalidate there. The Practice catalog is cached, so it is expired.
+    expireTestCatalog();
     refresh();
     return { success: true };
   } catch (error: unknown) {
@@ -1116,6 +1124,7 @@ export async function createTestFromBank(input: BuildTestInput) {
     testId = test.id;
 
     revalidateTag(examQuestionsCacheTag(testId), { expire: 0 });
+    expireTestCatalog();
     // The course's test list and the bank's "used in" counts are on other
     // pages: this clears the client's cached copies of every admin page.
     revalidatePath('/admin', 'layout');

@@ -14,8 +14,9 @@ import {
   getLastResultIds,
   type LastResultReview,
 } from '@/lib/courseProgress';
-import { getShownQuestions } from '@/lib/questionSource';
 import { getReviewOpensAt } from '@/lib/olympiad';
+import { getTestCatalog, type CatalogTest } from '@/lib/testCatalogCache';
+import { getTestQuestionKeys } from '@/lib/testQuestionKeys';
 import { PREMIUM_PLAN } from '@/lib/plans';
 import { readSalesOpen } from '@/app/dashboard/salesOpen';
 import CourseOverview from '@/components/dashboard/CourseOverview';
@@ -92,47 +93,41 @@ export default async function DashboardPage(props: {
   );
 }
 
-const REVIEW_QUESTION_FIELDS = { id: true, order: true, correctAnswer: true } as const;
-
 /**
  * Mistakes and whether the review is open, for the course cards' last
  * results. The keys are read here, on the server, and only the count leaves
- * it. A failed read costs the cards their count ("Open the review"), not the
- * whole Practice page.
+ * it - from each test's cached questions (`getTestQuestionKeys`, which for a
+ * copy are its original's) and the cached catalog's olympiad window, so the
+ * results are the one read. A failed read costs the cards their count ("Open
+ * the review"), not the whole Practice page.
  */
 async function readLastResultReviews(
   userId: string,
   resultIds: string[],
-  isAdmin: boolean
+  isAdmin: boolean,
+  testsById: Map<string, CatalogTest>
 ): Promise<Map<string, LastResultReview>> {
   if (resultIds.length === 0) return new Map();
 
   try {
     const rows = await prisma.result.findMany({
       where: { id: { in: resultIds }, userId },
-      select: {
-        id: true,
-        answers: true,
-        test: {
-          select: {
-            olympiadStartsAt: true,
-            olympiadEndsAt: true,
-            questions: { select: REVIEW_QUESTION_FIELDS },
-            // An attempt at a copy is graded against its original's questions.
-            questionSource: { select: { questions: { select: REVIEW_QUESTION_FIELDS } } },
-          },
-        },
-      },
+      select: { id: true, testId: true, answers: true },
     });
 
     return new Map(
-      rows.map((row) => [
-        row.id,
-        {
-          mistakes: countMistakes(getShownQuestions(row.test), row.answers),
-          closed: !isAdmin && getReviewOpensAt(row.test) !== null,
-        },
-      ])
+      await Promise.all(
+        rows.map(async (row): Promise<[string, LastResultReview]> => {
+          const test = testsById.get(row.testId);
+          return [
+            row.id,
+            {
+              mistakes: countMistakes(await getTestQuestionKeys(row.testId), row.answers),
+              closed: !isAdmin && test !== undefined && getReviewOpensAt(test) !== null,
+            },
+          ];
+        })
+      )
     );
   } catch (error) {
     console.error('Practice: could not read the last results for the course cards', error);
@@ -147,34 +142,20 @@ async function PracticeCatalogSection({
   userId: string;
   userEmail?: string | null;
 }) {
-  const [attemptCounts, tests, subscription, viewer, visibilityRows, sectionAccessGrants, recentResults, questionCounts, salesOpen, homeworkCounts] = await Promise.all([
+  // Every test and its question count are the same for every student, so
+  // they come from the data cache (`getTestCatalog`); what is read below is
+  // this student's own. Prisma Postgres bills every read.
+  const catalog = await getTestCatalog();
+  const tests = catalog.tests;
+  const hasHomework = tests.some((test) => test.homework);
+
+  const [attemptCounts, subscription, viewer, visibilityRows, sectionAccessGrants, recentResults, salesOpen, homeworkCounts] = await Promise.all([
     // The best attempt rides along for the card's "Best 600".
     prisma.result.groupBy({
       by: ['testId'],
       where: { userId },
       _count: { _all: true },
       _max: { score: true, correctCount: true },
-    }),
-    prisma.test.findMany({
-      orderBy: { createdAt: 'asc' },
-      select: {
-        id: true,
-        title: true,
-        description: true,
-        collectionCategory: true,
-        durationSeconds: true,
-        moduleDurations: true,
-        // "No time limit" instead of the placeholder minutes stored under it.
-        untimed: true,
-        homework: true,
-        maxAttempts: true,
-        isFree: true,
-        visible: true,
-        createdAt: true,
-        olympiadStartsAt: true,
-        olympiadEndsAt: true,
-        questionSourceId: true,
-      },
     }),
     prisma.subscription.findFirst({
       where: {
@@ -193,13 +174,14 @@ async function PracticeCatalogSection({
       take: 300,
       select: { id: true, testId: true, score: true, correctCount: true, createdAt: true },
     }),
-    // Question counts decide which results are full-length enough to plot.
-    prisma.question.groupBy({ by: ['testId'], _count: { _all: true } }),
     // While an admin has paused sales, a locked card must not offer an unlock
     // that ends on a page with nothing to buy.
     readSalesOpen('Practice'),
-    // A homework card says how far the student has got.
-    prisma.homeworkAnswer.groupBy({ by: ['testId'], where: { userId }, _count: { _all: true } }),
+    // A homework card says how far the student has got - read only while
+    // there is homework to show it on.
+    hasHomework
+      ? prisma.homeworkAnswer.groupBy({ by: ['testId'], where: { userId }, _count: { _all: true } })
+      : Promise.resolve([]),
   ]);
   const homeworkAnsweredByTest = new Map(homeworkCounts.map((row) => [row.testId, row._count._all]));
   const sectionAccessCategories = sectionAccessGrants.map((grant) => grant.category);
@@ -230,8 +212,9 @@ async function PracticeCatalogSection({
     tests.filter((test) => canDownloadPdf || test.visible)
   );
 
-  // A copy shows its original's questions, so it counts them too.
-  const ownQuestionCount = new Map(questionCounts.map((row) => [row.testId, row._count._all]));
+  // A copy shows its original's questions, so it counts them too. Question
+  // counts decide which results are full-length enough to plot.
+  const ownQuestionCount = catalog.ownQuestionCount;
   const visibleCollectionsForOverview = dashboardCollections.filter((collection) => collection.visible);
   const overviewInput = {
     collections: visibleCollectionsForOverview,
@@ -257,7 +240,7 @@ async function PracticeCatalogSection({
   };
   // The cards' "Review N questions" counts as the result page does, so it
   // needs the answers of the one last result per card - two rows at most.
-  const reviews = await readLastResultReviews(userId, getLastResultIds(overviewInput), viewer.isAdmin);
+  const reviews = await readLastResultReviews(userId, getLastResultIds(overviewInput), viewer.isAdmin, catalog.byId);
   const overview = buildPracticeOverview({ ...overviewInput, reviews });
 
   return (

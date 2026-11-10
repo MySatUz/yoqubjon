@@ -9,6 +9,8 @@ import { optionAsMath } from '@/components/exam/optionMath';
 import { formatReviewOpens, getReviewOpensAt } from '@/lib/olympiad';
 import { MAX_REPORT_LENGTH } from '@/lib/questionReports';
 import { getViewerAccess } from '@/lib/studentView';
+import { getTestCatalog } from '@/lib/testCatalogCache';
+import { findTestQuestionKey } from '@/lib/testQuestionKeys';
 
 /**
  * One question of a finished attempt, fetched on demand.
@@ -58,43 +60,43 @@ export type RevealQuestionResponse =
 /** Both ids are uuids; anything longer is not worth a database round-trip. */
 const MAX_ID_LENGTH = 160;
 
+/**
+ * One database read per question opened: the result itself. The test's
+ * olympiad window comes from the cached catalog and the question from the
+ * test's cached questions (`getTestQuestionKeys`) - a review opens many
+ * questions of the same test, and Prisma Postgres bills every read.
+ */
 async function readRevealedRecords(userId: string, resultId: string, questionId: string) {
   // `userId` in the filter, not a check afterwards: a result belonging to
   // somebody else must be indistinguishable from one that does not exist.
-  const [result, viewer] = await Promise.all([
-    prisma.result.findFirst({
-      where: { id: resultId, userId },
-      select: {
-        testId: true,
-        answers: true,
-        test: { select: { olympiadStartsAt: true, olympiadEndsAt: true } },
-      },
-    }),
-    getViewerAccess(userId),
-  ]);
+  const result = await prisma.result.findFirst({
+    where: { id: resultId, userId },
+    select: { testId: true, answers: true },
+  });
 
   if (!result) return { result: null, question: null, opensAt: null };
 
+  // A test newer than the cached catalog is read directly.
+  const test =
+    (await getTestCatalog()).byId.get(result.testId) ??
+    (await prisma.test.findUnique({
+      where: { id: result.testId },
+      select: { olympiadStartsAt: true, olympiadEndsAt: true },
+    }));
+
   // An olympiad's questions stay closed until its window has ended - the
   // question text as much as the key (getReviewOpensAt) - so this returns
-  // before the question is even read. An admin in student view waits too.
-  const opensAt = viewer.isAdmin ? null : getReviewOpensAt(result.test);
-  if (opensAt) return { result, question: null, opensAt };
+  // before the question is even looked up. An admin in student view waits
+  // too; who is asking matters only while the window is open.
+  const closedUntil = test ? getReviewOpensAt(test) : null;
+  if (closedUntil && !(await getViewerAccess(userId)).isAdmin) {
+    return { result, question: null, opensAt: closedUntil };
+  }
 
-  // Scoped to the questions the attempt's test shows - its own, or for a copy
-  // its original's - so a question id from another test cannot be read through
+  // Only the questions the attempt's test shows - its own, or for a copy its
+  // original's - so a question id from another test cannot be read through
   // somebody's own result.
-  const question = await prisma.question.findFirst({
-    where: { id: questionId, ...questionsShownBy(result.testId) },
-    select: {
-      id: true,
-      order: true,
-      content: true,
-      imageUrl: true,
-      correctAnswer: true,
-      options: true,
-    },
-  });
+  const question = await findTestQuestionKey(result.testId, questionId);
 
   return { result, question, opensAt: null };
 }

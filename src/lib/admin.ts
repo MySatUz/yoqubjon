@@ -22,32 +22,33 @@ export function isOwnerSessionUser(user?: { email?: string | null } | null) {
 }
 
 /**
+ * The signed-in user's row, read once per request for everything that needs
+ * it: the admin flag, the owner check and the name in the sidebar
+ * (`getShellUser`). Each used to read the same row with its own select, and
+ * Prisma Postgres bills every read. `cache()` lives for exactly one request,
+ * so role and name changes still take effect on the next page load (reading
+ * them from the JWT instead would delay them until the user signs in again).
+ */
+export const getUserRow = cache(async (userId: string) =>
+  prisma.user.findUnique({
+    where: { id: userId },
+    select: { name: true, email: true, role: true },
+  })
+);
+
+/**
  * Request-scoped memoization: `layout`, `page` and the shell islands all ask for
  * the same flag, and React does not deduplicate Prisma calls the way it does for
- * `fetch`. `cache()` lives for exactly one request, so role changes still take
- * effect on the next page load (reading the role from the JWT instead would
- * delay them until the user signs in again).
+ * `fetch`.
  */
 export const isAdminUser = cache(async (userId?: string | null) => {
   if (!userId) return false;
-
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { email: true, role: true },
-  });
-
-  return isAdminSessionUser(user);
+  return isAdminSessionUser(await getUserRow(userId));
 });
 
 export const isOwnerAdmin = cache(async (userId?: string | null) => {
   if (!userId) return false;
-
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { email: true },
-  });
-
-  return isOwnerEmail(user?.email);
+  return isOwnerEmail((await getUserRow(userId))?.email);
 });
 
 export async function requireAdmin() {

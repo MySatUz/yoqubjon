@@ -4,6 +4,7 @@ import { formatAnswerLetters, parseAnswerLetters } from '@/lib/resultAnswers';
 import { getViewerAccess } from '@/lib/studentView';
 import { userHasActiveSectionAccess } from '@/lib/sectionAccess';
 import { userHasUnlockedTest } from '@/lib/testAccessCode';
+import { getTestQuestionKeys } from '@/lib/testQuestionKeys';
 
 /**
  * Homework (Test.homework): one list of questions with no clock and no finish.
@@ -90,21 +91,26 @@ export function normalizeHomeworkAnswer(
   return formatAnswerLetters(letters);
 }
 
-/** The student's checked answers on this test, by question id. */
+/**
+ * The student's checked answers on this test, by question id. The keys come
+ * from the test's cached questions (`getTestQuestionKeys`), not a second read;
+ * an answer to a question the test no longer shows has nothing to show on.
+ */
 export async function readHomeworkVerdicts(userId: string, testId: string) {
-  const rows = await prisma.homeworkAnswer.findMany({
-    where: { userId, testId },
-    select: {
-      questionId: true,
-      answer: true,
-      isCorrect: true,
-      credit: true,
-      question: { select: { correctAnswer: true, options: true } },
-    },
-  });
+  const [rows, questions] = await Promise.all([
+    prisma.homeworkAnswer.findMany({
+      where: { userId, testId },
+      select: { questionId: true, answer: true, isCorrect: true, credit: true },
+    }),
+    getTestQuestionKeys(testId),
+  ]);
+  const byId = new Map(questions.map((question) => [question.id, question]));
 
   return Object.fromEntries(
-    rows.map((row) => [row.questionId, toHomeworkVerdict(row, row.question)])
+    rows.flatMap((row) => {
+      const question = byId.get(row.questionId);
+      return question ? [[row.questionId, toHomeworkVerdict(row, question)]] : [];
+    })
   ) as Record<string, HomeworkVerdict>;
 }
 

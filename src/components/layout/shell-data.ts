@@ -1,6 +1,6 @@
 import { cache } from 'react';
 import { auth } from '@/auth';
-import { isAdminUser } from '@/lib/admin';
+import { getUserRow, isAdminUser } from '@/lib/admin';
 import { getStudentView } from '@/lib/studentView';
 import { prisma } from '@/lib/prisma';
 
@@ -18,8 +18,9 @@ export const getShellSession = cache(async () => auth());
  * database rather than the session. The JWT keeps the name the student signed
  * in with, so a name changed in Profile would reach the sidebar only after the
  * next sign-in; this read follows Profile's revalidatePath at once. One
- * primary-key read per request, shared by both rows. A row that is gone (the
- * cookie outlived the account) falls back to what the session says.
+ * primary-key read per request, shared by both rows and with the admin check
+ * (`getUserRow`). A row that is gone (the cookie outlived the account) falls
+ * back to what the session says.
  */
 export const getShellUser = cache(async () => {
   const session = await getShellSession();
@@ -27,8 +28,8 @@ export const getShellUser = cache(async () => {
   const fromSession = { name: session?.user?.name ?? null, email: session?.user?.email ?? null };
   if (!userId) return fromSession;
 
-  const user = await prisma.user.findUnique({ where: { id: userId }, select: { name: true, email: true } });
-  return user ?? fromSession;
+  const user = await getUserRow(userId);
+  return user ? { name: user.name, email: user.email } : fromSession;
 });
 
 export const getShellCanManageTests = cache(async () => {

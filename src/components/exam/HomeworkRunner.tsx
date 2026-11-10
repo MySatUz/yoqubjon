@@ -356,6 +356,8 @@ interface HomeworkRunnerProps {
   questions: HomeworkQuestion[];
   /** The student's checked answers, by question id, as the server keeps them. */
   initialVerdicts: Record<string, HomeworkVerdict>;
+  /** The page's signed word that this student may do this homework (`issueHomeworkPass`), sent with each answer. */
+  pass: string | null;
   /** The reference sheet's content, rendered on the server (see `ReferenceSheet`). */
   referenceSheet: React.ReactNode;
 }
@@ -365,6 +367,7 @@ export default function HomeworkRunner({
   title,
   questions,
   initialVerdicts,
+  pass,
   referenceSheet,
 }: HomeworkRunnerProps) {
   const [verdicts, setVerdicts] = useState(initialVerdicts);
@@ -424,7 +427,7 @@ export default function HomeworkRunner({
 
       let response: Awaited<ReturnType<typeof checkHomeworkAnswer>> | null = null;
       try {
-        response = await checkHomeworkAnswer(testId, questionId, answer);
+        response = await checkHomeworkAnswer(testId, questionId, answer, pass);
       } catch (caught) {
         // A page opened before a deploy asks for an action the new build no
         // longer has; anything else is most likely the network.
@@ -448,7 +451,7 @@ export default function HomeworkRunner({
         setErrors((current) => ({ ...current, [questionId]: { message, reload: false } }));
       }
     },
-    [testId]
+    [testId, pass]
   );
 
   const handleSelectChoice = useCallback(

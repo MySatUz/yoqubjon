@@ -1,4 +1,5 @@
-import { PrismaClient } from '@prisma/client';
+import { appendFileSync } from 'node:fs';
+import { PrismaClient, type Prisma } from '@prisma/client';
 
 const globalForPrisma = globalThis as unknown as { prisma: PrismaClient };
 
@@ -39,10 +40,32 @@ function datasourceUrl() {
   }
 }
 
+/**
+ * Local measuring only: with `PRISMA_QUERY_LOG_FILE` set (never on Vercel),
+ * every SQL statement the client sends is appended to that file, one line
+ * each. Prisma Postgres bills per operation, so this is how a change is
+ * counted before it ships - a page load or an action is the lines it adds.
+ */
+const QUERY_LOG_FILE = process.env.VERCEL ? undefined : process.env.PRISMA_QUERY_LOG_FILE;
+
+function createPrismaClient() {
+  const vercelUrl = datasourceUrl();
+  const client = new PrismaClient({
+    ...(vercelUrl ? { datasourceUrl: vercelUrl } : {}),
+    ...(QUERY_LOG_FILE ? { log: [{ emit: 'event' as const, level: 'query' as const }] } : {}),
+  });
+  if (QUERY_LOG_FILE) {
+    const file = QUERY_LOG_FILE;
+    (client as unknown as { $on(event: 'query', listener: (e: Prisma.QueryEvent) => void): void }).$on(
+      'query',
+      (event) => appendFileSync(file, `${event.query.replace(/\s+/g, ' ').slice(0, 240)}\n`)
+    );
+  }
+  return client;
+}
+
 // Server-only module: importing it from a client component is a bug we want to
 // surface as a build/runtime error, not mask behind a `null` client.
-const vercelUrl = datasourceUrl();
-export const prisma =
-  globalForPrisma.prisma || new PrismaClient(vercelUrl ? { datasourceUrl: vercelUrl } : undefined);
+export const prisma = globalForPrisma.prisma || createPrismaClient();
 
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;

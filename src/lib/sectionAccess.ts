@@ -1,3 +1,4 @@
+import { cache } from 'react';
 import { prisma } from '@/lib/prisma';
 import { isTestCategory, normalizeCategoryId } from '@/lib/testCatalog';
 import { extractEmailAddress, isValidAccessEmail } from '@/components/admin/courses/accessPlan';
@@ -94,9 +95,10 @@ export type SectionAccessGrant = {
  * The student's live course grants, one per section, with their dates - what
  * the Practice home needs to show a course and how long it stays open. Where
  * two grants cover one section (one by email, one by account), the one that
- * lasts longer wins.
+ * lasts longer wins. Read once per request (`cache()`): Profile and
+ * Subscription each ask for it twice.
  */
-export async function getActiveSectionAccessGrants(userId: string, email?: string | null): Promise<SectionAccessGrant[]> {
+export const getActiveSectionAccessGrants = cache(async (userId: string, email?: string | null): Promise<SectionAccessGrant[]> => {
   const normalizedEmail = await resolveUserEmail(userId, email);
   const rows = await prisma.sectionAccess.findMany({
     where: {
@@ -116,7 +118,7 @@ export async function getActiveSectionAccessGrants(userId: string, email?: strin
     if (lastsLonger) byCategory.set(category, { category, expiresAt: row.expiresAt, grantedAt: row.createdAt });
   }
   return [...byCategory.values()];
-}
+});
 
 export async function getActiveSectionAccessCategories(userId: string, email?: string | null) {
   const grants = await getActiveSectionAccessGrants(userId, email);

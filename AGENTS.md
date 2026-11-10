@@ -390,3 +390,23 @@ In a `.tex` file each `\begin{question} … \end{question}` block may carry
 `advanced-math` / `am`, `problem-solving` / `psda`, `geometry-trig` / `trig`)
 and `\difficulty{1|2|3}` (or `easy` / `medium` / `hard`). A question without
 them is tagged in the import preview before anything is saved.
+
+# Database reads
+
+Prisma Postgres bills every operation (the Starter plan's 1M a month ran
+short on 2026-11-10), so a read that every student repeats is a cost, not
+only a latency. What is the same for everyone comes from the Next data cache:
+the test catalog and question counts (`getTestCatalog`,
+`src/lib/testCatalogCache.ts`) and each test's questions with their keys
+(`getTestQuestionKeys`, `src/lib/testQuestionKeys.ts`, server only, under the
+exam's `examQuestionsCacheTag`). Anything that creates, edits, hides, copies
+or deletes a test, or adds or moves its questions, calls `expireTestCatalog()`
+and expires the questions' tag, as `src/app/admin/actions.ts` does. A row read
+by several parts of one request goes through `cache()` (`getUserRow`,
+`getActiveSectionAccessGrants`). A homework answer trusts the page's signed
+pass (`src/lib/homeworkPass.ts`) instead of running the access gates again.
+
+Count before shipping: with `PRISMA_QUERY_LOG_FILE` set (local only,
+`src/lib/prisma.ts`) every SQL statement is appended to that file. While the
+URL carries `pgbouncer=true`, Prisma wraps each call in `BEGIN`,
+`DEALLOCATE ALL` and `COMMIT`, so one call is four statements.

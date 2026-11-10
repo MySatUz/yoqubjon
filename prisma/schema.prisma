@@ -1,5 +1,9 @@
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  // A read with nested relations is one SQL statement (a LATERAL join), not
+  // one per level. Prisma Postgres bills every statement, and the result page
+  // read four levels in four. Measured with PRISMA_QUERY_LOG_FILE (prisma.ts).
+  previewFeatures = ["relationJoins"]
 }
 
 datasource db {
