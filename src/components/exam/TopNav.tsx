@@ -8,7 +8,6 @@ import { useExamSubmit } from '@/components/exam/useExamSubmit';
 import type { ExamModuleSpec } from '@/lib/examModules';
 import { BookOpen, Calculator, Clock, PenLine } from 'lucide-react';
 import BrandMark from '@/components/layout/BrandMark';
-import TelegramChannel, { TelegramChannelBar } from '@/components/layout/TelegramChannel';
 import { buttonClass } from '@/components/ui/Button';
 import {
   labelledToolClass,
@@ -131,11 +130,11 @@ export default function TopNav({ testId, title, modules, canDraw = false, untime
 
   return (
     <>
-      <header className="sticky top-0 z-50 flex h-14 shrink-0 items-center justify-between gap-2 border-gray-200 bg-white px-2 sm:px-4 md:border-b lg:px-6">
+      <header className="sticky top-0 z-50 flex h-14 shrink-0 items-center justify-between gap-2 border-b border-gray-200 bg-white px-2 sm:px-4 lg:px-6">
         {/* Where the student is, in words: "Module 1 of 2" on every screen
             size, with the test under it. Kept clear of the centred clock.
-            The owner's Telegram channel follows, as on the Board; below md it
-            is on its own line under the bar (TelegramChannelBar). */}
+            The owner's Telegram channel is not up here but in the row over
+            the question (QuestionRowChannel), so a cropped screenshot keeps it. */}
         <div className="flex min-w-0 flex-1 items-center gap-3 sm:max-w-[calc(50%-5.5rem)]">
           <span className="hidden lg:block">
             <BrandMark size="sm" />
@@ -155,7 +154,6 @@ export default function TopNav({ testId, title, modules, canDraw = false, untime
               {title}
             </h1>
           </div>
-          <TelegramChannel size="md" className="hidden md:inline-flex" />
         </div>
 
         {/* From `sm` the clock is centred on the screen and Hide hangs off
@@ -274,7 +272,6 @@ export default function TopNav({ testId, title, modules, canDraw = false, untime
           </button>
         </div>
       </header>
-      <TelegramChannelBar />
 
       <ReferenceModal isOpen={isReferenceOpen} onClose={() => setReferenceOpen(false)}>
         {referenceSheet}

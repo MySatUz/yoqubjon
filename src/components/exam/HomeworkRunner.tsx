@@ -20,7 +20,7 @@ import type { LucideIcon } from 'lucide-react';
 // KaTeX's stylesheet only: the maths arrives rendered (see `ExamRunner`).
 import 'katex/dist/katex.min.css';
 import BrandMark from '@/components/layout/BrandMark';
-import TelegramChannel, { TelegramChannelBar } from '@/components/layout/TelegramChannel';
+import { QuestionRowChannel } from '@/components/layout/TelegramChannel';
 import CalculatorWindow from '@/components/exam/CalculatorWindow';
 import ReferenceModal from '@/components/exam/ReferenceModal';
 import { useColumnOffset, useSheetInset } from '@/components/exam/examWindows';
@@ -528,7 +528,7 @@ export default function HomeworkRunner({
 
   return (
     <main className="flex h-dvh flex-col overflow-hidden bg-gray-100">
-      <header className="sticky top-0 z-50 flex h-14 shrink-0 items-center justify-between gap-2 border-gray-200 bg-white px-2 sm:px-4 md:border-b lg:px-6">
+      <header className="sticky top-0 z-50 flex h-14 shrink-0 items-center justify-between gap-2 border-b border-gray-200 bg-white px-2 sm:px-4 lg:px-6">
         <div className="flex min-w-0 flex-1 items-center gap-3">
           {/* Leaving is safe: every checked answer is already saved. */}
           <Link
@@ -546,9 +546,6 @@ export default function HomeworkRunner({
             <h1 className="truncate text-sm font-semibold text-gray-900">{title}</h1>
             <p className="mt-0.5 truncate text-xs tabular-nums text-gray-500">{progress}</p>
           </div>
-          {/* The owner's channel, as in the exam's bar (TopNav); below md on
-              its own line under the bar. */}
-          <TelegramChannel size="md" className="hidden md:inline-flex" />
         </div>
 
         <div className="flex shrink-0 items-center gap-1">
@@ -591,7 +588,6 @@ export default function HomeworkRunner({
           </button>
         </div>
       </header>
-      <TelegramChannelBar />
 
       <div className="flex flex-1 flex-col overflow-hidden bg-white">
         <p className="sr-only" role="status">
@@ -609,10 +605,13 @@ export default function HomeworkRunner({
             <div className={questionColumnClass}>
               <div className={questionHeadClass}>
                 <QuestionNumberTile number={index + 1} />
-                {/* Said as it appears: the verdict is what the press was for. */}
-                <div aria-live="polite" className="ml-auto">
+                {/* Said as it appears: the verdict is what the press was for.
+                    Beside the number, where the exam has Flag, so the channel
+                    keeps the row's right end on every test screen. */}
+                <div aria-live="polite">
                   {verdict && <VerdictBadge verdict={verdict} />}
                 </div>
+                <QuestionRowChannel />
               </div>
 
               {question.imageUrl && <QuestionDiagram src={question.imageUrl} />}

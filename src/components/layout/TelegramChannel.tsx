@@ -2,9 +2,9 @@ import { cn } from '@/components/ui/cn';
 import { focusRingClass } from '@/components/ui/Button';
 
 /**
- * The owner's channel, named in the top bar of the Board and of every test
- * screen - each course's tests, olympiads and homework - so a recording or a
- * screenshot of either carries it.
+ * The owner's channel, named in the Board's top bar and in the row over each
+ * question of every test screen - each course's tests, olympiads and homework -
+ * so a recording, or a screenshot cropped to the question, carries it.
  */
 export const TELEGRAM_CHANNEL_URL = 'https://t.me/sat_800';
 const TELEGRAM_CHANNEL_LABEL = 't.me/sat_800';
@@ -29,11 +29,9 @@ function TelegramMark({ className }: { className?: string }) {
 const sizes = {
   // The Board's, read from across a room, as its tags are (`Badge size="md"`).
   lg: { link: 'gap-2 text-lg', mark: 'h-7 w-7' },
-  // A test screen's top bar, at its title's size and as tall as the tools
-  // beside it; a finger gets the tools' 40px.
-  md: { link: 'h-9 gap-2 px-1.5 text-sm pointer-coarse:h-10', mark: 'h-6 w-6' },
-  // The phone's line under that bar (`TelegramChannelBar`).
-  sm: { link: 'h-8 gap-1.5 px-1 text-xs', mark: 'h-5 w-5' },
+  // The row over a test's question, as tall as Flag beside it (a `sm`
+  // button) and at its label's size; a finger gets the button's 40px.
+  row: { link: 'h-8 gap-1.5 px-1 text-sm pointer-coarse:h-10', mark: 'h-5 w-5' },
 };
 
 /**
@@ -69,17 +67,12 @@ export default function TelegramChannel({
 }
 
 /**
- * The channel on a phone, below `md`: a line of its own under a test
- * screen's top bar, which has no room for the address beside the title, the
- * clock and the tools. The bar drops its bottom edge there, so the two read
- * as one header. A tool sheet pulled all the way up covers it, as it covers
- * the question.
+ * The channel at the right end of the row over a test's question
+ * (`questionHeadClass`): on every screen size, held apart from Flag so it
+ * reads as a caption of the question and not as a third tool beside it.
+ * `-mr-1` takes back the link's padding, so the address ends on the
+ * column's edge, under the end of the row's rule.
  */
-export function TelegramChannelBar() {
-  return (
-    <div className="flex h-8 shrink-0 items-center border-b border-gray-200 bg-white px-2 sm:px-4 md:hidden">
-      {/* -ml-1 takes back the link's padding, so the mark lines up with the bar above. */}
-      <TelegramChannel size="sm" className="-ml-1 inline-flex" />
-    </div>
-  );
+export function QuestionRowChannel() {
+  return <TelegramChannel size="row" className="-mr-1 ml-auto inline-flex" />;
 }

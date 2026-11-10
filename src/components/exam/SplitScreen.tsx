@@ -28,6 +28,7 @@ import {
   questionSurfaceClass,
   readGridInEdit,
 } from '@/components/exam/questionParts';
+import { QuestionRowChannel } from '@/components/layout/TelegramChannel';
 import { buttonClass } from '@/components/ui/Button';
 import { cn } from '@/components/ui/cn';
 
@@ -307,6 +308,7 @@ export default function SplitScreen({
               <div ref={questionHeadRef} tabIndex={-1} className={questionHeadClass}>
                 <QuestionNumberTile number={safeQuestionIndex + 1} />
                 <FlagQuestion questionId={question.id} />
+                <QuestionRowChannel />
               </div>
 
               {/* The diagram leads and the stem follows it, with the choices

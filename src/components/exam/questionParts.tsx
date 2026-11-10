@@ -59,7 +59,10 @@ export const questionColumnClass = `mx-auto ${columnClass}`;
 /** The same column at the left edge: the Board's, which leaves the right side to write on. */
 export const questionColumnLeftClass = columnClass;
 
-/** The row over the question: its number and whatever acts on it. */
+/**
+ * The row over the question: its number and whatever acts on it, and on a
+ * test screen the owner's channel at its right end (`QuestionRowChannel`).
+ */
 export const questionHeadClass = 'mb-5 flex items-center gap-3 border-b border-gray-200 pb-3 focus:outline-hidden';
 
 /** The stem's reading size. The answers never go larger or heavier. */

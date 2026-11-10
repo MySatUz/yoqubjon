@@ -100,13 +100,15 @@ files as delivered; replace them from a new kit, never redraw them.
 
 The Board's top bar also names the owner's Telegram channel, t.me/sat_800,
 beside the question's tags (`TelegramChannel.tsx`, in `components/layout/`),
-so a lesson recording carries it. Since 2026-11-05 (the owner's request) the
-top bar of every test screen - each course's tests, olympiads and homework -
-names it too, mark and address in full: after the test's title from `md`
-(`size="md"`), and below it, where the bar has no room beside the title, the
-clock and the tools, on a `text-xs` line of its own under the bar
-(`TelegramChannelBar`), the bar dropping its bottom edge so the two read as
-one header. It opens in a new tab, so a test in progress stays put. Telegram's
+so a lesson recording carries it. Every test screen - each course's tests,
+olympiads and homework - names it too, mark and address in full (the owner's
+request, 2026-11-05), and since 2026-11-10 not in the top bar but at the right
+end of the row over each question (`QuestionRowChannel`), after the number
+tile and Flag (in homework, the number and its verdict), so a screenshot
+cropped to the question still carries it. It is held apart from Flag and drawn
+as a link with no box, so it is not taken for a third tool; it is there on
+every screen size, so a phone has no extra line under the top bar. It opens in
+a new tab, so a test in progress stays put. Telegram's
 mark keeps its own blue disc and white plane, like the logo's colours; the
 address beside it is `ink-700`, since Telegram's blue is about 3:1 on white.
 
