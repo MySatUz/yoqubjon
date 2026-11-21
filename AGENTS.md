@@ -139,7 +139,13 @@ arbitrary values turn into spaces, so they live in CSS, never in
 `[font-family:…]`. Nothing below `text-xs` except the mobile tab labels
 (`text-[11px]`). Sentence case everywhere; no uppercase letter-spaced
 "eyebrow" captions above titles. The exam's question and answer text keep
-their reading size — compactness is taken from the chrome around them.
+their reading size — compactness is taken from the chrome around them. On a
+wide screen that size and the question column grow together, so a line keeps
+its length and the question is not a strip in the middle of a monitor: 680px
+and 18px, from 1600px wide 760px and 20px, from 2200px 840px and 22px
+(`columnClass` in `questionParts.tsx`; `questionColumnWidth` in
+`examWindows.ts` holds the same steps for the tool windows). The exam, the
+homework and the Board share it.
 
 **Weight — three steps.** `font-bold` and `font-black` are retired, and Fira
 Sans is loaded only in 400, 500 and 600.

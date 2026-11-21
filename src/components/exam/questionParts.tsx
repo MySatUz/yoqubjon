@@ -25,9 +25,11 @@ export const QUESTION_IMAGE_HEIGHT = 480;
 
 /**
  * One size whether a tool window is open or not: the column never narrows, so
- * neither does the diagram. At most the column's 680px less the frame's padding.
+ * neither does the diagram. At most the column's width (680, 760 or 840px, see
+ * `columnClass`) less the frame's padding.
  */
-export const QUESTION_IMAGE_SIZES = '(min-width: 768px) 40rem, 90vw';
+export const QUESTION_IMAGE_SIZES =
+  '(min-width: 2200px) 52rem, (min-width: 1600px) 47rem, (min-width: 768px) 40rem, 90vw';
 
 /**
  * The scroller. `overflow-x-hidden`: the surface inside slides sideways out
@@ -46,12 +48,22 @@ export const questionSurfaceClass =
   'relative isolate flex min-h-full flex-col px-4 py-6 transition-transform duration-300 ease-out motion-reduce:transition-none md:px-8 md:py-8';
 
 /**
- * One column, one size, with a calculator or without. KaTeX sets its maths
- * 1.21x the surrounding text; at 1.1x a formula sits on the line instead of
- * jumping out of it. Important, because KaTeX's stylesheet is unlayered and
- * beats any utility otherwise.
+ * One column, one size, with a calculator or without. On a wide screen the
+ * column and the question's text grow together, so a line keeps its length
+ * (about 75 characters) and the question is not a narrow strip in the middle
+ * of a monitor: 680px and 18px up to 1600px wide, 760px and 20px from there,
+ * 840px and 22px from 2200px. `questionColumnWidth` (examWindows.ts) holds the
+ * same steps for the tool windows' arithmetic; change both together.
+ *
+ * KaTeX sets its maths 1.21x the surrounding text; at 1.1x a formula sits on
+ * the line instead of jumping out of it. Important, because KaTeX's
+ * stylesheet is unlayered and beats any utility otherwise.
  */
-const columnClass = 'flex w-full max-w-[680px] flex-1 flex-col [&_.katex]:text-[1.1em]!';
+const columnClass =
+  'flex w-full max-w-[680px] flex-1 flex-col min-[1600px]:max-w-[760px] min-[2200px]:max-w-[840px] [&_.katex]:text-[1.1em]!';
+
+/** The question's reading size, stem and answers alike, in the column's steps. */
+const questionTextClass = 'text-lg min-[1600px]:text-xl min-[2200px]:text-[22px]';
 
 /** The exam's column, centred as in Bluebook. */
 export const questionColumnClass = `mx-auto ${columnClass}`;
@@ -66,7 +78,7 @@ export const questionColumnLeftClass = columnClass;
 export const questionHeadClass = 'mb-5 flex items-center gap-3 border-b border-gray-200 pb-3 focus:outline-hidden';
 
 /** The stem's reading size. The answers never go larger or heavier. */
-export const questionStemClass = 'text-lg leading-[1.6] text-gray-900';
+export const questionStemClass = `${questionTextClass} leading-[1.6] text-gray-900`;
 
 /**
  * Bluebook's question-number tile, one of the two places the exam copies the
@@ -99,7 +111,7 @@ export function QuestionDiagram({ src, unoptimized = false }: { src: string; uno
         fetchPriority="high"
         sizes={QUESTION_IMAGE_SIZES}
         unoptimized={unoptimized}
-        className="mx-auto h-auto max-h-65 w-full object-contain"
+        className="mx-auto h-auto max-h-65 w-full object-contain min-[1600px]:max-h-72 min-[2200px]:max-h-80"
       />
     </div>
   );
@@ -212,7 +224,7 @@ export const AnswerChoice = memo(function AnswerChoice({
           {/* The stem's size and weight - never larger or heavier than the
               question it answers. KaTeX takes its colour from here. */}
           <span
-            className={cn('min-w-0 text-lg', isCrossedOut ? 'text-gray-500' : 'text-gray-900')}
+            className={cn('min-w-0', questionTextClass, isCrossedOut ? 'text-gray-500' : 'text-gray-900')}
             dangerouslySetInnerHTML={{ __html: optionHtml }}
           />
           {isCrossedOut && (

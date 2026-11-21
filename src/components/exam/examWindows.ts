@@ -25,8 +25,24 @@ export const PHONE_MAX_WIDTH = 767;
  * part of it, as in Bluebook: there is no room to move it aside.
  */
 const COLUMN_SHIFT_MIN_VIEWPORT = 1240;
-/** The question column (`max-w-[680px]`) plus its `md:px-8` gutters. */
-const COLUMN_FOOTPRINT = 680 + 2 * 32;
+/** The question surface's `md:px-8` on each side of the column. */
+const COLUMN_GUTTER = 32;
+
+/**
+ * The question column's width at a viewport width: the steps of `columnClass`
+ * in questionParts.tsx (680, 760 and 840px), which must change together with
+ * these.
+ */
+function questionColumnWidth(viewportWidth: number) {
+  if (viewportWidth >= 2200) return 840;
+  if (viewportWidth >= 1600) return 760;
+  return 680;
+}
+
+/** The question column plus its gutters. */
+function columnFootprint(viewportWidth: number) {
+  return questionColumnWidth(viewportWidth) + 2 * COLUMN_GUTTER;
+}
 
 export type WindowId = 'calculator' | 'reference';
 
@@ -141,7 +157,7 @@ function columnOffset(viewportWidth: number) {
   }
   if (!hasWindow) return 0;
 
-  const reach = Math.max(0, (viewportWidth - COLUMN_FOOTPRINT) / 2);
+  const reach = Math.max(0, (viewportWidth - columnFootprint(viewportWidth)) / 2);
   const offset = (left + right) / 2 - viewportWidth / 2;
   return Math.round(Math.min(reach, Math.max(-reach, offset)));
 }
@@ -163,9 +179,8 @@ function leftColumnOffset(viewportWidth: number, start: number) {
   }
   if (left === 0) return 0;
 
-  const gutter = (COLUMN_FOOTPRINT - 680) / 2;
-  const reach = Math.max(0, viewportWidth - start - COLUMN_FOOTPRINT + gutter);
-  return Math.round(Math.min(reach, Math.max(0, left + gutter - start)));
+  const reach = Math.max(0, viewportWidth - start - columnFootprint(viewportWidth) + COLUMN_GUTTER);
+  return Math.round(Math.min(reach, Math.max(0, left + COLUMN_GUTTER - start)));
 }
 
 /**
