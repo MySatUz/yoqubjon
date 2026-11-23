@@ -297,10 +297,9 @@ export default function SplitScreen({
           <div
             style={{
               translate: columnOffset ? `${columnOffset}px 0` : undefined,
-              // On a phone or an upright tablet the calculator is a sheet over
-              // the lower part of the screen; this much more room at the foot
-              // lets the answers scroll up above it, and only when they would
-              // otherwise sit under it.
+              // On a phone the calculator is a sheet over the lower part of the
+              // screen; this much more room at the foot lets the answers scroll
+              // up above it, and only when they would otherwise sit under it.
               paddingBottom: sheetInset ? `calc(1.5rem + ${sheetInset}px)` : undefined,
             }}
             className={questionSurfaceClass}

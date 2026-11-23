@@ -5,13 +5,10 @@ import { GripHorizontal, Maximize2, Minimize2, X } from 'lucide-react';
 import { iconButtonClass } from '@/components/ui/Button';
 import { cn } from '@/components/ui/cn';
 import {
-  SHEET_MAX_WIDTH,
+  PHONE_MAX_WIDTH,
   BOTTOM_BAR_HEIGHT,
   TOP_BAR_HEIGHT,
-  WINDOW_MARGIN,
-  WINDOW_MIN_WIDTH,
   bringWindowToFront,
-  openingWindowWidth,
   readSavedWindow,
   saveWindow,
   setWindowFootprint,
@@ -23,13 +20,13 @@ import {
 } from '@/components/exam/examWindows';
 
 /** Where a window first opens: this far from the screen edge and from the bars. */
-const OPEN_MARGIN_X = WINDOW_MARGIN;
+const OPEN_MARGIN_X = 24;
 const OPEN_MARGIN_Y = 16;
 /** Share of the screen's width an expanded window takes. */
 const EXPANDED_SHARE = 0.6;
 /**
- * Share of the screen's height a bottom sheet first takes: half, so the
- * question stays readable above it.
+ * Share of the screen's height a bottom sheet first takes on a phone: half,
+ * so the question stays readable above it.
  */
 const SHEET_SHARE = 0.5;
 const SHEET_MIN_HEIGHT = 160;
@@ -81,9 +78,8 @@ function fitRect(rect: Rect, area: Area, minWidth: number, minHeight: number): R
   };
 }
 
-/** Narrower than its default where the question column would not fit beside it. */
-function openingRect(side: 'left' | 'right', defaultWidth: number, minWidth: number, area: Area): Rect {
-  const width = Math.min(openingWindowWidth(area.width, defaultWidth, minWidth), area.width - 2 * OPEN_MARGIN_X);
+function openingRect(side: 'left' | 'right', defaultWidth: number, area: Area): Rect {
+  const width = Math.min(defaultWidth, area.width - 2 * OPEN_MARGIN_X);
   return {
     x: side === 'left' ? OPEN_MARGIN_X : area.width - width - OPEN_MARGIN_X,
     y: area.top + OPEN_MARGIN_Y,
@@ -115,10 +111,9 @@ function fitSheetHeight(height: number, area: Area) {
 /**
  * A non-modal tool window over the exam, like Bluebook's: dragged by its title
  * bar, resized from its bottom-right corner, expanded to ~60% of the width and
- * back. Where no window fits beside the question column - a phone, a tablet
- * held upright (`SHEET_MAX_WIDTH`) - it is a full-width bottom sheet over the
- * answers instead, resized by its handle. Where it sits and how big it is are
- * remembered for the browser tab.
+ * back. Below `md` it is a full-width bottom sheet over the answers instead,
+ * resized by its handle. Where it sits and how big it is are remembered for
+ * the browser tab.
  *
  * One element tree in every mode, and `hidden` when closed rather than
  * unmounted by the window itself: moving an iframe in the DOM reloads it, and
@@ -133,7 +128,7 @@ export default function FloatingWindow({
   closeLabel,
   side,
   defaultWidth,
-  minWidth = WINDOW_MIN_WIDTH,
+  minWidth = 360,
   minHeight = 420,
   children,
 }: FloatingWindowProps) {
@@ -146,10 +141,10 @@ export default function FloatingWindow({
   // What is drawn is always re-fitted to the screen as it is now, while the
   // placement the student chose is kept: a window pushed in by a narrower
   // screen goes back where it was when the screen grows again.
-  const isSheet = viewport.width <= SHEET_MAX_WIDTH;
+  const isPhone = viewport.width <= PHONE_MAX_WIDTH;
   const area = areaOf(viewport);
   const restored = fitRect(
-    placement.rect ?? openingRect(side, defaultWidth, minWidth, area),
+    placement.rect ?? openingRect(side, defaultWidth, area),
     area,
     minWidth,
     minHeight
@@ -176,11 +171,11 @@ export default function FloatingWindow({
     if (isInteracting) return;
     setWindowFootprint(
       id,
-      isSheet
+      isPhone
         ? { kind: 'sheet', height: sheetHeight }
         : { kind: 'window', left: shown.x, right: shown.x + shown.width }
     );
-  }, [id, isInteracting, isOpen, isSheet, sheetHeight, shown.width, shown.x]);
+  }, [id, isInteracting, isOpen, isPhone, sheetHeight, shown.width, shown.x]);
 
   useEffect(() => () => setWindowFootprint(id, null), [id]);
 
@@ -199,7 +194,7 @@ export default function FloatingWindow({
     if (event.button !== 0) return;
     if (event.target instanceof Element && event.target.closest('button')) return;
 
-    if (isSheet) {
+    if (isPhone) {
       beginInteraction(event, {
         kind: 'sheet',
         pointerId: event.pointerId,
@@ -297,7 +292,7 @@ export default function FloatingWindow({
       onPointerDownCapture={() => bringWindowToFront(id)}
       onFocusCapture={() => bringWindowToFront(id)}
       style={
-        isSheet
+        isPhone
           ? { bottom: BOTTOM_BAR_HEIGHT, height: sheetHeight }
           : { left: shown.x, top: shown.y, width: shown.width, height: shown.height }
       }
@@ -306,10 +301,10 @@ export default function FloatingWindow({
       className={cn(
         isOpen ? 'fixed flex flex-col overflow-hidden border-gray-200 bg-white shadow-lg' : 'hidden',
         isFront ? 'z-40' : 'z-30',
-        isSheet ? 'inset-x-0 rounded-t-2xl border-t' : 'rounded-2xl border'
+        isPhone ? 'inset-x-0 rounded-t-2xl border-t' : 'rounded-2xl border'
       )}
     >
-      {isSheet && (
+      {isPhone && (
         <div
           aria-hidden
           onPointerDown={handleSheetPointerDown}
@@ -323,24 +318,24 @@ export default function FloatingWindow({
       <div
         onPointerDown={handleTitlePointerDown}
         onDoubleClick={(event) => {
-          if (isSheet || (event.target instanceof Element && event.target.closest('button'))) return;
+          if (isPhone || (event.target instanceof Element && event.target.closest('button'))) return;
           toggleExpanded();
         }}
         {...pointerHandlers}
         className={cn(
           'relative flex h-11 shrink-0 touch-none select-none items-center justify-between gap-2 border-b border-gray-200 pl-4 pr-1.5',
-          isSheet ? 'cursor-ns-resize bg-white' : 'cursor-move bg-gray-50'
+          isPhone ? 'cursor-ns-resize bg-white' : 'cursor-move bg-gray-50'
         )}
       >
         <h2 className="truncate text-sm font-semibold text-gray-900">{title}</h2>
-        {!isSheet && (
+        {!isPhone && (
           <GripHorizontal
             aria-hidden
             className="pointer-events-none absolute left-1/2 top-1/2 h-4 w-4 -translate-x-1/2 -translate-y-1/2 text-gray-400"
           />
         )}
         <div className="flex shrink-0 items-center gap-0.5">
-          {!isSheet && (
+          {!isPhone && (
             <button
               type="button"
               onClick={toggleExpanded}
@@ -369,7 +364,7 @@ export default function FloatingWindow({
         {isInteracting && <div className="absolute inset-0" />}
       </div>
 
-      {!isSheet && (
+      {!isPhone && (
         <div
           aria-hidden
           onPointerDown={handleResizePointerDown}

@@ -17,21 +17,16 @@ import { useSyncExternalStore } from 'react';
 export const TOP_BAR_HEIGHT = 56;
 /** BottomNav is `h-16`. */
 export const BOTTOM_BAR_HEIGHT = 64;
-/** How far a window first opens from the screen's edge. */
-export const WINDOW_MARGIN = 24;
-/** The narrowest a window is drawn, unless the screen itself is narrower. */
-export const WINDOW_MIN_WIDTH = 360;
-/** The question surface's `md:px-8` on each side of the column. */
-const COLUMN_GUTTER = 32;
+/** Below Tailwind's `md`, a window turns into a bottom sheet. */
+export const PHONE_MAX_WIDTH = 767;
 
 /**
- * Up to this width a window is a bottom sheet over the answers, and the
- * question scrolls up above it: a phone, a tablet held upright. From the next
- * pixel a window at its minimum fits beside the question column (680px and
- * its gutters, the steps below 1600px), so it floats there and the column
- * moves out from under it - on a tablet on its side as on a laptop.
+ * Below this the question column stays centred and an open window covers
+ * part of it, as in Bluebook: there is no room to move it aside.
  */
-export const SHEET_MAX_WIDTH = 680 + 2 * COLUMN_GUTTER + WINDOW_MIN_WIDTH + WINDOW_MARGIN - 1;
+const COLUMN_SHIFT_MIN_VIEWPORT = 1240;
+/** The question surface's `md:px-8` on each side of the column. */
+const COLUMN_GUTTER = 32;
 
 /**
  * The question column's width at a viewport width: the steps of `columnClass`
@@ -47,16 +42,6 @@ function questionColumnWidth(viewportWidth: number) {
 /** The question column plus its gutters. */
 function columnFootprint(viewportWidth: number) {
   return questionColumnWidth(viewportWidth) + 2 * COLUMN_GUTTER;
-}
-
-/**
- * How wide a window first opens: its own width where that leaves the question
- * column room beside it, narrower where it would not (a tablet on its side, a
- * small laptop), and never under its minimum.
- */
-export function openingWindowWidth(viewportWidth: number, defaultWidth: number, minWidth: number) {
-  const room = viewportWidth - columnFootprint(viewportWidth) - WINDOW_MARGIN;
-  return Math.min(defaultWidth, Math.max(minWidth, room));
 }
 
 export type WindowId = 'calculator' | 'reference';
@@ -159,7 +144,7 @@ function subscribeToLayout(listener: () => void) {
  * that, it covers, as in Bluebook.
  */
 function columnOffset(viewportWidth: number) {
-  if (viewportWidth <= SHEET_MAX_WIDTH) return 0;
+  if (viewportWidth < COLUMN_SHIFT_MIN_VIEWPORT) return 0;
 
   let left = 0;
   let right = viewportWidth;
@@ -185,7 +170,7 @@ function columnOffset(viewportWidth: number) {
  * screen.
  */
 function leftColumnOffset(viewportWidth: number, start: number) {
-  if (viewportWidth <= SHEET_MAX_WIDTH) return 0;
+  if (viewportWidth < COLUMN_SHIFT_MIN_VIEWPORT) return 0;
 
   let left = 0;
   for (const footprint of Object.values(footprints)) {
@@ -213,7 +198,7 @@ export function useColumnOffset(leftStart?: number) {
   );
 }
 
-/** How much of the question an open bottom sheet covers (see `SHEET_MAX_WIDTH`). */
+/** How much of the question an open bottom sheet covers, on a phone. */
 export function useSheetInset() {
   return useSyncExternalStore(
     subscribe,
@@ -236,7 +221,7 @@ export type SavedWindow = {
   /** `null` until the student moves or resizes it: it opens where it should. */
   rect: Rect | null;
   expanded: boolean;
-  /** The bottom sheet's height (see `SHEET_MAX_WIDTH`). */
+  /** The bottom sheet's height on a phone. */
   sheetHeight: number | null;
 };
 

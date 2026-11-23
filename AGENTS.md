@@ -145,12 +145,7 @@ its length and the question is not a strip in the middle of a monitor: 680px
 and 18px, from 1600px wide 760px and 20px, from 2200px 840px and 22px
 (`columnClass` in `questionParts.tsx`; `questionColumnWidth` in
 `examWindows.ts` holds the same steps for the tool windows). The exam, the
-homework and the Board share it. The calculator and the reference sheet float
-beside that column, and the column moves out from under them, wherever a
-window fits beside it — from 1128px wide, so a tablet on its side as well as a
-laptop, the window opening narrower where its own width would not leave the
-column room; on a narrower screen (a phone, an upright tablet) they are a
-bottom sheet the question scrolls up above (`SHEET_MAX_WIDTH`).
+homework and the Board share it.
 
 **Weight — three steps.** `font-bold` and `font-black` are retired, and Fira
 Sans is loaded only in 400, 500 and 600.
