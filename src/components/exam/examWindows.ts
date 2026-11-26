@@ -29,19 +29,23 @@ const COLUMN_SHIFT_MIN_VIEWPORT = 1240;
 const COLUMN_GUTTER = 32;
 
 /**
- * The question column's width at a viewport width: the steps of `columnClass`
- * in questionParts.tsx (680, 760 and 840px), which must change together with
- * these.
+ * A test's question column at a viewport width: `questionColumnClass` in
+ * questionParts.tsx, `clamp(680px, 91vw - 484px, 1440px)`, which must change
+ * together with this.
  */
 function questionColumnWidth(viewportWidth: number) {
+  return Math.min(1440, Math.max(680, 0.91 * viewportWidth - 484));
+}
+
+/**
+ * The Board's column at a viewport width: the steps of
+ * `questionColumnLeftClass` (680, 760 and 840px), which must change together
+ * with these.
+ */
+function boardColumnWidth(viewportWidth: number) {
   if (viewportWidth >= 2200) return 840;
   if (viewportWidth >= 1600) return 760;
   return 680;
-}
-
-/** The question column plus its gutters. */
-function columnFootprint(viewportWidth: number) {
-  return questionColumnWidth(viewportWidth) + 2 * COLUMN_GUTTER;
 }
 
 export type WindowId = 'calculator' | 'reference';
@@ -157,7 +161,8 @@ function columnOffset(viewportWidth: number) {
   }
   if (!hasWindow) return 0;
 
-  const reach = Math.max(0, (viewportWidth - columnFootprint(viewportWidth)) / 2);
+  const columnSpan = questionColumnWidth(viewportWidth) + 2 * COLUMN_GUTTER;
+  const reach = Math.max(0, (viewportWidth - columnSpan) / 2);
   const offset = (left + right) / 2 - viewportWidth / 2;
   return Math.round(Math.min(reach, Math.max(-reach, offset)));
 }
@@ -179,7 +184,8 @@ function leftColumnOffset(viewportWidth: number, start: number) {
   }
   if (left === 0) return 0;
 
-  const reach = Math.max(0, viewportWidth - start - columnFootprint(viewportWidth) + COLUMN_GUTTER);
+  const columnSpan = boardColumnWidth(viewportWidth) + 2 * COLUMN_GUTTER;
+  const reach = Math.max(0, viewportWidth - start - columnSpan + COLUMN_GUTTER);
   return Math.round(Math.min(reach, Math.max(0, left + COLUMN_GUTTER - start)));
 }
 

@@ -140,12 +140,16 @@ arbitrary values turn into spaces, so they live in CSS, never in
 (`text-[11px]`). Sentence case everywhere; no uppercase letter-spaced
 "eyebrow" captions above titles. The exam's question and answer text keep
 their reading size — compactness is taken from the chrome around them. On a
-wide screen that size and the question column grow together, so a line keeps
-its length and the question is not a strip in the middle of a monitor: 680px
-and 18px, from 1600px wide 760px and 20px, from 2200px 840px and 22px
-(`columnClass` in `questionParts.tsx`; `questionColumnWidth` in
-`examWindows.ts` holds the same steps for the tool windows). The exam, the
-homework and the Board share it.
+screen wider than 1280px a test's column and that size grow with the screen,
+so on a monitor the question fills about two thirds of it in large type (the
+owner marked the area on 2026-11-26): `clamp(680px, 91vw − 484px, 1440px)`
+and `clamp(18px, 1.09vw + 4px, 28px)` — 680px and 18px on a 1280 laptop,
+about 1180px and 24px at 1830px wide, at most 1440px and 28px
+(`questionColumnClass` in `questionParts.tsx`, through `--question-text`;
+`questionColumnWidth` in `examWindows.ts` holds the same rule for the tool
+windows). The exam and homework share it. The Board keeps the right side to
+write on, so its column only steps: 680px and 18px, from 1600px wide 760px
+and 20px, from 2200px 840px and 22px (`questionColumnLeftClass`).
 
 **Weight — three steps.** `font-bold` and `font-black` are retired, and Fira
 Sans is loaded only in 400, 500 and 600.

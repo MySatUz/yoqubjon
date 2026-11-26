@@ -25,11 +25,11 @@ export const QUESTION_IMAGE_HEIGHT = 480;
 
 /**
  * One size whether a tool window is open or not: the column never narrows, so
- * neither does the diagram. At most the column's width (680, 760 or 840px, see
- * `columnClass`) less the frame's padding.
+ * neither does the diagram. At most the test column's width (see
+ * `questionColumnClass`), the widest of the two.
  */
 export const QUESTION_IMAGE_SIZES =
-  '(min-width: 2200px) 52rem, (min-width: 1600px) 47rem, (min-width: 768px) 40rem, 90vw';
+  '(min-width: 2120px) 1440px, (min-width: 1280px) calc(91vw - 484px), (min-width: 768px) 40rem, 90vw';
 
 /**
  * The scroller. `overflow-x-hidden`: the surface inside slides sideways out
@@ -48,28 +48,37 @@ export const questionSurfaceClass =
   'relative isolate flex min-h-full flex-col px-4 py-6 transition-transform duration-300 ease-out motion-reduce:transition-none md:px-8 md:py-8';
 
 /**
- * One column, one size, with a calculator or without. On a wide screen the
- * column and the question's text grow together, so a line keeps its length
- * (about 75 characters) and the question is not a narrow strip in the middle
- * of a monitor: 680px and 18px up to 1600px wide, 760px and 20px from there,
- * 840px and 22px from 2200px. `questionColumnWidth` (examWindows.ts) holds the
- * same steps for the tool windows' arithmetic; change both together.
+ * One column, one size, with a calculator or without. Each column sets the
+ * question's reading size in `--question-text`, which the stem, the answers
+ * and the diagram's height cap read.
  *
  * KaTeX sets its maths 1.21x the surrounding text; at 1.1x a formula sits on
  * the line instead of jumping out of it. Important, because KaTeX's
  * stylesheet is unlayered and beats any utility otherwise.
  */
-const columnClass =
-  'flex w-full max-w-[680px] flex-1 flex-col min-[1600px]:max-w-[760px] min-[2200px]:max-w-[840px] [&_.katex]:text-[1.1em]!';
+const columnClass = 'flex w-full flex-1 flex-col [&_.katex]:text-[1.1em]!';
 
-/** The question's reading size, stem and answers alike, in the column's steps. */
-const questionTextClass = 'text-lg min-[1600px]:text-xl min-[2200px]:text-[22px]';
+/**
+ * A test's column (the exam, homework), centred as in Bluebook. Up to a
+ * 1280px screen it is 680px with 18px text; wider, the column and the text
+ * grow with the screen, so on a monitor the question fills about two thirds
+ * of it in type that reads from a chair's distance (the owner's request,
+ * 2026-11-26): 1830px wide gives about 1180px and 24px. The column stops at
+ * 1440px (from 2120px wide) and the text at 28px (from 2200px), where lines
+ * would grow too long to follow. `questionColumnWidth` (examWindows.ts)
+ * holds the same rule for the tool windows' arithmetic; change both together.
+ */
+export const questionColumnClass = `mx-auto ${columnClass} max-w-[clamp(680px,91vw_-_484px,1440px)] [--question-text:clamp(18px,1.09vw_+_4px,28px)]`;
 
-/** The exam's column, centred as in Bluebook. */
-export const questionColumnClass = `mx-auto ${columnClass}`;
+/**
+ * The Board's column, at the left edge, which leaves the right side to write
+ * on: so it grows only a little, in steps - 680px and 18px, from 1600px wide
+ * 760px and 20px, from 2200px 840px and 22px (`boardColumnWidth`).
+ */
+export const questionColumnLeftClass = `${columnClass} max-w-[680px] [--question-text:18px] min-[1600px]:max-w-[760px] min-[1600px]:[--question-text:20px] min-[2200px]:max-w-[840px] min-[2200px]:[--question-text:22px]`;
 
-/** The same column at the left edge: the Board's, which leaves the right side to write on. */
-export const questionColumnLeftClass = columnClass;
+/** The question's reading size, stem and answers alike: the column's. */
+const questionTextClass = 'text-[length:var(--question-text,1.125rem)]';
 
 /**
  * The row over the question: its number and whatever acts on it, and on a
@@ -111,7 +120,8 @@ export function QuestionDiagram({ src, unoptimized = false }: { src: string; uno
         fetchPriority="high"
         sizes={QUESTION_IMAGE_SIZES}
         unoptimized={unoptimized}
-        className="mx-auto h-auto max-h-65 w-full object-contain min-[1600px]:max-h-72 min-[2200px]:max-h-80"
+        // 260px at the 18px reading size, and as much taller as the text is.
+        className="mx-auto h-auto max-h-[calc(var(--question-text,1.125rem)*14.4)] w-full object-contain"
       />
     </div>
   );
